@@ -33,7 +33,7 @@ export const login = async (req: Request, res: Response) => {
             "SELECT * FROM users WHERE email = $1",
             [email]
         );
-       console.log("User from token:", req);
+        console.log("User from token:", req);
 
         if (user.rows.length === 0) {
             return res.status(400).json({ error: "Invalid credentials" });
@@ -64,7 +64,10 @@ export const login = async (req: Request, res: Response) => {
             user: {
                 id: dbUser.id,
                 name: dbUser.name,
-                role: dbUser.role
+                email: dbUser.email,
+                role: dbUser.role,
+                manager_id: dbUser.manager_id,
+                department: dbUser.department
             }
         });
 
@@ -73,3 +76,4 @@ export const login = async (req: Request, res: Response) => {
         res.status(500).json({ error: "Login failed" });
     }
 };
+

@@ -1,49 +1,131 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Card from '../cards/Card';
-import StatCard from "../cards/StatCard"
+import StatCard from "../cards/StatCard";
+import { getDashboard, getHolidays } from "../../api/leaveApi";
+import { getUser } from '../../utils/getUser';
+import { useNavigate } from 'react-router-dom';
+import { DashboardData ,User} from "../../types";
 
-const stats = [
-    { label: "Available leaves", value: 12 },
-    { label: "Used this year", value: 8 },
-    { label: "Pending approval", value: 2 },
-    { label: "Total entitled", value: 20 },
-];
-const balances = [
-    { label: "Casual leave", value: "5 of 10" },
-    { label: "Sick leave", value: "4 of 5" },
-    { label: "Privilege leave", value: "3 of 5" },
-];
-
-const holidays = [
-    "April 3 (Good Friday)",
-    "April 14 (Tamil New Year)",
-];
+type Balance = {
+    label: string;
+    value: string;
+};
 
 const DashBoard: React.FC = () => {
+    const [user, setUser] = useState<User | null>(null);
+         useEffect(() => {
+            const fetchUser = async () => {
+                try {
+                    const res = await getUser();
+                    setUser(res.data.data);
+                } catch (err) {
+                    console.error("Failed to fetch user", err);
+                }
+            };
+        
+            fetchUser();
+        }, []);
+    const [data, setData] = useState<DashboardData | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [holidays, setHolidays] = useState<any[]>([]);
+    
+    const navigate = useNavigate()
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const res = await getDashboard();
+                setData(res.data);
+            } catch (err) {
+                console.error(err);
+                setError("Failed to load dashboard");
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    useEffect(() => {
+        fetchHolidays();
+    }, []);
+    const fetchHolidays = async () => {
+        try {
+            const res = await getHolidays();
+            setHolidays(res.data);
+        } catch (err) {
+            console.error("Failed to fetch holidays", err);
+        }
+    };
+    const today = new Date()
+    const upcomingHolidays = holidays.filter((h) => {
+        return new Date(h.date) >= today
+    })
+
+    if (error) return <p className="text-red-500">{error}</p>;
+    if (!data) return <p>Loading...</p>;
+
+
+    const stats = [
+        {
+            label: "Available leaves",
+            value: data.leave_balance.reduce(
+                (sum, item) => sum + item.remaining,
+                0
+            ),
+        },
+        {
+            label: "Used this year",
+            value: data.leave_balance.reduce(
+                (sum, item) => sum + item.used,
+                0
+            ),
+        },
+        {
+            label: "Pending approval",
+            value: data.pending_requests,
+        },
+        {
+            label: "Total entitled",
+            value: data.leave_balance.reduce(
+                (sum, item) => sum + item.total_allocated,
+                0
+            ),
+        },
+    ];
+
+    const balances: Balance[] = data.leave_balance.map((item) => ({
+        label: item.type,
+        value: `${item.used} of ${item.total_allocated}`,
+    }));
+
+
+
+
+
+    // console.log("Dashboard rendered");
+
     return (
         <div>
-
             {/* Welcome Banner */}
-            <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-8 rounded-xl mb-6">
-                <h1 className="text-3xl font-bold mb-2">Welcome, Navajit!</h1>
+            <div className="bg-gradient-to-r from-[#5746AF] to-[#302178] text-white p-8 rounded-xl mb-6">
+                <h1 className="text-3xl font-bold mb-2">Welcome, {user?.name || "User"}!</h1>
                 <p className="text-purple-100">Your leave dashboard</p>
             </div>
 
             {/* Stats Grid */}
-
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                {stats.map((stat, index) => (
-                    <StatCard key={index} label={stat.label} value={stat.value} />
+                {stats.map((stat) => (
+                    <StatCard key={stat.label} label={stat.label} value={stat.value} />
                 ))}
             </div>
-
 
             {/* Main Content */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 {/* Apply Leave Card */}
                 <div className="bg-white p-6 rounded-lg shadow-sm">
                     <h3 className="text-lg font-semibold mb-4">Apply for leave</h3>
-                    <button className="w-full bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 transition">
+                    <button className="w-full bg-[#5746AF] text-white py-3 rounded-lg hover:bg-purple-700 transition"
+                        onClick={() => navigate("/apply-leave")}>
                         + New leave request
                     </button>
                 </div>
@@ -52,8 +134,8 @@ const DashBoard: React.FC = () => {
                 <Card>
                     <h3 className="text-lg font-semibold mb-4">Leave balance</h3>
                     <div className="space-y-3">
-                        {balances.map((item, i) => (
-                            <div key={i} className="flex justify-between">
+                        {balances.map((item) => (
+                            <div key={item.label} className="flex justify-between">
                                 <span className="text-gray-600">{item.label}</span>
                                 <span className="font-semibold">{item.value}</span>
                             </div>
@@ -62,18 +144,28 @@ const DashBoard: React.FC = () => {
                 </Card>
             </div>
 
-            {/* Upcoming Holidays & Team */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Holidays */}
                 <Card>
                     <h3 className="text-lg font-semibold mb-4">Upcoming holidays</h3>
-                    {holidays.map((h, i) => (
-                        <p key={i} className="text-gray-700">{h}</p>
+                    {upcomingHolidays.slice(0, 4).map((h, i) => (
+                        <p key={i} className="text-gray-700">{h.name} ({new Date(h.date).toLocaleDateString()})</p>
                     ))}
                 </Card>
 
                 <div className="bg-white p-6 rounded-lg shadow-sm">
                     <h3 className="text-lg font-semibold mb-4">Team members on leave</h3>
-                    <p className="text-gray-500">No one is on leave today</p>
+
+                    {data.team_on_leave.length === 0 ? (
+                        <p className="text-gray-500">No one is on leave today</p>
+                    ) : (
+                        data.team_on_leave.map((member, i) => (
+                            <p key={i} className="text-gray-700">
+                                {member.name} ( {new Date(member.from_date).toLocaleDateString()} →
+                                {new Date(member.to_date).toLocaleDateString()})
+                            </p>
+                        ))
+                    )}
                 </div>
             </div>
         </div>

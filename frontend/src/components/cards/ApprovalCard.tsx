@@ -1,72 +1,69 @@
-type Approval = {
-    id: number;
-    employeeName: string;
-    role: string;
-    leaveType: string;
-    fromDate: string;
-    toDate: string;
-    reason: string;
-};
+
+import { ApprovalRequest } from "../../types";
 
 type Props = {
-    request: Approval;
+    request: ApprovalRequest;
     onApprove: (id: number) => void;
     onReject: (id: number) => void;
+    ProcessingId: number | null
 };
 
-const fieldConfig = [
-    { label: "From Date", key: "fromDate" },
-    { label: "To Date", key: "toDate" },
-    { label: "Reason", key: "reason" },
-];
-
-const ApprovalCard: React.FC<Props> = ({ request, onApprove, onReject }) => {
+const ApprovalCard: React.FC<Props> = ({ request, onApprove, onReject, ProcessingId }) => {
     return (
-        <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition">
 
             {/* Header */}
-            <div className="mb-4">
-                <p className="font-semibold text-gray-800">
-                    {request.employeeName}
-                </p>
-                <p className="text-sm text-gray-600">
-                    {request.role} • {request.leaveType}
-                </p>
+            <div className="flex justify-between items-start mb-3">
+                <div>
+                    <p className="font-semibold text-gray-800 text-base">
+                        {request.employeeName}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                        {request.role} • {request.leaveType}
+                    </p>
+                </div>
+
+                {/* Status badge */}
+                <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
+                    Pending
+                </span>
             </div>
 
-            {/* Fields */}
-            <div className="grid grid-cols-3 gap-4 mb-4">
-                {fieldConfig.map((field, i) => (
-                    <div key={i}>
-                        <label className="text-sm text-gray-600">
-                            {field.label}
-                        </label>
-                        <input
-                            type="text"
-                            value={request[field.key as keyof Approval]}
-                            disabled
-                            className="w-full border border-gray-300 rounded px-2 py-1 mt-1 bg-gray-50"
-                        />
-                    </div>
-                ))}
+            {/* Dates */}
+            <div className="flex gap-6 text-sm text-gray-700 mb-3">
+                <div>
+                    <p className="text-gray-500">From</p>
+                    <p>{request.from_date}</p>
+                </div>
+                <div>
+                    <p className="text-gray-500">To</p>
+                    <p>{request.to_date}</p>
+                </div>
+            </div>
+
+            {/* Reason */}
+            <div className="mb-4">
+                <p className="text-sm text-gray-500">Reason</p>
+                <p className="text-sm text-gray-800">{request.reason}</p>
             </div>
 
             {/* Actions */}
             <div className="flex gap-3">
                 <button
                     onClick={() => onApprove(request.id)}
-                    className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                    disabled={ProcessingId === request.id}
+                    className="flex-1 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
                 >
-                    Approve
+                    {ProcessingId === request.id ? "Processing..." : "Approve"}
                 </button>
+
                 <button
                     onClick={() => onReject(request.id)}
-                    className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                    className="flex-1 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
                 >
                     Reject
                 </button>
             </div>
-
         </div>
     );
 };
