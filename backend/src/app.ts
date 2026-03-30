@@ -11,7 +11,10 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+    origin: "http://localhost:3000",
+    credentials: true
+}));
 app.use(express.json());
 
 // test route
@@ -19,9 +22,9 @@ app.get("/", async (req, res) => {
     const result = await pool.query("SELECT NOW()");
     res.json({ time: result.rows[0] });
 });
-app.use("/api/leaves",authenticate, leaveRoutes);
+app.use("/api/leaves", authenticate, leaveRoutes);
 app.use("/api/auth", authRoutes);
-app.use("/api/notification",authenticate,notificationRoute);
+app.use("/api/notification", authenticate, notificationRoute);
 
 const PORT = process.env.PORT || 5000;
 
