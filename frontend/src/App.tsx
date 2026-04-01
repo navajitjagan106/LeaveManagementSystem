@@ -12,6 +12,7 @@ import Approvals from "./components/Manager/Approvals";
 import TeamView from "./components/pages/TeamView";
 import LeaveBalance from "./components/pages/LeaveBalance";
 import Profile from "./components/pages/Profile";
+import AdminDashboard from "./components/admin/AdminDashboard";
 
 const App: React.FC = () => {
   return (
@@ -37,10 +38,17 @@ const App: React.FC = () => {
               <ProtectedRoute allowedRoles={["manager"]}>
                 <Approvals />
               </ProtectedRoute>
+
+             
             }
           />
           <Route path="/team-view" element={<TeamView />} />
           <Route path="/leave-balance" element={<LeaveBalance />} />
+          <Route path="/admin/employees" element={
+             <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminDashboard/>
+              </ProtectedRoute>
+          } />
         </Route>
 
       </Routes>

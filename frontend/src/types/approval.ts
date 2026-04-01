@@ -1,8 +1,8 @@
 export interface ApprovalRequest {
     id: number;
-    employeeName: string;
+    employee_name: string;
     role: string;
-    leaveType: string;
+    leave_type: string;
     from_date: string;
     to_date: string;
     reason: string;

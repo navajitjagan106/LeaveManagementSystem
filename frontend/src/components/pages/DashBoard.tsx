@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import Card from '../cards/Card';
 import StatCard from "../cards/StatCard";
 import { getDashboard, getHolidays } from "../../api/leaveApi";
-import { getUser } from '../../utils/getUser';
+import { getUserLocal } from '../../utils/getUser';
 import { useNavigate } from 'react-router-dom';
-import { DashboardData ,User} from "../../types";
+import { DashboardData, User } from "../../types";
 
 type Balance = {
     label: string;
@@ -13,22 +13,14 @@ type Balance = {
 
 const DashBoard: React.FC = () => {
     const [user, setUser] = useState<User | null>(null);
-         useEffect(() => {
-            const fetchUser = async () => {
-                try {
-                    const res = await getUser();
-                    setUser(res.data.data);
-                } catch (err) {
-                    console.error("Failed to fetch user", err);
-                }
-            };
-        
-            fetchUser();
-        }, []);
+    useEffect(() => {
+        const user = getUserLocal();
+        setUser(user);
+    }, []);
     const [data, setData] = useState<DashboardData | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [holidays, setHolidays] = useState<any[]>([]);
-    
+
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -149,7 +141,7 @@ const DashBoard: React.FC = () => {
                 <Card>
                     <h3 className="text-lg font-semibold mb-4">Upcoming holidays</h3>
                     {upcomingHolidays.slice(0, 4).map((h, i) => (
-                        <p key={i} className="text-gray-700">{h.name} ({new Date(h.date).toLocaleDateString()})</p>
+                        <p key={i} className="text-gray-700">{h.name} ({new Date(h.date).toLocaleDateString("en-GB")})</p>
                     ))}
                 </Card>
 
@@ -161,8 +153,8 @@ const DashBoard: React.FC = () => {
                     ) : (
                         data.team_on_leave.map((member, i) => (
                             <p key={i} className="text-gray-700">
-                                {member.name} ( {new Date(member.from_date).toLocaleDateString()} →
-                                {new Date(member.to_date).toLocaleDateString()})
+                                {member.name} ( {new Date(member.from_date).toLocaleDateString("en-GB")} →
+                                {new Date(member.to_date).toLocaleDateString("en-GB")})
                             </p>
                         ))
                     )}

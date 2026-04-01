@@ -1,24 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { getUser } from "../../utils/getUser";
 import { useNavigate } from "react-router-dom";
-import { User } from "../../types";
+
+import { getUserLocal } from "../../utils/getUser";
 const Header: React.FC = () => {
 
-    const [user, setUser] = useState<User | null>(null);
-    useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const res = await getUser();
-                console.log("USER RESPONSE:", res.data);
 
-                setUser(res.data.data || res.data);
-            } catch (err) {
-                console.error("Failed to fetch user", err);
-            }
-        };
-
-        fetchUser();
-    }, []);
+const user = getUserLocal();
     const navigate = useNavigate()
 
     const [showNotif, setShowNotif] = useState(false);

@@ -16,10 +16,10 @@ const ApprovalCard: React.FC<Props> = ({ request, onApprove, onReject, Processin
             <div className="flex justify-between items-start mb-3">
                 <div>
                     <p className="font-semibold text-gray-800 text-base">
-                        {request.employeeName}
+                        {request.employee_name}
                     </p>
                     <p className="text-sm text-gray-500">
-                        {request.role} • {request.leaveType}
+                        {request.role} • {request.leave_type}
                     </p>
                 </div>
 
@@ -33,11 +33,11 @@ const ApprovalCard: React.FC<Props> = ({ request, onApprove, onReject, Processin
             <div className="flex gap-6 text-sm text-gray-700 mb-3">
                 <div>
                     <p className="text-gray-500">From</p>
-                    <p>{request.from_date}</p>
+                    <p>{new Date(request.from_date).toLocaleDateString("en-GB")}</p>
                 </div>
                 <div>
                     <p className="text-gray-500">To</p>
-                    <p>{request.to_date}</p>
+                    <p> {new Date(request.to_date).toLocaleDateString("en-GB")}</p>
                 </div>
             </div>
 

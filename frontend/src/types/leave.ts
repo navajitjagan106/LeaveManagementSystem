@@ -22,4 +22,7 @@ export interface LeaveHistory {
     total_days: number;
     reason: string;
     status: LeaveStatus;
+    created_at?: string;
+    updated_at?: string;
+    user_name?: string;
 }

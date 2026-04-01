@@ -14,7 +14,7 @@ const TeamView: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [holidays, setHolidays] = useState<any[]>([]);
     const [leaveTypes, setLeaveTypes] = useState<any[]>([]);
-
+    const [leaveEvents, setLeaveEvents] = useState<CalendarEvent[]>([]);
 
     useEffect(() => {
         fetchHolidays();
@@ -98,7 +98,8 @@ const TeamView: React.FC = () => {
                     backgroundColor: "#f59e0b",
                     borderColor: "#f59e0b",
                 }));
-                setEvents([...leaveEvents, ...holidayEvents]);
+                setLeaveEvents(leaveEvents);
+                setEvents([...leaveEvents, ...holidayEvents])
             } catch (error) {
                 alert('Failed to load team calendar');
             } finally {
@@ -132,16 +133,22 @@ const TeamView: React.FC = () => {
             color: leaveColorMap[key]?.dot || "bg-purple-500",
         };
     });
+    const todayDate = new Date();
+const thisMonth = todayDate.getMonth();
+const thisYear = todayDate.getFullYear();
 
     const stats = [
         {
             label: "Total Leaves",
-            value: events.length,
+            value: leaveEvents.length,
             color: "text-purple-600",
         },
         {
             label: "This Month",
-            value: events.length,
+            value:leaveEvents.filter((e) => {
+            const d = new Date(e.start);
+            return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+        }).length,
             color: "text-blue-600",
         },
         {
@@ -209,7 +216,7 @@ const TeamView: React.FC = () => {
                     dayCellClassNames={(arg) => {
                         const day = arg.date.getDay();
                         if (day === 0 || day === 6) {
-                            return ["bg-gray-50"]; 
+                            return ["bg-gray-50"];
                         }
                         return [];
                     }}
