@@ -46,8 +46,6 @@ export const login = async (req: Request, res: Response) => {
         if (!isMatch) {
             return res.status(400).json({ error: "Invalid credentials" });
         }
-
-        // 🔥 generate JWT
         const token = jwt.sign(
             {
                 id: dbUser.id,

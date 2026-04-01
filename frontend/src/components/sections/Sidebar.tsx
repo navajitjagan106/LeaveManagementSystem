@@ -7,26 +7,18 @@ import {
     Users,
     CheckCircle,
     Scale,
+    ShieldUser 
 } from "lucide-react";
-import { getUser } from "../../utils/getUser";
+import {  getUserLocal } from "../../utils/getUser";
 import { User } from "../../types";
 
 const Sidebar: React.FC = () => {
     const location = useLocation();
     const [user, setUser] = useState<User | null>(null);
     useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const res = await getUser();
-                setUser(res.data.data);
-            } catch (err) {
-                console.error("Failed to fetch user", err);
-            }
-        };
-
-        fetchUser();
-    }, []);
-
+    const user = getUserLocal();
+    setUser(user);
+}, []);
     const menuItems = [
         { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { path: "/apply-leave", label: "Apply Leave", icon: FileText },
@@ -34,6 +26,7 @@ const Sidebar: React.FC = () => {
         { path: "/team-view", label: "Team View", icon: Users },
         { path: "/approvals", label: "Approvals", roles: ["manager"], icon: CheckCircle },
         { path: "/leave-balance", label: "Leave Balance", icon: Scale },
+        { path: "/admin/employees", label: "Employees", roles: ["admin"] ,icon:ShieldUser }
     ];
 
     return (

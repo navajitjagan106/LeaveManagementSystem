@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getHistory, getLeaveTypes } from '../../api/leaveApi';
-import { LeaveType,LeaveHistory as Leave } from '../../types';
+import { LeaveType, LeaveHistory as Leave } from '../../types';
 const LeaveHistory: React.FC = () => {
     const [filters, setFilters] = useState({
         leaveType: '',
@@ -10,6 +10,8 @@ const LeaveHistory: React.FC = () => {
     const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
     const [leaveHistory, setLeaveHistory] = useState<Leave[]>([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     type Status = "approved" | "pending" | "rejected";
 
     const statusOptions = [
@@ -18,12 +20,12 @@ const LeaveHistory: React.FC = () => {
         { label: "Rejected", value: "rejected" },
     ];
     const columns = [
+        { key: "dates", label: "Leave Dates" },
         { key: "leave_type", label: "Leave Type" },
-        { key: "from_date", label: "From Date" },
-        { key: "to_date", label: "To Date" },
-        { key: "total_days", label: "Days" },
-        { key: "reason", label: "Reason" },
         { key: "status", label: "Status" },
+        { key: "requested_by", label: "Requested By" },
+        { key: "created_at", label: "Action Taken On" },
+        { key: "reason", label: "Leave Note" },
     ];
     useEffect(() => {
         fetchLeaveTypes();
@@ -40,36 +42,44 @@ const LeaveHistory: React.FC = () => {
 
 
     useEffect(() => {
+        const fetchLeaveHistory = async () => {
+            try {
+                setLoading(true);
+
+                const params: any = {};
+
+                if (filters.status) {
+                    params.status = filters.status;
+                }
+
+                if (filters.leaveType) {
+                    params.leave_type_id = filters.leaveType;
+                }
+
+                if (filters.search) {
+                    params.search = filters.search;
+                }
+
+                const response = await getHistory({
+                    ...params,
+                    page,
+                    limit: 5
+                });
+
+                setLeaveHistory(response.data.data || []);
+                setTotalPages(response.data.totalPages);
+
+
+            } catch (error) {
+                console.error('Failed to fetch leave history:', error);
+                alert('Failed to load leave history');
+            } finally {
+                setLoading(false);
+            }
+        };
         fetchLeaveHistory();
-    }, [filters]);
-    const fetchLeaveHistory = async () => {
-    try {
-        setLoading(true);
+    }, [filters,page]);
 
-        const params: any = {};
-
-        if (filters.status) {
-            params.status = filters.status;
-        }
-
-        if (filters.leaveType) {
-            params.leave_type_id = filters.leaveType; // ✅ direct ID
-        }
-
-        if (filters.search) {
-            params.search = filters.search;
-        }
-
-        const response = await getHistory(); // ✅ PASS PARAMS
-
-        setLeaveHistory(response.data.data || []);
-    } catch (error) {
-        console.error('Failed to fetch leave history:', error);
-        alert('Failed to load leave history');
-    } finally {
-        setLoading(false);
-    }
-};
 
     const formatDate = (dateString: string) => {
         if (!dateString) return '-';
@@ -143,7 +153,7 @@ const LeaveHistory: React.FC = () => {
                     className="flex-1 border border-gray-300 rounded-lg px-4 py-2"
                 />
             </div>
-                    
+
             {/* Table */}
             <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                 {leaveHistory.length === 0 ? (
@@ -151,8 +161,8 @@ const LeaveHistory: React.FC = () => {
                         No leave history found
                     </div>
                 ) : (
-                    <table className="w-full">
-                        <thead className="bg-gray-50 text-xs uppercase text-gray-600">
+                    <table className="w-full text-sm">
+                        <thead className="bg-gray-100 text-xs uppercase text-gray-500">
                             <tr>
                                 {columns.map((col, i) => (
                                     <th key={i} className="px-6 py-3 text-left">
@@ -165,24 +175,82 @@ const LeaveHistory: React.FC = () => {
                         <tbody className="divide-y">
                             {leaveHistory.map((row) => (
                                 <tr key={row.id} className="hover:bg-gray-50">
-                                    {columns.map((col, i) => (
-                                        <td key={i} className="px-6 py-4 text-sm text-gray-800">
-                                            {col.key === "status" ? (
-                                                <StatusBadge status={row.status} />
-                                            ) : col.key === "from_date" || col.key === "to_date" ? (
-                                                formatDate(row[col.key])
-                                            ) : (
-                                                row[col.key as keyof typeof row]
+
+                                    <td className="px-6 py-4">
+                                        <div className="font-medium">
+                                            {formatDate(row.from_date)}
+                                            {row.from_date !== row.to_date && (
+                                                <> - {formatDate(row.to_date)}</>
                                             )}
-                                        </td>
-                                    ))}
+                                        </div>
+                                        <div className="text-sm text-gray-500">
+                                            {row.total_days} Day{row.total_days > 1 ? "s" : ""}
+                                        </div>
+                                    </td>
+
+
+                                    <td className="px-6 py-4">
+                                        <div className="font-medium">{row.leave_type}</div>
+                                        <div className="text-sm text-gray-500">
+                                            Requested on {row.created_at ? formatDate(row.created_at) : "-"}
+                                        </div>
+                                    </td>
+
+                                    {/* ✅ Status */}
+                                    <td className="px-6 py-4">
+                                        <StatusBadge status={row.status as "approved" | "pending" | "rejected"} />
+                                        {row.status === "approved" && (
+                                            <div className="text-sm text-gray-500">
+                                                by Manager
+                                            </div>
+                                        )}
+                                    </td>
+
+                                    {/* 👤 Requested By */}
+                                    <td className="px-6 py-4">
+                                        {row.user_name || "You"}
+                                    </td>
+
+                                    {/* 📅 Action Taken */}
+                                    <td className="px-6 py-4">
+                                        {row.created_at ? formatDate(row.created_at) : "-"}
+                                    </td>
+
+                                    {/* 📝 Reason */}
+                                    <td className="px-6 py-4 text-gray-600 max-w-xs truncate">
+                                        {row.reason}
+                                    </td>
+
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 )}
             </div>
+
+            <div className="flex justify-center gap-4 mt-4">
+                <button
+                    disabled={page === 1}
+                    onClick={() => setPage(prev => prev - 1)}
+                    className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+                >
+                    Prev
+                </button>
+
+                <span className="px-4 py-2">
+                    Page {page} of {totalPages}
+                </span>
+
+                <button
+                    disabled={page === totalPages}
+                    onClick={() => setPage(prev => prev + 1)}
+                    className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+                >
+                    Next
+                </button>
+            </div>
         </div>
+
     );
 };
 export default LeaveHistory;

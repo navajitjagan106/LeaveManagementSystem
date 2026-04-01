@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { pool } from "../config/db";
 import { createNotification } from "../utils/notifications"
 import { calculateWorkingDays } from "../utils/calculateWorkingDays";
+import { getHolidaysinRange } from "../utils/getHolidaysinRange";
+
 
 export const getHolidays = async (req: Request, res: Response) => {
     try {
@@ -23,7 +25,7 @@ export const getDashboardData = async (req: Request, res: Response) => {
 
         const user_id = req.user.id;
 
-        // 1️⃣ Get manager_id + department
+
         const userResult = await pool.query(
             "SELECT manager_id, department FROM users WHERE id = $1",
             [user_id]
@@ -35,7 +37,7 @@ export const getDashboardData = async (req: Request, res: Response) => {
 
         const { manager_id, department } = userResult.rows[0];
 
-        // 🔥 Run queries in parallel
+
         const [
             balanceResult,
             pendingCount,
@@ -43,7 +45,7 @@ export const getDashboardData = async (req: Request, res: Response) => {
             teamLeaves
         ] = await Promise.all([
 
-            // 2️⃣ Leave balance
+
             pool.query(
                 `SELECT 
           lt.name,
@@ -56,7 +58,7 @@ export const getDashboardData = async (req: Request, res: Response) => {
                 [user_id]
             ),
 
-            // 3️⃣ Pending requests count
+
             pool.query(
                 `SELECT COUNT(*) 
          FROM leaves 
@@ -64,7 +66,7 @@ export const getDashboardData = async (req: Request, res: Response) => {
                 [user_id]
             ),
 
-            // 4️⃣ Approved requests count
+
             pool.query(
                 `SELECT COUNT(*) 
          FROM leaves 
@@ -72,7 +74,6 @@ export const getDashboardData = async (req: Request, res: Response) => {
                 [user_id]
             ),
 
-            // 5️⃣ Team on leave today
             pool.query(
                 `SELECT u.name, l.from_date, l.to_date
          FROM leaves l
@@ -80,11 +81,11 @@ export const getDashboardData = async (req: Request, res: Response) => {
          WHERE u.manager_id = $1
          AND l.status = 'approved'
          AND CURRENT_DATE BETWEEN l.from_date AND l.to_date`,
-                [manager_id || user_id] // fallback
+                [manager_id || user_id]
             )
         ]);
 
-        // 🎯 Final response
+
         res.json({
             leave_balance: balanceResult.rows,
             pending_requests: Number(pendingCount.rows[0].count),
@@ -140,15 +141,7 @@ export const approveLeave = async (req: Request, res: Response) => {
         }
 
 
-        const holidayRes = await client.query(
-            `SELECT date FROM holidays 
-             WHERE date BETWEEN $1 AND $2`,
-            [leaveData.from_date, leaveData.to_date]
-        );
-
-        const holidays = holidayRes.rows.map(
-            (h: any) => h.date.toISOString().split("T")[0]
-        );
+        const holidays = await getHolidaysinRange(leaveData.from_date, leaveData.to_date, pool);
 
 
         const correctDays = calculateWorkingDays(
@@ -192,12 +185,6 @@ export const approveLeave = async (req: Request, res: Response) => {
             data: result.rows[0]
         });
 
-        // async notification (outside transaction)
-        createNotification(
-            leaveData.user_id,
-            `Your leave request has been ${status}`
-        ).catch(console.error);
-
     } catch (err: any) {
         await client.query("ROLLBACK");
         console.error(err);
@@ -234,10 +221,10 @@ export const getPendingLeaves = async (req: Request, res: Response) => {
         l.to_date,
         l.reason,
         l.status
-       FROM leaves l
-       JOIN users u ON l.user_id = u.id
-       JOIN leave_types lt ON l.leave_type_id = lt.id
-       WHERE l.applied_to = $1 AND l.status = 'pending'`,
+        FROM leaves l
+        JOIN users u ON l.user_id = u.id
+        JOIN leave_types lt ON l.leave_type_id = lt.id
+        WHERE l.applied_to = $1 AND l.status = 'pending'`,
             [manager_id]
         );
 
@@ -256,7 +243,7 @@ export const applyLeave = async (req: Request, res: Response) => {
     try {
         const { leave_type_id, from_date, to_date, reason, duration_type } = req.body;
 
-        console.log("Incoming data:", req.body);
+
 
         if (!req.user) {
             return res.status(401).json({ error: "Unauthorized" });
@@ -269,24 +256,17 @@ export const applyLeave = async (req: Request, res: Response) => {
 
         const user_id = req.user.id;
 
-        const holidayRes = await pool.query(
-            `SELECT date FROM holidays 
-     WHERE date BETWEEN $1 AND $2`,
-            [from_date, to_date]
-        );
+        const holidays = await getHolidaysinRange(from_date, to_date, pool);
 
-        const holidays = holidayRes.rows.map(r => r.date.toISOString().split("T")[0]);
-
-        // Get user's manager
         const data = await pool.query(
             `SELECT 
         u.manager_id,
         lb.total_allocated,
         lb.used
-     FROM users u
-     JOIN leave_balances lb 
+        FROM users u
+        JOIN leave_balances lb 
         ON lb.user_id = u.id AND lb.leave_type_id = $2
-     WHERE u.id = $1`,
+        WHERE u.id = $1`,
             [user_id, leave_type_id]
         );
 
@@ -431,18 +411,24 @@ export const calculateDays = async (req: Request, res: Response) => {
 
 export const getLeaveHistory = async (req: Request, res: Response) => {
     try {
-        const { status, leave_type_id, search } = req.query;
+        const { status, leave_type_id, search, page = 1, limit = 10 } = req.query;
         if (!req.user) {
             return res.status(401).json({ error: "Unauthorized" });
         }
 
         const user_id = req.user.id;
         let query = `
-        SELECT l.*, lt.name as leave_type
+        SELECT l.*, lt.name as leave_type,u.name as user_name
         FROM leaves l
         JOIN leave_types lt ON l.leave_type_id = lt.id
+        JOIN users u ON l.user_id=u.id
         WHERE l.user_id = $1
     `;
+
+        let countQuery = `
+            SELECT COUNT(*) FROM leaves l WHERE l.user_id = $1
+        `;
+
 
         const values: any[] = [user_id];
         let index = 2;
@@ -450,6 +436,7 @@ export const getLeaveHistory = async (req: Request, res: Response) => {
         // filter by status
         if (status) {
             query += ` AND l.status = $${index}`;
+            countQuery += `AND l.status=$${index} `
             values.push(status);
             index++;
         }
@@ -457,6 +444,7 @@ export const getLeaveHistory = async (req: Request, res: Response) => {
         // filter by leave type
         if (leave_type_id) {
             query += ` AND l.leave_type_id = $${index}`;
+            countQuery += `AND l.leave_type_id=$${index} `
             values.push(leave_type_id);
             index++;
         }
@@ -464,18 +452,29 @@ export const getLeaveHistory = async (req: Request, res: Response) => {
         // search (reason)
         if (search) {
             query += ` AND l.reason ILIKE $${index}`;
+            countQuery += `AND l.reason ILIKE $${index} `
             values.push(`%${search}%`);
             index++;
         }
 
-        query += ` ORDER BY l.created_at DESC`;
+        const offset = (Number(page) - 1) * Number(limit);
 
-        const result = await pool.query(query, values);
+
+        query += ` ORDER BY l.created_at DESC LIMIT $${index} OFFSET $${index + 1}`;
+        values.push(limit, offset);
+        const [dataResult, countResult] = await Promise.all([
+            pool.query(query, values),
+            pool.query(countQuery, values.slice(0, index - 1))
+        ]);
 
         res.json({
             success: true,
-            data: result.rows
+            data: dataResult.rows,
+            total: Number(countResult.rows[0].count),
+            page: Number(page),
+            totalPages: Math.ceil(countResult.rows[0].count / Number(limit))
         });
+
 
     } catch (err) {
         console.error(err);
@@ -491,20 +490,58 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
 
         const user_id = req.user.id;
 
-        const result = await pool.query(
-            `SELECT 
-                lb.leave_type_id,          
-        lt.name as type,
-        lb.total_allocated,
-        lb.used,
-        (lb.total_allocated - lb.used) AS remaining
-        FROM leave_balances lb
-        JOIN leave_types lt ON lb.leave_type_id = lt.id
-        WHERE lb.user_id = $1`,
-            [user_id]
-        );
+        const [balanceResult, weeklyResult] = await Promise.all([
 
-        res.json(result.rows);
+            // 1️⃣ Existing leave balance
+            pool.query(
+                `SELECT 
+                    lb.leave_type_id,          
+                    lt.name as type,
+                    lb.total_allocated,
+                    lb.used,
+                    (lb.total_allocated - lb.used) AS remaining
+                FROM leave_balances lb
+                JOIN leave_types lt ON lb.leave_type_id = lt.id
+                WHERE lb.user_id = $1`,
+                [user_id]
+            ),
+
+            // 2️⃣ 🔥 Weekly Pattern (MULTI-DAY SAFE)
+            pool.query(
+                `
+                SELECT 
+                    EXTRACT(DOW FROM d)::int AS day,
+                    COUNT(*) as count
+                FROM leaves l,
+                GENERATE_SERIES(l.from_date, l.to_date, INTERVAL '1 day') AS d
+                WHERE l.user_id = $1
+                AND l.status = 'approved'
+                GROUP BY day
+                ORDER BY day;
+                `,
+                [user_id]
+            )
+        ]);
+
+
+        const daysMap = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+        const weeklyPattern = daysMap.map((day, i) => ({
+            day,
+            value: 0
+        }));
+
+        weeklyResult.rows.forEach((row: any) => {
+            weeklyPattern[row.day].value = Number(row.count);
+        });
+
+
+
+
+        res.json({
+            leaveBalances: balanceResult.rows,
+            weeklyPattern
+        });
 
     } catch (err) {
         console.error(err);
@@ -532,7 +569,7 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
 
         const manager_id = userResult.rows[0].manager_id;
 
-        // 🔥 dynamic fields
+
         let selectFields = `
       l.id,
       u.name,
