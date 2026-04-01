@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getHistory, getLeaveTypes } from '../../api/leaveApi';
 import { LeaveType, LeaveHistory as Leave } from '../../types';
+import PageHeader from '../common/PageHeader';
 const LeaveHistory: React.FC = () => {
     const [filters, setFilters] = useState({
         leaveType: '',
@@ -111,6 +112,10 @@ const LeaveHistory: React.FC = () => {
 
     return (
         <div>
+            <PageHeader
+    title="Leave History"
+    subtitle="View all your past leave requests"
+/>
             {/* Filters */}
             <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex gap-4">
 

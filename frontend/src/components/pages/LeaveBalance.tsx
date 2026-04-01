@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Card from '../cards/Card';
 import { getBalance } from '../../api/leaveApi';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
+import PageHeader from '../common/PageHeader';
 
 const LeaveBalance: React.FC = () => {
     type LeaveBalanceType = {
@@ -51,6 +52,10 @@ const LeaveBalance: React.FC = () => {
     }));
     return (
         <div>
+            <PageHeader
+                title="Leave Balance"
+                subtitle="View your Leave Balance"
+            />
 
             {/* Balance Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">

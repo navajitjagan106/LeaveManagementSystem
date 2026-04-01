@@ -7,6 +7,7 @@ import {
     getLeaveInitData,
 } from "../../api/leaveApi";
 import { LeaveBalance, LeaveType } from "../../types";
+import PageHeader from '../common/PageHeader';
 
 
 const ApplyLeave: React.FC = () => {
@@ -108,7 +109,13 @@ const ApplyLeave: React.FC = () => {
     const remaining = selectedBalance?.remaining || 0;
 
     return (
+        <>
+        <PageHeader
+    title="Apply Leave"
+    subtitle="Submit a new leave request"
+/>
         <div className='flex justify-center'>
+            
             <div className="bg-white p-8 rounded-lg shadow-sm w-full">
                 <form onSubmit={handleSubmit}>
 
@@ -222,6 +229,7 @@ const ApplyLeave: React.FC = () => {
                 </form>
             </div>
         </div>
+        </>
     );
 };
 

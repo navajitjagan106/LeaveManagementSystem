@@ -5,6 +5,7 @@ import { getDashboard, getHolidays } from "../../api/leaveApi";
 import { getUserLocal } from '../../utils/getUser';
 import { useNavigate } from 'react-router-dom';
 import { DashboardData, User } from "../../types";
+import PageHeader from '../common/PageHeader';
 
 type Balance = {
     label: string;
@@ -90,30 +91,25 @@ const DashBoard: React.FC = () => {
         value: `${item.used} of ${item.total_allocated}`,
     }));
 
-
-
-
-
-    // console.log("Dashboard rendered");
-
     return (
         <div>
-            {/* Welcome Banner */}
+            <PageHeader
+                title="Dashboard"
+                subtitle="Overview of your leave activity"
+            />
+
             <div className="bg-gradient-to-r from-[#5746AF] to-[#302178] text-white p-8 rounded-xl mb-6">
                 <h1 className="text-3xl font-bold mb-2">Welcome, {user?.name || "User"}!</h1>
                 <p className="text-purple-100">Your leave dashboard</p>
             </div>
 
-            {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 {stats.map((stat) => (
                     <StatCard key={stat.label} label={stat.label} value={stat.value} />
                 ))}
             </div>
 
-            {/* Main Content */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {/* Apply Leave Card */}
                 <div className="bg-white p-6 rounded-lg shadow-sm">
                     <h3 className="text-lg font-semibold mb-4">Apply for leave</h3>
                     <button className="w-full bg-[#5746AF] text-white py-3 rounded-lg hover:bg-purple-700 transition"
@@ -122,7 +118,6 @@ const DashBoard: React.FC = () => {
                     </button>
                 </div>
 
-                {/* Leave Balance */}
                 <Card>
                     <h3 className="text-lg font-semibold mb-4">Leave balance</h3>
                     <div className="space-y-3">
