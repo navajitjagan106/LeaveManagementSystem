@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import ApprovalCard from '../cards/ApprovalCard';
 import { getPending, approveLeave } from '../../api/leaveApi';
 import { ApprovalRequest } from "../../types";
+import PageHeader from '../common/PageHeader';
 const Approvals: React.FC = () => {
 
     const filtersConfig = [
@@ -74,7 +75,15 @@ const Approvals: React.FC = () => {
 
     return (
         <div>
-
+            <PageHeader
+    title="Approvals"
+    subtitle="Manage pending leave requests"
+    action={
+        <button className="bg-purple-600 text-white px-4 py-2 rounded-lg">
+            Refresh
+        </button>
+    }
+/>
             {/* Filters */}
             <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex gap-4">
                 {filtersConfig.map((f, i) =>

@@ -1,6 +1,5 @@
 import { Navigate } from "react-router-dom";
 import React, { useEffect, useState } from "react";
-import { getUser } from "../../utils/getUser";
 import { User } from "../../types";
 
 type Props = {
@@ -9,19 +8,7 @@ type Props = {
 };
 
 const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles }) => {
-    const [user, setUser] = useState<User | null>(null);
-    useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const res = await getUser();
-                setUser(res.data.data);
-            } catch (err) {
-                console.error("Failed to fetch user", err);
-            }
-        };
-
-        fetchUser();
-    }, []);
+    const user: User | null = JSON.parse(localStorage.getItem("user") || "null");
 
     const token = localStorage.getItem("token");
 
@@ -30,7 +17,7 @@ const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles }) => {
     }
 
     if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-        return <Navigate to="/dashboard" />; 
+        return <Navigate to="/dashboard" replace />;
     }
 
     return <>{children}</>;

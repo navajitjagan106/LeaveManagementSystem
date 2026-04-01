@@ -7,6 +7,7 @@ import { getHolidays, getLeaveTypes } from "../../api/leaveApi";
 import {
     LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer
 } from "recharts";
+import PageHeader from "../common/PageHeader";
 
 
 const AdminDashboard = () => {
@@ -71,6 +72,10 @@ const AdminDashboard = () => {
 
     return (
         <div className="space-y-6">
+            <PageHeader
+                title="Employee Management"
+                subtitle="Manage users, roles and departments"
+            />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {stats.map((s, i) => (
                     <div key={i} className="bg-white p-5 rounded-xl shadow-sm">

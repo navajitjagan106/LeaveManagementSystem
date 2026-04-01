@@ -8,22 +8,22 @@ const Login: React.FC = () => {
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+        e.preventDefault();
 
-    try {
-        localStorage.removeItem("token"); 
+        try {
+            localStorage.removeItem("token");
 
-        const res = await login({ email, password });
+            const res = await login({ email, password });
 
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("user", JSON.stringify(res.data.user));
+            localStorage.setItem("token", res.data.token);
+            localStorage.setItem("user", JSON.stringify(res.data.user));
 
-        navigate("/dashboard");
-    } catch (err) {
-        console.error(err);
-        alert("Invalid credentials");
-    }
-};
+            navigate("/dashboard");
+        } catch (err) {
+            console.error(err);
+            alert("Invalid credentials");
+        }
+    };
 
     return (
         <div className="flex justify-center items-center h-screen bg-gray-100">

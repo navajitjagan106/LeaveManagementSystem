@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import { getLeaveTypes, getTeamLeaves, getHolidays } from "../../api/leaveApi";
+import PageHeader from "../common/PageHeader";
 
 type CalendarEvent = {
     title: string;
@@ -177,7 +178,10 @@ const thisYear = todayDate.getFullYear();
 
     return (
         <div className="space-y-6">
-
+               <PageHeader
+                title="Team View"
+                subtitle="View your Team members on Leave "
+            />
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4">
                 {stats.map((s, i) => (
