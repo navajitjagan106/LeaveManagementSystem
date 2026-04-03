@@ -1,72 +1,81 @@
 import React, { useEffect, useState } from "react";
 import Card from "../cards/Card";
-import { getUser } from "../../utils/getUser";
+import PageHeader from "../common/PageHeader";
+import { getuserdata } from "../../api/leaveApi";
 import { User } from "../../types";
 
 const Profile: React.FC = () => {
     const [user, setUser] = useState<User | null>(null);
 
-   useEffect(() => {
-    const fetchUser = async () => {
-        try {
-            const res = await getUser();
-            setUser(res.data.data);
-        } catch (err) {
-            console.error("Failed to fetch user", err);
-        }
-    };
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const res = await getuserdata();
+                setUser(res.data.data);
+            } catch (err) {
+                console.error("Failed to fetch user", err);
+            }
+        };
 
-    fetchUser();
-}, []);
-
+        fetchUser();
+    }, []);
 
     if (!user) {
         return <p className="text-center py-8">Loading profile...</p>;
     }
 
-    return (
-        <div className="max-w-3xl mx-auto space-y-6">
+    // 🔥 Dynamic fields (no repetition)
+    const profileFields = [
+        { label: "Full Name", value: user.name },
+        { label: "Email", value: user.email },
+        { label: "Role", value: user.role, capitalize: true },
+        { label: "Department", value: user.department || "-" },
+        { label: "Manager", value: user.manager_name || "N/A" },
+    ];
 
-            {/* Header */}
-            <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6 rounded-xl">
-                <h1 className="text-2xl font-bold">{user.name}</h1>
-                <p className="text-purple-100">{user.email}</p>
+    return (
+        <div className="max-w-4xl mx-auto space-y-6">
+
+            <PageHeader
+                title="Profile"
+                subtitle="View your personal and organizational details"
+            />
+
+            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 rounded-2xl shadow-sm flex items-center justify-between">
+                <div>
+                    <h2 className="text-xl font-semibold">{user.name}</h2>
+                    <p className="text-purple-100 text-sm">{user.email}</p>
+                </div>
+
+                <div className="bg-white/20 px-4 py-1 rounded-full text-sm capitalize">
+                    {user.role}
+                </div>
             </div>
 
-            {/* Profile Details */}
             <Card>
-                <h3 className="text-lg font-semibold mb-4">Profile Information</h3>
+                <h3 className="text-lg font-semibold mb-4 text-gray-800">
+                    Profile Information
+                </h3>
 
-                <div className="space-y-4">
+                <div className="divide-y">
+                    {profileFields.map((field, index) => (
+                        <div
+                            key={index}
+                            className="flex justify-between py-3 text-sm"
+                        >
+                            <span className="text-gray-500">
+                                {field.label}
+                            </span>
 
-                    <div className="flex justify-between">
-                        <span className="text-gray-500">Full Name</span>
-                        <span className="font-medium">{user.name}</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                        <span className="text-gray-500">Email</span>
-                        <span className="font-medium">{user.email}</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                        <span className="text-gray-500">Role</span>
-                        <span className="font-medium capitalize">{user.role}</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                        <span className="text-gray-500">Department</span>
-                        <span className="font-medium">{user.department || "-"}</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                        <span className="text-gray-500">Manager</span>
-                        <span className="font-medium">{user.manager_name || "N/A"}</span>
-                    </div>
-
+                            <span className="font-medium text-gray-800 ">
+                                {field.capitalize
+                                    ? String(field.value)
+                                    : field.value}
+                            </span>
+                        </div>
+                    ))}
                 </div>
             </Card>
-
         </div>
     );
 };

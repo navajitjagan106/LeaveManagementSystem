@@ -87,7 +87,7 @@ const DashBoard: React.FC = () => {
     ];
 
     const balances: Balance[] = data.leave_balance.map((item) => ({
-        label: item.type,
+        label: item.name,
         value: `${item.used} of ${item.total_allocated}`,
     }));
 

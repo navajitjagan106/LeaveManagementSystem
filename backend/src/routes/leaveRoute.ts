@@ -6,7 +6,7 @@ import { authenticate  } from "../middleware/authMiddleware";
 
 const router = express.Router();
 router.patch("/approve/:id",authorizeRoles("manager"), approveLeave);
-router.post("/apply",authorizeRoles("employee"), applyLeave);
+router.post("/apply",authorizeRoles("employee","manager"), applyLeave);
 router.get('/types', getLeaveTypes);
 router.get('/users/manager',  getManager);
 router.get("/holidays",getHolidays)

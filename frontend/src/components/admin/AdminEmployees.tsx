@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
-import { getEmployees, deleteEmployee } from "../../api/adminApi";
+import { useEffect, useState } from "react";
+import { getEmployees, } from "../../api/adminApi";
 import AddEmployeeModal from "./modal/AddEmployeeModal";
-import EditEmployeeModal from "./modal/EditEmployeeModal";
+
+import EmployeeDetailsModal from "./modal/EmployeeDetailModal";
 
 // 🔹 Small reusable components
 const RoleBadge = ({ role }: { role: string }) => {
@@ -13,13 +14,13 @@ const RoleBadge = ({ role }: { role: string }) => {
                 : "bg-gray-200 text-gray-700";
 
     return (
-        <span className={`text-xs px-2 py-1 rounded ${styles}`}>
+        <span className={`w-1/3 text-xs px-2 py-1  rounded ${styles}`}>
             {role}
         </span>
     );
 };
 
-const EmployeeRow = ({ emp, onEdit, onDelete }: any) => (
+const EmployeeRow = ({ emp, onEdit }: any) => (
     <div className="grid grid-cols-5 items-center px-4 py-3 border-t hover:bg-white">
         <div className="flex items-center gap-2">
             <div className="w-8 h-8 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 text-sm font-semibold">
@@ -32,9 +33,11 @@ const EmployeeRow = ({ emp, onEdit, onDelete }: any) => (
         <RoleBadge role={emp.role} />
         <span className="text-sm text-gray-600">{emp.manager_name || "—"}</span>
 
-        <div className="flex gap-3 text-sm">
-            <button onClick={() => onEdit(emp)} className="text-blue-500">Edit</button>
-            <button onClick={() => onDelete(emp.id)} className="text-red-500">Delete</button>
+        <div
+            className=" items-center px-4 py-3 hover:bg-white cursor-pointer"
+            onClick={() => onEdit(emp)}
+        >
+            ...
         </div>
     </div>
 );
@@ -54,10 +57,6 @@ const AdminEmployees = () => {
         fetchEmployees();
     }, []);
 
-    const handleDelete = async (id: number) => {
-        await deleteEmployee(id);
-        fetchEmployees();
-    };
 
     const filtered = employees.filter(({ name, email }) =>
         `${name} ${email}`.toLowerCase().includes(search.toLowerCase())
@@ -66,7 +65,6 @@ const AdminEmployees = () => {
     return (
         <div className="bg-white p-6 rounded-2xl shadow-sm border">
 
-            {/* Header */}
             <div className="flex justify-between mb-6 gap-3">
                 <div>
                     <h2 className="text-xl font-semibold">Employees</h2>
@@ -89,7 +87,6 @@ const AdminEmployees = () => {
                 </div>
             </div>
 
-            {/* Table */}
             <div className="bg-gray-50 rounded-xl overflow-hidden">
                 <div className="grid grid-cols-5 text-xs font-semibold text-gray-500 px-4 py-3">
                     {["Name", "Email", "Role", "Manager", "Actions"].map((h) => (
@@ -102,8 +99,7 @@ const AdminEmployees = () => {
                         <EmployeeRow
                             key={emp.id}
                             emp={emp}
-                            onEdit={setSelectedUser}
-                            onDelete={handleDelete}
+                            onEdit={() => setSelectedUser(emp)}
                         />
                     ))
                 ) : (
@@ -122,7 +118,7 @@ const AdminEmployees = () => {
             )}
 
             {selectedUser && (
-                <EditEmployeeModal
+                <EmployeeDetailsModal
                     user={selectedUser}
                     onClose={() => setSelectedUser(null)}
                     onSuccess={fetchEmployees}

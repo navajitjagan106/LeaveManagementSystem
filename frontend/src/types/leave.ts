@@ -6,7 +6,7 @@ export interface LeaveType {
 
 export interface LeaveBalance {
     leave_type_id: number;
-    type: string;
+    name: string;
     total_allocated: number;
     used: number;
     remaining: number;

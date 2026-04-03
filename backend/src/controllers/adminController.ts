@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { pool } from "../config/db";
 import bcrypt from "bcrypt";
 
-// ➕ Add Employee
 export const createEmployee = async (req: Request, res: Response) => {
     try {
         const { name, password, email, role, manager_id, department } = req.body;
@@ -10,10 +9,24 @@ export const createEmployee = async (req: Request, res: Response) => {
 
         const result = await pool.query(
             `INSERT INTO users (name,password, email, role, manager_id, department)
-             VALUES ($1, $2, $3, $4, $5,$6)
-             RETURNING *`,
+            VALUES ($1, $2, $3, $4, $5,$6)
+            RETURNING *`,
             [name, hashedPassword, email, role, manager_id || null, department]
         );
+        const user = result.rows[0]
+        const leaveTypes = await pool.query(
+            "SELECT id, max_days FROM leave_types"
+        );
+
+        const balanceQueries = leaveTypes.rows.map((lt: any) =>
+            pool.query(
+                `INSERT INTO leave_balances (user_id, leave_type_id, total_allocated, used)
+                VALUES ($1, $2, $3, 0)`,
+                [user.id, lt.id, lt.max_days]
+            )
+        );
+
+        await Promise.all(balanceQueries);
 
         res.json({ success: true, data: result.rows[0] });
     } catch (err) {
@@ -21,8 +34,7 @@ export const createEmployee = async (req: Request, res: Response) => {
     }
 };
 
-// 📋 Get all employees
-export const getAllEmployees = async (_: Request, res: Response) => {
+export const getAllEmployees = async (req: Request, res: Response) => {
     try {
         const result = await pool.query(`
             SELECT u.*, m.name AS manager_name
@@ -36,7 +48,6 @@ export const getAllEmployees = async (_: Request, res: Response) => {
     }
 };
 
-// ✏️ Update employee
 export const updateEmployee = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -44,9 +55,9 @@ export const updateEmployee = async (req: Request, res: Response) => {
         const { role, manager_id, department } = req.body;
         const result = await pool.query(
             `UPDATE users
-             SET role = $1, manager_id = $2, department = $3
-             WHERE id = $4
-             RETURNING *`,
+            SET role = $1, manager_id = $2, department = $3
+            WHERE id = $4
+            RETURNING *`,
             [role, manager_id, department, id]
         );
 
@@ -56,13 +67,10 @@ export const updateEmployee = async (req: Request, res: Response) => {
     }
 };
 
-// ❌ Delete employee
 export const deleteEmployee = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-
         await pool.query(`DELETE FROM users WHERE id = $1`, [id]);
-
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: "Failed to delete employee" });
@@ -135,8 +143,6 @@ export const getAllLeaves = async (req: Request, res: Response) => {
     }
 };
 
-
-
 export const updateLeaveType = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { max_days } = req.body;
@@ -193,5 +199,117 @@ export const deleteHoliday = async (req: Request, res: Response) => {
 
     } catch (err) {
         res.status(500).json({ error: "Failed to delete holiday" });
+    }
+};
+
+export const getUserLeaveBalance = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        const requesterId = req.user.id;
+        const role = req.user.role;
+        const targetUserId = Number(req.params.id);
+
+        if (!["admin"].includes(role)) {
+            return res.status(403).json({ error: "Forbidden" });
+        }
+
+        if (role === "manager") {
+            const check = await pool.query(
+                "SELECT id FROM users WHERE id = $1 AND manager_id = $2",
+                [targetUserId, requesterId]
+            );
+
+            if (check.rows.length === 0) {
+                return res.status(403).json({ error: "Not your team member" });
+            }
+        }
+
+        const result = await pool.query(
+            `SELECT 
+                lb.leave_type_id,
+                lt.name as type,
+                lb.total_allocated,
+                lb.used,
+                (lb.total_allocated - lb.used) AS remaining
+            FROM leave_balances lb
+            JOIN leave_types lt ON lb.leave_type_id = lt.id
+            WHERE lb.user_id = $1
+            ORDER BY lb.leave_type_id`,
+            [targetUserId]
+        );
+
+        res.json({
+            success: true,
+            data: result.rows
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch leave balance" });
+    }
+};
+
+export const updateLeaveBalance = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        const role = req.user.role;
+        
+        const { user_id, leave_type_id, change } = req.body;
+
+        if (!["admin"].includes(role)) {
+            return res.status(403).json({ error: "Forbidden" });
+        }
+
+        const balance = await pool.query(
+            `SELECT total_allocated, used 
+            FROM leave_balances
+            WHERE user_id = $1 AND leave_type_id = $2`,
+            [user_id, leave_type_id]
+        );
+
+        if (balance.rows.length === 0) {
+            return res.status(404).json({ error: "Leave type not found" });
+        }
+
+        const { total_allocated, used } = balance.rows[0];
+
+        const newTotal = total_allocated + change;
+
+        // ❗ validation
+        if (newTotal < used) {
+            return res.status(400).json({
+                error: "Cannot reduce below used leaves"
+            });
+        }
+
+        if (newTotal < 0) {
+            return res.status(400).json({
+                error: "Invalid leave balance"
+            });
+        }
+
+        // ✅ update
+        const result = await pool.query(
+            `UPDATE leave_balances
+            SET total_allocated = $1
+            WHERE user_id = $2 AND leave_type_id = $3
+             RETURNING *`,
+            [newTotal, user_id, leave_type_id]
+        );
+
+        res.json({
+            success: true,
+            data: result.rows[0]
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to update leave balance" });
     }
 };

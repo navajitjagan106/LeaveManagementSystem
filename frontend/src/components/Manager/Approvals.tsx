@@ -37,12 +37,12 @@ const Approvals: React.FC = () => {
         try {
             setProcessingId(id);
             const res = await approveLeave(id, "approved");
-            console.log("RESPONSE:", res);
 
             if (res.data.success) {
                 setApprovalQueue(prev =>
                     prev.filter(item => item.id !== id)
                 );
+                alert("Approved")
             } else {
                 throw new Error("Not successful");
             }
@@ -76,14 +76,14 @@ const Approvals: React.FC = () => {
     return (
         <div>
             <PageHeader
-    title="Approvals"
-    subtitle="Manage pending leave requests"
-    action={
-        <button className="bg-purple-600 text-white px-4 py-2 rounded-lg">
-            Refresh
-        </button>
-    }
-/>
+                title="Approvals"
+                subtitle="Manage pending leave requests"
+                action={
+                    <button className="bg-purple-600 text-white px-4 py-2 rounded-lg">
+                        Refresh
+                    </button>
+                }
+            />
             {/* Filters */}
             <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex gap-4">
                 {filtersConfig.map((f, i) =>

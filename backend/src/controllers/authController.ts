@@ -33,7 +33,6 @@ export const login = async (req: Request, res: Response) => {
             "SELECT * FROM users WHERE email = $1",
             [email]
         );
-        console.log("User from token:", req);
 
         if (user.rows.length === 0) {
             return res.status(400).json({ error: "Invalid credentials" });

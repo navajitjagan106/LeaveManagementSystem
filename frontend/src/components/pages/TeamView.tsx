@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
-import { getLeaveTypes, getTeamLeaves, getHolidays } from "../../api/leaveApi";
+import { getTeamLeaves, getHolidays } from "../../api/leaveApi";
 import PageHeader from "../common/PageHeader";
 
 type CalendarEvent = {
@@ -14,8 +14,7 @@ const TeamView: React.FC = () => {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [holidays, setHolidays] = useState<any[]>([]);
-    const [leaveTypes, setLeaveTypes] = useState<any[]>([]);
-    const [leaveEvents, setLeaveEvents] = useState<CalendarEvent[]>([]);
+    const [leaveEvents, setLeaveEvents] = useState<CalendarEvent[]>([])
 
     useEffect(() => {
         fetchHolidays();
@@ -27,20 +26,6 @@ const TeamView: React.FC = () => {
             setHolidays(res.data);
         } catch (err) {
             console.error("Failed to fetch holidays", err);
-        }
-    };
-
-
-    useEffect(() => {
-        fetchLeaveTypes();
-    }, []);
-
-    const fetchLeaveTypes = async () => {
-        try {
-            const res = await getLeaveTypes();
-            setLeaveTypes(res.data.data);
-        } catch (err) {
-            console.error("Failed to fetch leave types", err);
         }
     };
 
@@ -118,25 +103,10 @@ const TeamView: React.FC = () => {
         const day = String(date.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
     };
-
-    const leaveColorMap: Record<string, { bg: string; dot: string }> = {
-        sick: { bg: "#ef4444", dot: "bg-red-500" },
-        casual: { bg: "#3b82f6", dot: "bg-blue-500" },
-        earned: { bg: "#10b981", dot: "bg-green-500" },
-    };
-
-
-    const legend = leaveTypes.map((lt) => {
-        const key = lt.name.toLowerCase().split(" ")[0];
-
-        return {
-            label: lt.name,
-            color: leaveColorMap[key]?.dot || "bg-purple-500",
-        };
-    });
+    
     const todayDate = new Date();
-const thisMonth = todayDate.getMonth();
-const thisYear = todayDate.getFullYear();
+    const thisMonth = todayDate.getMonth();
+    const thisYear = todayDate.getFullYear();
 
     const stats = [
         {
@@ -146,10 +116,10 @@ const thisYear = todayDate.getFullYear();
         },
         {
             label: "This Month",
-            value:leaveEvents.filter((e) => {
-            const d = new Date(e.start);
-            return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
-        }).length,
+            value: leaveEvents.filter((e) => {
+                const d = new Date(e.start);
+                return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+            }).length,
             color: "text-blue-600",
         },
         {
@@ -164,7 +134,7 @@ const thisYear = todayDate.getFullYear();
     const filters = [
         {
             type: "select",
-            options: ["All Teams", "Engineering", "Sales"],
+            options: ["All Teams", "Products", "Tests"],
         },
         {
             type: "button",
@@ -172,17 +142,20 @@ const thisYear = todayDate.getFullYear();
         },
     ];
 
+    const legendItems = [
+    { label: "Leave", color: "bg-indigo-500" },
+    { label: "Holiday", color: "bg-yellow-500" },
+];
     if (loading) {
         return <div className="text-center py-8">Loading calendar...</div>;
     }
 
     return (
         <div className="space-y-6">
-               <PageHeader
+            <PageHeader
                 title="Team View"
                 subtitle="View your Team members on Leave "
             />
-            {/* Stats */}
             <div className="grid grid-cols-3 gap-4">
                 {stats.map((s, i) => (
                     <div key={i} className="bg-white p-4 rounded-xl shadow-sm">
@@ -193,8 +166,6 @@ const thisYear = todayDate.getFullYear();
                     </div>
                 ))}
             </div>
-
-            {/* Filters */}
             <div className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center">
 
                 <select className="border border-gray-300 rounded-lg px-4 py-2 text-sm">
@@ -220,7 +191,7 @@ const thisYear = todayDate.getFullYear();
                     dayCellClassNames={(arg) => {
                         const day = arg.date.getDay();
                         if (day === 0 || day === 6) {
-                            return ["bg-gray-50"];
+                            return ["bg-gray-300"];
                         }
                         return [];
                     }}
@@ -242,15 +213,16 @@ const thisYear = todayDate.getFullYear();
                 />
             </div>
 
-            {/* Legend */}
-            <div className="bg-white p-4 rounded-xl shadow-sm flex gap-6 text-sm">
-                {legend.map((l, i) => (
-                    <span key={i} className="flex items-center gap-2">
-                        <span className={`w-3 h-3 ${l.color} rounded-full`}></span>
-                        {l.label}
-                    </span>
-                ))}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+    <div className="flex gap-6 text-sm">
+        {legendItems.map((item, index) => (
+            <div key={index} className="flex items-center gap-2">
+                <span className={`w-3 h-3 rounded-full ${item.color}`}></span>
+                <span className="text-gray-700">{item.label}</span>
             </div>
+        ))}
+    </div>
+</div>
 
         </div>
     );
