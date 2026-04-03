@@ -13,7 +13,7 @@ const MainLayout = () => {
         <Header />
 
         <div className="p-6 bg-gray-100 h-[calc(100vh-56px)] overflow-y-auto">
-          <Outlet />   {/* 🔥 THIS MUST BE HERE */}
+          <Outlet />   
         </div>
       </div>
     </div>

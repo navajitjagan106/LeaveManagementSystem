@@ -132,7 +132,6 @@ const DashBoard: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Holidays */}
                 <Card>
                     <h3 className="text-lg font-semibold mb-4">Upcoming holidays</h3>
                     {upcomingHolidays.slice(0, 4).map((h, i) => (

@@ -18,7 +18,7 @@ import {
 
 const router = express.Router();
 
-router.use(authenticate, authorizeRoles("admin"));
+router.use(authorizeRoles("admin"));
 
 router.post("/users", createEmployee);
 router.get("/users", getAllEmployees);

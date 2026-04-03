@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
     updateEmployee,
     deleteEmployee,
@@ -38,8 +38,6 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
     const fetchManagers = async () => {
         try {
             const res = await getEmployees();
-
-            // filter only managers
             const managerList = res.data.data.filter(
                 (u: any) => u.role === "manager"
             );
@@ -49,14 +47,14 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
             console.error("Failed to fetch managers", err);
         }
     };
-    useEffect(() => {
-        fetchBalance();
-    }, []);
-
-    const fetchBalance = async () => {
+    const fetchBalance = useCallback(async () => {
         const res = await getuserBalance(user.id);
         setBalances(res.data.data || []);
-    };
+    }, [user.id]);
+    useEffect(() => {
+        fetchBalance();
+    }, [fetchBalance]);
+
 
     const handleChange = (e: any) => {
         setForm({ ...form, [e.target.name]: e.target.value });

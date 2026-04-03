@@ -84,7 +84,6 @@ const Approvals: React.FC = () => {
                     </button>
                 }
             />
-            {/* Filters */}
             <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex gap-4">
                 {filtersConfig.map((f, i) =>
                     f.type === "select" ? (
@@ -103,7 +102,6 @@ const Approvals: React.FC = () => {
                 )}
             </div>
 
-            {/* Approval Cards */}
             <div className="space-y-4">
                 {approvalQueue.map((req) => (
                     <ApprovalCard

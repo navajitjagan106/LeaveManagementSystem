@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getHolidays } from "../../../api/leaveApi";
-import { addHoliday } from "../../../api/adminApi";
+import { addHoliday, deleteHoliday } from "../../../api/adminApi";
 
 const HolidaySection = () => {
   const [holidays, setHolidays] = useState<any[]>([]);
@@ -17,13 +17,21 @@ const HolidaySection = () => {
 
   const handleAdd = async () => {
     if (!form.name || !form.date) {
-    alert("Fill all fields");
-    return;
-  }
-
-  await addHoliday(form);
-  setForm({ name: "", date: "" });
-  fetchHolidays();
+      alert("Fill all fields");
+      return;
+    }
+    await addHoliday(form);
+    setForm({ name: "", date: "" });
+    fetchHolidays();
+  };
+  const handleDelete = async (id: number) => {
+    try {
+      await deleteHoliday(id);
+      fetchHolidays(); // refresh list
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete holiday");
+    }
   };
 
   return (
@@ -39,7 +47,6 @@ const HolidaySection = () => {
         </button>
       </div>
 
-      {/* Inputs inline */}
       <div className="flex gap-2 mb-4">
         <input
           placeholder="Holiday"
@@ -56,19 +63,29 @@ const HolidaySection = () => {
         />
       </div>
 
-      {/* List */}
       <div className="space-y-2 max-h-64 overflow-y-auto">
-        {holidays.map(h => (
-          <div key={h.id} className="flex justify-between p-2 hover:bg-gray-100 rounded">
+        {holidays.map((h) => (
+          <div
+            key={h.id}
+            className="flex justify-between items-center p-2 hover:bg-gray-100 rounded"
+          >
+            {/* Left */}
+            <div>
+              <span className="font-medium">{h.name}</span>
+              <div className="text-sm text-gray-500">
+                {new Date(h.date).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                })}
+              </div>
+            </div>
 
-            <span>{h.name}</span>
-
-            <span className="text-sm text-gray-500">
-              {new Date(h.date).toLocaleDateString("en-IN", {
-                day: "numeric",
-                month: "short"
-              })}
-            </span>
+            <button
+              onClick={() => handleDelete(h.id)}
+              className="text-red-500 text-sm hover:text-red-700"
+            >
+              Delete
+            </button>
           </div>
         ))}
       </div>
