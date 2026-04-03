@@ -10,10 +10,16 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-    origin: ["http://localhost:3000",
-        "https://leavemsystem.netlify.app/"],
-    credentials: true
+  origin: [
+    "https://leavemsystem.netlify.app",
+    "http://localhost:3000",
+    "http://localhost:5173"
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
+
 app.use(express.json());
 app.get("/", (req, res) => {
     res.send("API is running");
