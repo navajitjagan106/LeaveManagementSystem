@@ -3,6 +3,7 @@ import Card from '../cards/Card';
 import { getBalance } from '../../api/leaveApi';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import PageHeader from '../common/PageHeader';
+import { Loader } from 'lucide-react';
 
 const LeaveBalance: React.FC = () => {
     type LeaveBalanceType = {
@@ -14,16 +15,20 @@ const LeaveBalance: React.FC = () => {
 
     const [leaveBalances, setLeaveBalances] = useState<LeaveBalanceType[]>([])
     const [weeklyData, setWeeklyData] = useState([])
+            const [loading, setLoading] = useState(true);
+    
     useEffect(() => {
         fetchBalances();
     }, []);
 
     const fetchBalances = async () => {
         try {
+                    setLoading(true)
             const res = await getBalance();
-            console.log(res.data)
+    
             setLeaveBalances(res.data.leaveBalances || []);
             setWeeklyData(res.data.weeklyPattern || [])
+                    setLoading(false)
         } catch (err) {
             console.error("Failed to fetch leave balance", err);
         }
@@ -50,6 +55,11 @@ const LeaveBalance: React.FC = () => {
         name: lb.type,
         value: lb.used,
     }));
+
+    if (loading) {
+        return <div className="text-center py-8"><Loader/></div>;
+    }
+
     return (
         <div>
             <PageHeader

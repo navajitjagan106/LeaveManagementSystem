@@ -3,6 +3,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import { getTeamLeaves, getHolidays } from "../../api/leaveApi";
 import PageHeader from "../common/PageHeader";
+import Loader from "../common/Loader";
 
 type CalendarEvent = {
     title: string;
@@ -154,7 +155,7 @@ const TeamView: React.FC = () => {
         { label: "Holiday", color: "bg-yellow-500" },
     ];
     if (loading) {
-        return <div className="text-center py-8">Loading calendar...</div>;
+        return <div className="text-center py-8"><Loader/></div>;
     }
 
     return (

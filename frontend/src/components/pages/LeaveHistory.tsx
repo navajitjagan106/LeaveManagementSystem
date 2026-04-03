@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getHistory, getLeaveInitData } from '../../api/leaveApi';
 import { LeaveType, LeaveHistory as Leave } from '../../types';
 import PageHeader from '../common/PageHeader';
+import Loader from '../common/Loader';
 const LeaveHistory: React.FC = () => {
     const [filters, setFilters] = useState({
         leaveType: '',
@@ -108,7 +109,7 @@ const LeaveHistory: React.FC = () => {
     };
 
     if (loading) {
-        return <div className="text-center py-8">Loading...</div>;
+        return <div className="text-center py-8"><Loader/></div>;
     }
 
     return (
