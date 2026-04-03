@@ -13,14 +13,14 @@ import Loader from "../common/Loader";
 const AdminDashboard = () => {
 
     const [chartData, setChartData] = useState<any[]>([]);
-    const [loading,setLoading]=useState(true)
+    const [loading, setLoading] = useState(true)
     useEffect(() => {
         const fetchChartData = async () => {
-                    setLoading(true)
+            setLoading(true)
             const res = await getAllLeaves();
             const processed = processChartData(res.data.data || []);
             setChartData(processed);
-                    setLoading(false)
+            setLoading(false)
         };
 
         fetchChartData()
@@ -48,8 +48,8 @@ const AdminDashboard = () => {
         }));
     };
 
-     if (loading) {
-        return <div className="text-center py-8"><Loader/></div>;
+    if (loading) {
+        return <div className="text-center py-8"><Loader /></div>;
     }
 
     return (
