@@ -195,6 +195,21 @@ export const applyLeave = async (req: Request, res: Response) => {
                 error: `Insufficient leave balance. Remaining: ${remaining}`
             });
         }
+        const overlapCheck = await pool.query(
+            `SELECT * FROM leaves 
+            WHERE user_id = $1
+            AND status IN ('pending', 'approved')
+            AND (
+            (from_date <= $3 AND to_date >= $2)
+            )`,
+            [user_id, from_date, to_date]
+        );
+
+        if (overlapCheck.rows.length > 0) {
+            return res.status(400).json({
+                error: "You already have a leave request for selected dates"
+            });
+        }
 
         // Insert leave request
         const result = await pool.query(
