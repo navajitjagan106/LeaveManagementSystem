@@ -158,8 +158,6 @@ export const updateLeaveType = async (req: Request, res: Response) => {
     res.json({ success: true, data: result.rows[0] });
 };
 
-
-
 export const addHoliday = async (req: Request, res: Response) => {
     try {
         const { name, date } = req.body;
@@ -170,8 +168,8 @@ export const addHoliday = async (req: Request, res: Response) => {
 
         const result = await pool.query(
             `INSERT INTO holidays (name, date)
-             VALUES ($1, $2)
-             RETURNING *`,
+            VALUES ($1, $2)
+            RETURNING *`,
             [name, date]
         );
 

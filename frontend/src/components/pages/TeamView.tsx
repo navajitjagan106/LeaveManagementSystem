@@ -103,19 +103,26 @@ const TeamView: React.FC = () => {
         const day = String(date.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
     };
-    
+
     const todayDate = new Date();
     const thisMonth = todayDate.getMonth();
     const thisYear = todayDate.getFullYear();
+    const holidaysThisMonth = holidays.filter((h) => {
+        const d = new Date(h.date);
+        return (
+            d.getMonth() === thisMonth &&
+            d.getFullYear() === thisYear
+        );
+    }).length;
 
     const stats = [
         {
-            label: "Total Leaves",
-            value: leaveEvents.length,
+            label: "Total Holidays",
+            value: holidaysThisMonth,
             color: "text-purple-600",
         },
         {
-            label: "This Month",
+            label: "Employees On Leave This Month",
             value: leaveEvents.filter((e) => {
                 const d = new Date(e.start);
                 return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
@@ -123,7 +130,7 @@ const TeamView: React.FC = () => {
             color: "text-blue-600",
         },
         {
-            label: "On Leave Today",
+            label: "Employees On Leave Today",
             value: events.filter(
                 (e) => e.start === new Date().toISOString().split("T")[0]
             ).length,
@@ -143,9 +150,9 @@ const TeamView: React.FC = () => {
     ];
 
     const legendItems = [
-    { label: "Leave", color: "bg-indigo-500" },
-    { label: "Holiday", color: "bg-yellow-500" },
-];
+        { label: "Leave", color: "bg-indigo-500" },
+        { label: "Holiday", color: "bg-yellow-500" },
+    ];
     if (loading) {
         return <div className="text-center py-8">Loading calendar...</div>;
     }
@@ -213,16 +220,16 @@ const TeamView: React.FC = () => {
                 />
             </div>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-    <div className="flex gap-6 text-sm">
-        {legendItems.map((item, index) => (
-            <div key={index} className="flex items-center gap-2">
-                <span className={`w-3 h-3 rounded-full ${item.color}`}></span>
-                <span className="text-gray-700">{item.label}</span>
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex gap-6 text-sm">
+                    {legendItems.map((item, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                            <span className={`w-3 h-3 rounded-full ${item.color}`}></span>
+                            <span className="text-gray-700">{item.label}</span>
+                        </div>
+                    ))}
+                </div>
             </div>
-        ))}
-    </div>
-</div>
 
         </div>
     );

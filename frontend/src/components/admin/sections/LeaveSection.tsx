@@ -19,12 +19,6 @@ const LeaveSection = () => {
         fetchTypes();
     }, []);
 
-    const handleUpdate = async (id: number, value: number) => {
-        await updateLeaveType(id, value);
-        setEditingId(null);
-        fetchTypes();
-    };
-
     return (
         <div className="bg-white p-6 rounded-xl shadow-sm">
             <div className="flex justify-between mb-4">

@@ -20,7 +20,7 @@ app.use("/api/leaves", authenticate, leaveRoutes);
 app.use("/api/auth", authRoutes);
 
 
-app.use("/api/admin", adminRoute);
+app.use("/api/admin", authenticate, adminRoute);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
