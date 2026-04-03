@@ -6,6 +6,7 @@ import { getUserLocal } from '../../utils/getUser';
 import { useNavigate } from 'react-router-dom';
 import { DashboardData, User } from "../../types";
 import PageHeader from '../common/PageHeader';
+import { Loader } from 'lucide-react';
 
 type Balance = {
     label: string;
@@ -18,6 +19,8 @@ const DashBoard: React.FC = () => {
         const user = getUserLocal();
         setUser(user);
     }, []);
+        const [loading, setLoading] = useState(true);
+    
     const [data, setData] = useState<DashboardData | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [holidays, setHolidays] = useState<any[]>([]);
@@ -27,8 +30,10 @@ const DashBoard: React.FC = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                setLoading(true)
                 const res = await getDashboard();
                 setData(res.data);
+                setLoading(false)
             } catch (err) {
                 console.error(err);
                 setError("Failed to load dashboard");
@@ -90,7 +95,9 @@ const DashBoard: React.FC = () => {
         label: item.name,
         value: `${item.used} of ${item.total_allocated}`,
     }));
-
+ if (loading) {
+        return <div className="text-center py-8"><Loader/></div>;
+    }
     return (
         <div>
             <PageHeader

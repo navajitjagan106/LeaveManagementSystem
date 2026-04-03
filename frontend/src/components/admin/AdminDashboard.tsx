@@ -7,17 +7,20 @@ import {
     LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer
 } from "recharts";
 import PageHeader from "../common/PageHeader";
+import Loader from "../common/Loader";
 
 
 const AdminDashboard = () => {
 
     const [chartData, setChartData] = useState<any[]>([]);
-
+    const [loading,setLoading]=useState(true)
     useEffect(() => {
         const fetchChartData = async () => {
+                    setLoading(true)
             const res = await getAllLeaves();
             const processed = processChartData(res.data.data || []);
             setChartData(processed);
+                    setLoading(false)
         };
 
         fetchChartData()
@@ -44,6 +47,10 @@ const AdminDashboard = () => {
             leaves: monthMap[month],
         }));
     };
+
+     if (loading) {
+        return <div className="text-center py-8"><Loader/></div>;
+    }
 
     return (
         <div className="space-y-6">
