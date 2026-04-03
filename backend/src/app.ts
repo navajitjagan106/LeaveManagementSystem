@@ -1,11 +1,9 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
-import { pool } from "./config/db";
 import leaveRoutes from "./routes/leaveRoute"
 import authRoutes from "./routes/authRoute";
 import { authenticate } from "./middleware/authMiddleware";
-import notificationRoute from "./routes/notificationRoute"
 import adminRoute from "./routes/adminRoute";
 dotenv.config();
 
@@ -17,14 +15,9 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// test route
-app.get("/", async (req, res) => {
-    const result = await pool.query("SELECT NOW()");
-    res.json({ time: result.rows[0] });
-});
+
 app.use("/api/leaves", authenticate, leaveRoutes);
 app.use("/api/auth", authRoutes);
-app.use("/api/notification", authenticate, notificationRoute);
 
 
 app.use("/api/admin", adminRoute);

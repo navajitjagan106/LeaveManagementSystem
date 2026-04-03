@@ -5,5 +5,6 @@ export interface ApprovalRequest {
     leave_type: string;
     from_date: string;
     to_date: string;
+    total_days:number,
     reason: string;
 }

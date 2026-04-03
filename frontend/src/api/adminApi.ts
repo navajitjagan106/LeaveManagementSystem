@@ -26,3 +26,9 @@ export const updateLeaveType=(id:number,max_days:number)=>
 
 export const getAllLeaves=()=>
     API.get("/admin/leaves")
+
+export const getuserBalance=(id:number)=>
+    API.get(`/admin/user-balance/${id}`)
+
+export const updateLeaveBalance=(data:{user_id:number,leave_type_id:number,change:number})=>
+    API.patch(`admin/user-balance`,data)

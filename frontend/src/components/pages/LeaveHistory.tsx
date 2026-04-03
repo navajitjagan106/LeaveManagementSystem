@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getHistory, getLeaveTypes } from '../../api/leaveApi';
+import { getHistory, getLeaveInitData } from '../../api/leaveApi';
 import { LeaveType, LeaveHistory as Leave } from '../../types';
 import PageHeader from '../common/PageHeader';
 const LeaveHistory: React.FC = () => {
@@ -34,8 +34,9 @@ const LeaveHistory: React.FC = () => {
 
     const fetchLeaveTypes = async () => {
         try {
-            const res = await getLeaveTypes();
-            setLeaveTypes(res.data.data);
+            const res = await getLeaveInitData();
+            console.log(res.data);
+            setLeaveTypes(res.data.data.leaveTypes);
         } catch (err) {
             console.error("Failed to fetch leave types", err);
         }
@@ -79,7 +80,7 @@ const LeaveHistory: React.FC = () => {
             }
         };
         fetchLeaveHistory();
-    }, [filters,page]);
+    }, [filters, page]);
 
 
     const formatDate = (dateString: string) => {
@@ -113,9 +114,9 @@ const LeaveHistory: React.FC = () => {
     return (
         <div>
             <PageHeader
-    title="Leave History"
-    subtitle="View all your past leave requests"
-/>
+                title="Leave History"
+                subtitle="View all your past leave requests"
+            />
             {/* Filters */}
             <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex gap-4">
 
