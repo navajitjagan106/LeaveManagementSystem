@@ -1,4 +1,3 @@
-import React from "react";
 import Sidebar from "../sections/Sidebar";
 import Header from "../sections/Header";
 
