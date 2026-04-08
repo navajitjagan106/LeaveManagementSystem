@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { getUserLocal } from "../../utils/getUser";
+import { Bell } from "lucide-react";
 const Header: React.FC = () => {
 
 
@@ -48,7 +49,6 @@ const user = getUserLocal();
         <div className="h-14 bg-[#5746AF] flex items-center justify-between px-6 text-white 
 sticky top-0 z-50 shadow-md">
 
-            {/* Left */}
             <div className="flex items-center gap-4">
                 <span className="font-semibold">Lumel Technologies</span>
                 <input
@@ -57,10 +57,8 @@ sticky top-0 z-50 shadow-md">
                 />
             </div>
 
-            {/* Right */}
             <div className="flex items-center gap-6 relative">
 
-                {/* 🔔 Notification */}
                 <div className="relative" ref={notifRef}>
                     <span
                         className="cursor-pointer"
@@ -69,7 +67,7 @@ sticky top-0 z-50 shadow-md">
                             setShowNotif(!showNotif)
                         }}
                     >
-                        🔔
+                        <Bell size={20} />
                     </span>
 
                     {showNotif && (
@@ -80,7 +78,6 @@ sticky top-0 z-50 shadow-md">
                     )}
                 </div>
 
-                {/* 👤 Profile */}
                 <div className="relative" ref={profileRef}>
                     <div
                         className="w-8 h-8 rounded-full bg-white text-purple-600 flex items-center justify-center cursor-pointer"

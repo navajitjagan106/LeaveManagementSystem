@@ -108,6 +108,7 @@ const LeaveBalance: React.FC = () => {
                             </ResponsiveContainer>
                         </div>
                     </Card>
+                    
                     {/* Pie Chart Placeholder */}
                     <Card>
                         <h3 className="text-lg font-semibold mb-4">Leave Balances</h3>

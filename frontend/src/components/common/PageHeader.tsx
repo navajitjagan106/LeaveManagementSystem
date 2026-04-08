@@ -12,7 +12,6 @@ const PageHeader: React.FC<Props> = ({ title, subtitle, action }) => {
             
             <div className="flex justify-between items-center">
 
-                {/* Left */}
                 <div>
                     <h1 className="text-2xl font-semibold text-gray-900">
                         {title}
@@ -25,7 +24,6 @@ const PageHeader: React.FC<Props> = ({ title, subtitle, action }) => {
                     )}
                 </div>
 
-                {/* Right */}
                 {action && (
                     <div>
                         {action}

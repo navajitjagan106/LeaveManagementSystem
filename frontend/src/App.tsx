@@ -18,7 +18,6 @@ const App: React.FC = () => {
     <Router>
       <Routes>
       <Route path="*" element={<RedirectHandler />} />
-        {/* 🔓 Public */}
         <Route path="/login" element={<Login />} />
         <Route
           element={

@@ -1,5 +1,4 @@
 import express from "express";
-import { authenticate } from "../middleware/authMiddleware";
 import { authorizeRoles } from "../middleware/roleMiddleware";
 import {
     createEmployee,

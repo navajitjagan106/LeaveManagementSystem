@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-     "build": "tsc",
+    "build": "tsc",
     "start": "node dist/app.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
+    "dev": "ts-node-dev --project ./tsconfig.json --respawn --transpile-only src/app.ts",
     "seed": "node dist/seed.js",
     "seed:dev": "ts-node src/seed.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -30,6 +30,6 @@
     "@types/node": "^25.5.0",
     "@types/pg": "^8.20.0",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^6.0.2"
+    "typescript": "^5.4.5"
   }
 }

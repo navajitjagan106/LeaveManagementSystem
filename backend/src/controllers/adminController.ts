@@ -279,7 +279,6 @@ export const updateLeaveBalance = async (req: Request, res: Response) => {
 
         const newTotal = total_allocated + change;
 
-        // ❗ validation
         if (newTotal < used) {
             return res.status(400).json({
                 error: "Cannot reduce below used leaves"
@@ -292,7 +291,6 @@ export const updateLeaveBalance = async (req: Request, res: Response) => {
             });
         }
 
-        // ✅ update
         const result = await pool.query(
             `UPDATE leave_balances
             SET total_allocated = $1

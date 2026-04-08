@@ -119,7 +119,7 @@ const ApplyLeave: React.FC = () => {
                 <div className="bg-white p-8 rounded-lg shadow-sm w-full">
                     <form onSubmit={handleSubmit}>
 
-                        {/* Leave Type */}
+                        {/* leave type */}
                         <FormField label="Leave Type">
                             <RadioGroup
                                 name="leaveType"
@@ -143,7 +143,7 @@ const ApplyLeave: React.FC = () => {
                             )}
                         </FormField>
 
-                        {/* Duration */}
+                        {/* duration */}
                         <FormField label="Duration Type">
                             <RadioGroup
                                 name="durationType"
@@ -158,7 +158,7 @@ const ApplyLeave: React.FC = () => {
                             />
                         </FormField>
 
-                        {/* Dates */}
+                        {/* dates */}
                         <div className="grid grid-cols-2 gap-4 mb-6">
                             <FormField label="From Date">
                                 <input
@@ -193,10 +193,8 @@ const ApplyLeave: React.FC = () => {
                             )}
                         </div>
 
-                        {/* Total Days */}
 
-
-                        {/* Reason */}
+                        {/* reason */}
                         <FormField label="Reason">
                             <textarea
                                 value={formData.reason}
@@ -208,7 +206,7 @@ const ApplyLeave: React.FC = () => {
                             />
                         </FormField>
 
-                        {/* Manager */}
+                        {/* manager */}
                         <div className="mb-6">
                             <label className="block text-sm font-semibold mb-2">
                                 Apply to (Manager)
@@ -218,7 +216,7 @@ const ApplyLeave: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Submit */}
+                        {/* submit */}
                         <button
                             type="submit"
                             className="w-full bg-[#5746AF] text-white py-3 rounded-lg"

@@ -1,4 +1,3 @@
-// src/routes/leaveRoutes.ts
 import express from "express";
 import { applyLeave ,approveLeave,calculateDays,getDashboardData,getHolidays,getLeaveBalance,getLeaveHistory, getLeaveInitData, getLeaveTypes, getManager, getPendingLeaves, getTeamLeaves, getuserdetails} from "../controllers/leaveController";
 import { authorizeRoles } from "../middleware/roleMiddleware";

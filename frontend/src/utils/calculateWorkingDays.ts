@@ -20,7 +20,6 @@ export const calculateWorkingDays = (
         const isWeekend = day === 0 || day === 6;
         const isHoliday = holidays.includes(dateStr);
 
-        // 🚨 ONLY count working days
         if (!isWeekend && !isHoliday) {
             count++;
         }
