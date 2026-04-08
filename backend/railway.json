@@ -1,7 +1,7 @@
 {
     "build": {
         "builder": "NIXPACKS",
-        "buildCommand": "npm install --include=dev && ./node_modules/typescript/bin/tsc"
+        "buildCommand": "npm install --include=dev && npm run build"
     },
     "deploy": {
         "startCommand": "node dist/app.js",
