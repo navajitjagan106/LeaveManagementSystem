@@ -1,7 +1,6 @@
 import express from "express";
 import { applyLeave ,approveLeave,calculateDays,getDashboardData,getHolidays,getLeaveBalance,getLeaveHistory, getLeaveInitData, getLeaveTypes, getManager, getPendingLeaves, getTeamLeaves, getuserdetails} from "../controllers/leaveController";
 import { authorizeRoles } from "../middleware/roleMiddleware";
-import { authenticate  } from "../middleware/authMiddleware";
 
 const router = express.Router();
 router.patch("/approve/:id",authorizeRoles("manager"), approveLeave);
@@ -13,7 +12,7 @@ router.get("/history", getLeaveHistory);
 router.get("/pending",authorizeRoles("manager"),getPendingLeaves)
 router.get("/balance", getLeaveBalance);
 router.get("/team",getTeamLeaves)
-router.get("/dashboard",authenticate,getDashboardData)
+router.get("/dashboard",getDashboardData)
 router.get("/getuserdata",getuserdetails)
 router.post("/calculatedays",calculateDays)
 router.get("/getinitdata",getLeaveInitData)

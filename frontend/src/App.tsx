@@ -40,9 +40,9 @@ const App: React.FC = () => {
 
             }
           />
-          <Route path="/team-view" element={<TeamView />} />
-          <Route path="/leave-balance" element={<LeaveBalance />} />
-          <Route path="/admin/employees" element={
+          <Route path="team-view" element={<TeamView />} />
+          <Route path="leave-balance" element={<LeaveBalance />} />
+          <Route path="admin/employees" element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <AdminDashboard />
             </ProtectedRoute>

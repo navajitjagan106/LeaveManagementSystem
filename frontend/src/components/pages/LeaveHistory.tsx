@@ -50,18 +50,10 @@ const LeaveHistory: React.FC = () => {
                 setLoading(true);
 
                 const params: any = {};
+                if (filters.status) params.status = filters.status;
+                if (filters.leaveType) params.leave_type_id = filters.leaveType;
+                if (filters.search) params.search = filters.search;
 
-                if (filters.status) {
-                    params.status = filters.status;
-                }
-
-                if (filters.leaveType) {
-                    params.leave_type_id = filters.leaveType;
-                }
-
-                if (filters.search) {
-                    params.search = filters.search;
-                }
 
                 const response = await getHistory({
                     ...params,
@@ -82,6 +74,17 @@ const LeaveHistory: React.FC = () => {
         };
         fetchLeaveHistory();
     }, [filters, page]);
+
+    const handleFilterChange = (key: string, value: string) => {
+        setPage(1);
+        setFilters(prev => ({ ...prev, [key]: value }));
+    };
+
+    const clearFilters = () => {
+        setPage(1);
+        setFilters({ leaveType: '', status: '', search: '' });
+    };
+    const hasActiveFilters = filters.leaveType || filters.status || filters.search;
 
 
     const formatDate = (dateString: string) => {
@@ -109,7 +112,7 @@ const LeaveHistory: React.FC = () => {
     };
 
     if (loading) {
-        return <div className="text-center py-8"><Loader/></div>;
+        return <div className="text-center py-8"><Loader /></div>;
     }
 
     return (
@@ -118,14 +121,13 @@ const LeaveHistory: React.FC = () => {
                 title="Leave History"
                 subtitle="View all your past leave requests"
             />
+
             {/* Filters */}
-            <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex gap-4">
+            <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap gap-4 items-center">
 
                 <select
                     value={filters.leaveType}
-                    onChange={(e) =>
-                        setFilters({ ...filters, leaveType: e.target.value })
-                    }
+                    onChange={(e) => handleFilterChange('leaveType', e.target.value)}
                     className="border border-gray-300 rounded-lg px-4 py-2"
                 >
                     <option value="">All Types</option>
@@ -138,27 +140,32 @@ const LeaveHistory: React.FC = () => {
 
                 <select
                     value={filters.status}
-                    onChange={(e) =>
-                        setFilters({ ...filters, status: e.target.value })
-                    }
+                    onChange={(e) => handleFilterChange('status', e.target.value)}
                     className="border border-gray-300 rounded-lg px-4 py-2"
                 >
-                    <option value="">All Types</option>
-                    {statusOptions.map((lt) => (
-                        <option key={lt.value} value={lt.value}>
-                            {lt.label}
+                    <option value="">All Status</option>
+                    {statusOptions.map((s) => (
+                        <option key={s.value} value={s.value}>
+                            {s.label}
                         </option>
                     ))}
                 </select>
 
                 <input
                     value={filters.search}
-                    onChange={(e) =>
-                        setFilters({ ...filters, search: e.target.value })
-                    }
+                    onChange={(e) => handleFilterChange('search', e.target.value)}
                     placeholder="Search by reason"
                     className="flex-1 border border-gray-300 rounded-lg px-4 py-2"
                 />
+
+                {hasActiveFilters && (
+                    <button
+                        onClick={clearFilters}
+                        className="text-sm text-red-500 hover:underline whitespace-nowrap"
+                    >
+                        Clear filters
+                    </button>
+                )}
             </div>
 
             {/* Table */}
