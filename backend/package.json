@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "./node_modules/.bin/tsc",
     "start": "node dist/app.js",
     "dev": "ts-node-dev --project ./tsconfig.json --respawn --transpile-only src/app.ts",
     "seed": "node dist/seed.js",

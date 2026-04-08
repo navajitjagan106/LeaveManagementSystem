@@ -256,21 +256,21 @@ export const getLeaveHistory = async (req: Request, res: Response) => {
 
         if (status) {
             query += ` AND l.status = $${index}`;
-            countQuery += `AND l.status=$${index} `
+            countQuery += ` AND l.status=$${index} `
             values.push(status);
             index++;
         }
 
         if (leave_type_id) {
             query += ` AND l.leave_type_id = $${index}`;
-            countQuery += `AND l.leave_type_id=$${index} `
+            countQuery += ` AND l.leave_type_id=$${index} `
             values.push(leave_type_id);
             index++;
         }
 
         if (search) {
             query += ` AND l.reason ILIKE $${index}`;
-            countQuery += `AND l.reason ILIKE $${index} `
+            countQuery += ` AND l.reason ILIKE $${index} `
             values.push(`%${search}%`);
             index++;
         }
@@ -278,7 +278,7 @@ export const getLeaveHistory = async (req: Request, res: Response) => {
         const offset = (Number(page) - 1) * Number(limit);
 
 
-        query += `ORDER BY l.created_at DESC LIMIT $${index} OFFSET $${index + 1}`;
+        query += ` ORDER BY l.created_at DESC LIMIT $${index} OFFSET $${index + 1}`;
         values.push(limit, offset);
         const [dataResult, countResult] = await Promise.all([
             pool.query(query, values),
@@ -620,9 +620,6 @@ export const getuserdetails = async (req: Request, res: Response) => {
         res.status(500).json({ error: "Cannot fetch user details" })
     }
 }
-
-
-
 
 export const getHolidays = async (req: Request, res: Response) => {
     try {

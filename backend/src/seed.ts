@@ -96,7 +96,7 @@ const seed = async () => {
       (6, 'Charlie', 'charlie@gmail.com', '$2b$10$HtFBBG.7iEQvJUR4ygReQ.Y/MbcasJGbDD0OxLeYyA.wYvXDsgCY6', 'employee', 2, 'Products');
     `);
 
-    console.log("📋 Leave types...");
+    console.log(" Leave types...");
 
     await pool.query(`
       INSERT INTO leave_types (name, max_days) VALUES
