@@ -1,0 +1,10 @@
+{
+    "build": {
+        "builder": "NIXPACKS",
+        "buildCommand": "npm install --include=dev && npx tsc"
+    },
+    "deploy": {
+        "startCommand": "node dist/app.js",
+        "restartPolicyType": "ON_FAILURE"
+    }
+}
