@@ -1,4 +1,3 @@
-// src/types/leave.ts
 export interface ApplyLeaveDTO {
     user_id: number;
     leave_type_id: number;

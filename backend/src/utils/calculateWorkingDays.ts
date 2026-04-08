@@ -1,7 +1,7 @@
 export const calculateWorkingDays = (
     fromDate: string,
     toDate: string,
-    holidays: string[], // ["2026-01-26", ...]
+    holidays: string[], 
     durationType: string
 ) => {
     const start = new Date(fromDate);
@@ -19,7 +19,6 @@ export const calculateWorkingDays = (
         const isWeekend = day === 0 || day === 6;
         const isHoliday = holidays.includes(dateStr);
 
-        // 🚨 ONLY count working days
         if (!isWeekend && !isHoliday) {
             count++;
         }

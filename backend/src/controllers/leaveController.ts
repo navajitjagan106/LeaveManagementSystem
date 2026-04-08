@@ -211,7 +211,6 @@ export const applyLeave = async (req: Request, res: Response) => {
             });
         }
 
-        // Insert leave request
         const result = await pool.query(
             `INSERT INTO leaves 
             (user_id, leave_type_id, from_date, to_date, total_days, reason, applied_to)
@@ -255,7 +254,6 @@ export const getLeaveHistory = async (req: Request, res: Response) => {
         const values: any[] = [user_id];
         let index = 2;
 
-        // filter by status
         if (status) {
             query += ` AND l.status = $${index}`;
             countQuery += `AND l.status=$${index} `
@@ -263,7 +261,6 @@ export const getLeaveHistory = async (req: Request, res: Response) => {
             index++;
         }
 
-        // filter by leave type
         if (leave_type_id) {
             query += ` AND l.leave_type_id = $${index}`;
             countQuery += `AND l.leave_type_id=$${index} `
@@ -271,7 +268,6 @@ export const getLeaveHistory = async (req: Request, res: Response) => {
             index++;
         }
 
-        // search (reason)
         if (search) {
             query += ` AND l.reason ILIKE $${index}`;
             countQuery += `AND l.reason ILIKE $${index} `
@@ -390,7 +386,6 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
     }
 };
 
-//manager
 export const getPendingLeaves = async (req: Request, res: Response) => {
     try {
         if (!req.user) {
@@ -641,7 +636,6 @@ export const getHolidays = async (req: Request, res: Response) => {
     }
 }
 
-//manager
 export const getManager = async (req: Request, res: Response) => {
     try {
         if (!req.user) {

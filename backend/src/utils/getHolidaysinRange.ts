@@ -1,5 +1,3 @@
-// utils/getHolidaysInRange.ts
-
 export const getHolidaysinRange = async (from: string, to: string, client: any) => {
     const res = await client.query(
         `SELECT date FROM holidays WHERE date BETWEEN $1 AND $2`,

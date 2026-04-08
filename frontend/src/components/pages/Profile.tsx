@@ -24,7 +24,6 @@ const Profile: React.FC = () => {
         return <p className="text-center py-8">Loading profile...</p>;
     }
 
-    // 🔥 Dynamic fields (no repetition)
     const profileFields = [
         { label: "Full Name", value: user.name },
         { label: "Email", value: user.email },

@@ -4,10 +4,47 @@ type Props = {
     request: ApprovalRequest;
     onApprove: (id: number) => void;
     onReject: (id: number) => void;
-    ProcessingId: number | null
+    ProcessingId: number | null;
 };
 
-const ApprovalCard: React.FC<Props> = ({ request, onApprove, onReject, ProcessingId }) => {
+const ApprovalCard: React.FC<Props> = ({
+    request,
+    onApprove,
+    onReject,
+    ProcessingId,
+}) => {
+
+    const dateFields = [
+        {
+            label: "From",
+            value: new Date(request.from_date).toLocaleDateString("en-GB"),
+        },
+        {
+            label: "To",
+            value: new Date(request.to_date).toLocaleDateString("en-GB"),
+        },
+        {
+            label: "Days",
+            value: request.total_days,
+        },
+    ];
+
+    const actions = [
+        {
+            label: ProcessingId === request.id ? "Processing..." : "Approve",
+            onClick: () => onApprove(request.id),
+            className:
+                "bg-green-500 hover:bg-green-600 disabled:opacity-50",
+            disabled: ProcessingId === request.id,
+        },
+        {
+            label: "Reject",
+            onClick: () => onReject(request.id),
+            className: "bg-red-500 hover:bg-red-600",
+            disabled: false,
+        },
+    ];
+
     return (
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
 
@@ -27,26 +64,12 @@ const ApprovalCard: React.FC<Props> = ({ request, onApprove, onReject, Processin
             </div>
 
             <div className="grid grid-cols-3 gap-4 text-sm mb-4">
-                <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-gray-500 text-xs">From</p>
-                    <p className="font-medium text-gray-800">
-                        {new Date(request.from_date).toLocaleDateString("en-GB")}
-                    </p>
-                </div>
-
-                <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-gray-500 text-xs">To</p>
-                    <p className="font-medium text-gray-800">
-                        {new Date(request.to_date).toLocaleDateString("en-GB")}
-                    </p>
-                </div>
-
-                <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-gray-500 text-xs">Days</p>
-                    <p className="font-medium text-gray-800">
-                        {request.total_days}
-                    </p>
-                </div>
+                {dateFields.map((item, index) => (
+                    <div key={index} className="bg-gray-50 p-3 rounded-lg">
+                        <p className="text-gray-500 text-xs">{item.label}</p>
+                        <p className="font-medium text-gray-800">{item.value}</p>
+                    </div>
+                ))}
             </div>
 
             <div className="mb-5">
@@ -57,20 +80,16 @@ const ApprovalCard: React.FC<Props> = ({ request, onApprove, onReject, Processin
             </div>
 
             <div className="flex gap-3">
-                <button
-                    onClick={() => onApprove(request.id)}
-                    disabled={ProcessingId === request.id}
-                    className="flex-1 py-2.5 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 disabled:opacity-50 transition"
-                >
-                    {ProcessingId === request.id ? "Processing..." : "Approve"}
-                </button>
-
-                <button
-                    onClick={() => onReject(request.id)}
-                    className="flex-1 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition"
-                >
-                    Reject
-                </button>
+                {actions.map((btn, index) => (
+                    <button
+                        key={index}
+                        onClick={btn.onClick}
+                        disabled={btn.disabled}
+                        className={`flex-1 py-2.5 text-white rounded-xl font-medium transition ${btn.className}`}
+                    >
+                        {btn.label}
+                    </button>
+                ))}
             </div>
         </div>
     );

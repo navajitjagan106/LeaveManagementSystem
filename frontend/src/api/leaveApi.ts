@@ -1,17 +1,14 @@
 import API from "./axios";
 
-// Apply leave
 export const applyLeave = (data: any) =>
     API.post("/leaves/apply", data);
 
-// Get dashboard
 export const getDashboard = () =>
     API.get("/leaves/dashboard");
 
 export const getHolidays = () =>
     API.get("/leaves/holidays")
 
-// Get leave history
 export const getHistory = (params:any) =>
     API.get("/leaves/history",{params});
 
@@ -21,19 +18,15 @@ export const getManager = () =>
 export const getLeaveTypes = () =>
     API.get("/leaves/types");
 
-// Get pending approvals (manager)
 export const getPending = () =>
     API.get("/leaves/pending");
 
-// Approve leave
 export const approveLeave = (id: number, status: string) =>
     API.patch(`/leaves/approve/${id}`, { status });
 
-// Leave balance
 export const getBalance = () =>
     API.get("/leaves/balance");
 
-// Team leaves
 export const getTeamLeaves = () =>
     API.get("/leaves/team");
 

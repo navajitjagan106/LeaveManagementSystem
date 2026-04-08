@@ -2,11 +2,9 @@ import { pool } from "./config/db";
 
 const seed = async () => {
   try {
-    console.log("🧹 Resetting database...");
+    console.log(" Resetting database...");
 
-    // =========================
     // DROP EVERYTHING
-    // =========================
     await pool.query(`
       DROP TABLE IF EXISTS notifications CASCADE;
       DROP TABLE IF EXISTS leaves CASCADE;
@@ -19,19 +17,15 @@ const seed = async () => {
       DROP TYPE IF EXISTS user_role CASCADE;
     `);
 
-    console.log("🧱 Creating schema...");
+    console.log(" Creating schema...");
 
-    // =========================
     // ENUM TYPES
-    // =========================
     await pool.query(`
       CREATE TYPE leave_status AS ENUM ('pending', 'approved', 'rejected');
       CREATE TYPE user_role AS ENUM ('employee', 'manager', 'admin');
     `);
 
-    // =========================
     // TABLES
-    // =========================
     await pool.query(`
       CREATE TABLE users (
         id SERIAL PRIMARY KEY,
@@ -87,11 +81,9 @@ const seed = async () => {
       );
     `);
 
-    console.log("👤 Inserting users...");
+    console.log(" Inserting users...");
 
-    // =========================
-    // USERS (YOUR DATA)
-    // =========================
+  
     await pool.query(`
       INSERT INTO users (id, name, email, password, role, manager_id, department) VALUES
       (5, 'Bob', 'bob@gmail.com', '$2b$10$HtFBBG.7iEQvJUR4ygReQ.Y/MbcasJGbDD0OxLeYyA.wYvXDsgCY6', 'employee', 2, 'Products'),
@@ -113,7 +105,7 @@ const seed = async () => {
       ('Earned Leave', 15);
     `);
 
-    console.log("⚖️ Generating leave balances...");
+    console.log(" Generating leave balances...");
 
     await pool.query(`
       INSERT INTO leave_balances (user_id, leave_type_id, total_allocated, used)
@@ -123,18 +115,33 @@ const seed = async () => {
       WHERE u.role = 'employee';
     `);
 
-    console.log("📅 Holidays...");
+    console.log(" Holidays...");
 
     await pool.query(`
-      INSERT INTO holidays (name, date) VALUES
-      ('New Year', '2026-01-01'),
-      ('Republic Day', '2026-01-26'),
-      ('Independence Day', '2026-08-15'),
-      ('Diwali', '2026-11-12'),
-      ('Christmas', '2026-12-25');
-    `);
+  INSERT INTO holidays (date, name) VALUES
+  ('2026-01-01', 'New Year'),
+  ('2026-01-14', 'Pongal'),
+  ('2026-01-15', 'Makar Sankranti'),
+  ('2026-01-26', 'Republic Day'),
+  ('2026-02-14', 'Maha Shivaratri'),
+  ('2026-03-02', 'Holi'),
+  ('2026-03-20', 'Ramzan (Eid al-Fitr)'),
+  ('2026-04-03', 'Good Friday'),
+  ('2026-04-14', 'Tamil New Year'),
+  ('2026-04-14', 'Ambedkar Jayanti'),
+  ('2026-05-01', 'Labour Day'),
+  ('2026-06-28', 'Bakrid (Eid al-Adha)'),
+  ('2026-08-15', 'Independence Day'),
+  ('2026-08-27', 'Krishna Janmashtami'),
+  ('2026-09-17', 'Vinayaka Chaturthi'),
+  ('2026-10-02', 'Gandhi Jayanti'),
+  ('2026-10-20', 'Dussehra'),
+  ('2026-11-01', 'Kannada Rajyotsava'),
+  ('2026-11-08', 'Diwali'),
+  ('2026-12-25', 'Christmas')
+`);
 
-    console.log("📝 Leaves...");
+    console.log("Leaves...");
 
     await pool.query(`
       INSERT INTO leaves 
@@ -145,7 +152,7 @@ const seed = async () => {
       (6, 3, '2026-05-01', '2026-05-02', 2, 'Vacation', 'rejected', 2);
     `);
 
-    console.log("🔄 Updating used leaves...");
+    console.log("Updating used leaves...");
 
     await pool.query(`
       UPDATE leave_balances lb
@@ -160,7 +167,7 @@ const seed = async () => {
       AND lb.leave_type_id = sub.leave_type_id;
     `);
 
-    console.log("🔧 Fixing sequences...");
+    console.log(" Fixing sequences...");
 
     await pool.query(`
       SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
@@ -170,11 +177,11 @@ const seed = async () => {
       SELECT setval('holidays_id_seq', (SELECT MAX(id) FROM holidays));
     `);
 
-    console.log("✅ Database fully seeded!");
+    console.log(" Database fully seeded!");
 
     process.exit(0);
   } catch (err) {
-    console.error("❌ Error seeding:", err);
+    console.error(" Error seeding:", err);
     process.exit(1);
   }
 };

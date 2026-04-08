@@ -7,7 +7,6 @@ export const register = async (req: Request, res: Response) => {
     try {
         const { name, email, password, role } = req.body;
 
-        // hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const result = await pool.query(
