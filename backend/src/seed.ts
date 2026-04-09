@@ -63,7 +63,9 @@ const seed = async () => {
         status leave_status DEFAULT 'pending',
         applied_to INT,
         approved_by INT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        rejection_reason TEXT,
+        approved_at TIMESTAMPTZ,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP        
       );
 
       CREATE TABLE holidays (
@@ -83,7 +85,7 @@ const seed = async () => {
 
     console.log(" Inserting users...");
 
-  
+
     await pool.query(`
       INSERT INTO users (id, name, email, password, role, manager_id, department) VALUES
       (5, 'Bob', 'bob@gmail.com', '$2b$10$HtFBBG.7iEQvJUR4ygReQ.Y/MbcasJGbDD0OxLeYyA.wYvXDsgCY6', 'employee', 2, 'Products'),
@@ -143,13 +145,12 @@ const seed = async () => {
     console.log("Leaves...");
 
     await pool.query(`
-      INSERT INTO leaves 
-      (user_id, leave_type_id, from_date, to_date, total_days, reason, status, applied_to)
-      VALUES
-      (5, 1, '2026-04-01', '2026-04-03', 3, 'Fever', 'approved', 2),
-      (4, 2, '2026-04-10', '2026-04-12', 3, 'Family Function', 'pending', 2),
-      (6, 3, '2026-05-01', '2026-05-02', 2, 'Vacation', 'rejected', 2);
-    `);
+        INSERT INTO leaves 
+        (user_id, leave_type_id, from_date, to_date, total_days, reason, status, applied_to, approved_by, approved_at, rejection_reason)
+        VALUES
+        (5, 1, '2026-04-01', '2026-04-03', 3, 'Fever', 'approved', 2, 2, NOW(), NULL),
+        (4, 2, '2026-04-10', '2026-04-12', 3, 'Family Function', 'pending', 2, NULL, NULL, NULL),
+        (6, 3, '2026-05-01', '2026-05-02', 2, 'Vacation', 'rejected', 2, 2, NOW(), 'Insufficient leave balance');`)
 
     console.log("Updating used leaves...");
 

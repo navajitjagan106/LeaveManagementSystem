@@ -9,8 +9,8 @@ export const getDashboard = () =>
 export const getHolidays = () =>
     API.get("/leaves/holidays")
 
-export const getHistory = (params:any) =>
-    API.get("/leaves/history",{params});
+export const getHistory = (params: any) =>
+    API.get("/leaves/history", { params });
 
 export const getManager = () =>
     API.get("/leaves/users/manager");
@@ -18,11 +18,11 @@ export const getManager = () =>
 export const getLeaveTypes = () =>
     API.get("/leaves/types");
 
-export const getPending = (params:any) =>
-    API.get("/leaves/pending",{params});
+export const getPending = (params: any) =>
+    API.get("/leaves/pending", { params });
 
-export const approveLeave = (id: number, status: string) =>
-    API.patch(`/leaves/approve/${id}`, { status });
+export const approveLeave = (id: number, status: string, rejection_reason?: string) =>
+    API.patch(`/leaves/approve/${id}`, { status, rejection_reason });
 
 export const getBalance = () =>
     API.get("/leaves/balance");
@@ -35,10 +35,10 @@ export const calculateDays = (data: {
     to_date: string;
     duration_type: string;
 }) =>
-    API.post("/leaves/calculatedays",data)
+    API.post("/leaves/calculatedays", data)
 
-export const getLeaveInitData=()=>
+export const getLeaveInitData = () =>
     API.get("/leaves/getinitdata")
 
-export const getuserdata=()=>
+export const getuserdata = () =>
     API.get("/leaves/getuserdata")
