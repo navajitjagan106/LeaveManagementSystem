@@ -112,7 +112,6 @@ const seed = async () => {
       SELECT u.id, lt.id, lt.max_days, 0
       FROM users u
       CROSS JOIN leave_types lt
-      WHERE u.role = 'employee';
     `);
 
     console.log(" Holidays...");
