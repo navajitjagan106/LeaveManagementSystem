@@ -19,8 +19,8 @@ const DashBoard: React.FC = () => {
         const user = getUserLocal();
         setUser(user);
     }, []);
-        const [loading, setLoading] = useState(true);
-    
+    const [loading, setLoading] = useState(true);
+
     const [data, setData] = useState<DashboardData | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [holidays, setHolidays] = useState<any[]>([]);
@@ -95,8 +95,8 @@ const DashBoard: React.FC = () => {
         label: item.name,
         value: `${item.used} of ${item.total_allocated}`,
     }));
- if (loading) {
-        return <div className="text-center py-8"><Loader/></div>;
+    if (loading) {
+        return <div className="text-center py-8"><Loader /></div>;
     }
     return (
         <div>

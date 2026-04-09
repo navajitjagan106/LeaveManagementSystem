@@ -37,25 +37,27 @@ const TeamView: React.FC = () => {
                 setLoading(true)
                 const expandLeaves = (data: any[]) => {
                     const events: any[] = []
-                    const holidayDates = holidays.map(
-                        (h: any) => formatDate(new Date(h.date))
-                    )
+                    const holidayDates = holidays.map((h: any) => formatDate(new Date(h.date)))
+
                     data.forEach((e) => {
+                        const isHalfDay = e.duration_type === "half";
                         let current = new Date(e.from_date)
                         const end = new Date(e.to_date)
                         current.setHours(0, 0, 0, 0)
                         end.setHours(0, 0, 0, 0)
+
                         while (current <= end) {
                             const day = current.getDay()
                             const dateStr = formatDate(current)
                             const isWeekend = day === 0 || day === 6
                             const isHoliday = holidayDates.includes(dateStr)
+
                             if (!isWeekend && !isHoliday) {
                                 events.push({
-                                    title: e.name,
+                                    title: isHalfDay ? `${e.name} (Half Day)` : e.name,
                                     start: dateStr,
-                                    backgroundColor: "#6366f1",
-                                    borderColor: "#6366f1",
+                                    backgroundColor: isHalfDay ? "#a5b4fc" : "#6366f1",
+                                    borderColor: isHalfDay ? "#a5b4fc" : "#6366f1",
                                 })
                             }
                             current.setDate(current.getDate() + 1)
@@ -138,7 +140,8 @@ const TeamView: React.FC = () => {
 
 
     const legendItems = [
-        { label: "Leave", color: "bg-indigo-500" },
+        { label: "Full Day Leave", color: "bg-indigo-500" },
+        { label: "Half Day Leave", color: "bg-[#a5b4fc]" },
         { label: "Holiday", color: "bg-yellow-500" },
     ]
     if (loading) {

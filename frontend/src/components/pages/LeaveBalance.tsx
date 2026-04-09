@@ -49,11 +49,11 @@ const LeaveBalance: React.FC = () => {
 
     const chartDatarem = leaveBalances.map((lb) => ({
         name: lb.type,
-        value: lb.remaining,
+        value:Number( lb.remaining),
     }));
     const chartDataused = leaveBalances.map((lb) => ({
         name: lb.type,
-        value: lb.used,
+        value: Number(lb.used),
     }));
 
     if (loading) {

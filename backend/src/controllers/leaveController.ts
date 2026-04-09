@@ -68,7 +68,11 @@ export const getDashboardData = async (req: Request, res: Response) => {
 
 
         res.json({
-            leave_balance: balanceResult.rows,
+            leave_balance: balanceResult.rows.map(row => ({
+                ...row, total_allocated: Number(row.total_allocated),
+                used: Number(row.used),
+                remaining: Number(row.remaining)
+            })),
             pending_requests: Number(pendingCount.rows[0].count),
             approved_requests: Number(approvedCount.rows[0].count),
             team_on_leave: teamLeaves.rows
@@ -213,10 +217,10 @@ export const applyLeave = async (req: Request, res: Response) => {
 
         const result = await pool.query(
             `INSERT INTO leaves 
-            (user_id, leave_type_id, from_date, to_date, total_days, reason, applied_to)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            (user_id, leave_type_id, from_date, to_date, total_days, reason, applied_to,duration_type)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *`,
-            [user_id, leave_type_id, from_date, to_date, total_days, reason, manager_id]
+            [user_id, leave_type_id, from_date, to_date, total_days, reason, manager_id, duration_type]
         );
 
         res.json({
@@ -341,7 +345,8 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
         u.name,
         lt.name as leave_type,
         l.from_date,
-        l.to_date`;
+        l.to_date,
+        l.duration_type`;
 
         if (role === "manager") {
             selectFields += `, l.reason`;
@@ -376,6 +381,7 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
             leave_type: row.leave_type,
             from_date: row.from_date,
             to_date: row.to_date,
+            duration_type:row.duration_type
         }));
 
         res.json(events);
@@ -474,7 +480,7 @@ export const approveLeave = async (req: Request, res: Response) => {
         }
 
         const leaveId = req.params.id;
-       const { status, rejection_reason: rejectionReason } = req.body;
+        const { status, rejection_reason: rejectionReason } = req.body;
         const manager_id = req.user.id;
 
         if (!["approved", "rejected"].includes(status)) {
@@ -524,7 +530,7 @@ export const approveLeave = async (req: Request, res: Response) => {
             SET status = $1, approved_by = $2, total_days = $3 , approved_at= NOW() ,rejection_reason = CASE WHEN $6 = 'rejected' THEN $5 ELSE NULL END
             WHERE id = $4
             RETURNING *`,
-            [status, manager_id, correctDays, leaveId,rejectionReason ??null,status]
+            [status, manager_id, correctDays, leaveId, rejectionReason ?? null, status]
         );
 
         if (status === "approved") {
@@ -605,7 +611,7 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
         const weeklyPattern = daysMap.map((day, i) => ({
             day,
             value: 0
-        }));
+        }));    
 
         weeklyResult.rows.forEach((row: any) => {
             weeklyPattern[row.day].value = Number(row.count);
