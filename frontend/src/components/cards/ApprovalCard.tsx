@@ -33,8 +33,7 @@ const ApprovalCard: React.FC<Props> = ({
         {
             label: ProcessingId === request.id ? "Processing..." : "Approve",
             onClick: () => onApprove(request.id),
-            className:
-                "bg-green-500 hover:bg-green-600 disabled:opacity-50",
+            className: "bg-green-500 hover:bg-green-600 disabled:opacity-50",
             disabled: ProcessingId === request.id,
         },
         {
@@ -54,12 +53,16 @@ const ApprovalCard: React.FC<Props> = ({
                         {request.employee_name}
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
-                        {request.role} • {request.leave_type}
+                        {request.department} • {request.leave_type}
                     </p>
                 </div>
 
-                <span className="text-xs font-medium bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full">
-                    Pending
+                <span className={`text-xs font-medium px-3 py-1 rounded-full ${
+                    request.status === "pending" ? "bg-yellow-100 text-yellow-700" :
+                    request.status === "approved" ? "bg-green-100 text-green-700" :
+                    "bg-red-100 text-red-700"
+                }`}>
+                    {request.status}
                 </span>
             </div>
 
@@ -79,18 +82,20 @@ const ApprovalCard: React.FC<Props> = ({
                 </p>
             </div>
 
-            <div className="flex gap-3">
-                {actions.map((btn, index) => (
-                    <button
-                        key={index}
-                        onClick={btn.onClick}
-                        disabled={btn.disabled}
-                        className={`flex-1 py-2.5 text-white rounded-xl font-medium transition ${btn.className}`}
-                    >
-                        {btn.label}
-                    </button>
-                ))}
-            </div>
+            {request.status === "pending" && (
+                <div className="flex gap-3">
+                    {actions.map((btn, index) => (
+                        <button
+                            key={index}
+                            onClick={btn.onClick}
+                            disabled={btn.disabled}
+                            className={`flex-1 py-2.5 text-white rounded-xl font-medium transition ${btn.className}`}
+                        >
+                            {btn.label}
+                        </button>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };

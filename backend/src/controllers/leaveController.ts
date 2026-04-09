@@ -386,7 +386,7 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
     }
 };
 
-export const getPendingLeaves = async (req: Request, res: Response) => {
+export const getManagerLeaves = async (req: Request, res: Response) => {
     try {
         if (!req.user) {
             return res.status(401).json({ error: "Unauthorized" });
@@ -396,30 +396,60 @@ export const getPendingLeaves = async (req: Request, res: Response) => {
             return res.status(403).json({ error: "Forbidden" });
         }
 
-        const manager_id = req.user.id;
 
-        const result = await pool.query(
-            `SELECT
-            l.id,
-            u.name as employee_name,
-            u.department,
-            lt.name as leave_type,
-            l.from_date,
-            l.to_date,
-            l.total_days,
-            l.reason,
-            l.status
+        const manager_id = req.user.id;
+        const { status, search, page = 1, limit = 10 } = req.query;
+
+        let query = `
+            SELECT
+                l.id, u.name as employee_name, u.department,
+                lt.name as leave_type, l.from_date, l.to_date,
+                l.total_days, l.reason, l.status
             FROM leaves l
             JOIN users u ON l.user_id = u.id
             JOIN leave_types lt ON l.leave_type_id = lt.id
-            WHERE l.applied_to = $1 AND l.status = 'pending'`,
-            [manager_id]
-        );
+            WHERE l.applied_to = $1
+        `;
+
+        let countQuery = `
+    SELECT COUNT(*) FROM leaves l
+    JOIN users u ON l.user_id = u.id
+    WHERE l.applied_to = $1
+`;
+
+        const values: any[] = [manager_id];
+        let index = 2;
+
+        if (status) {
+            query += ` AND l.status = $${index}`;
+            countQuery += ` AND l.status = $${index}`;
+            values.push(status);
+            index++;
+        }
+        if (search) {
+            query += ` AND u.name ILIKE $${index}`;
+            countQuery += ` AND u.name ILIKE $${index}`;
+            values.push(`%${search}%`);
+            index++;
+        }
+
+        const offset = (Number(page) - 1) * Number(limit);
+        query += ` ORDER BY l.created_at DESC LIMIT $${index} OFFSET $${index + 1}`;
+        values.push(limit, offset);
+
+        const [dataResult, countResult] = await Promise.all([
+            pool.query(query, values),
+            pool.query(countQuery, values.slice(0, index - 1))
+        ]);
 
         res.json({
             success: true,
-            data: result.rows
+            data: dataResult.rows,
+            total: Number(countResult.rows[0].count),
+            page: Number(page),
+            totalPages: Math.ceil(countResult.rows[0].count / Number(limit))
         });
+
 
     } catch (err) {
         console.error(err);

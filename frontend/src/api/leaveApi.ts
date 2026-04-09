@@ -18,8 +18,8 @@ export const getManager = () =>
 export const getLeaveTypes = () =>
     API.get("/leaves/types");
 
-export const getPending = () =>
-    API.get("/leaves/pending");
+export const getPending = (params:any) =>
+    API.get("/leaves/pending",{params});
 
 export const approveLeave = (id: number, status: string) =>
     API.patch(`/leaves/approve/${id}`, { status });

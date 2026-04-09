@@ -122,7 +122,6 @@ const LeaveHistory: React.FC = () => {
                 subtitle="View all your past leave requests"
             />
 
-            {/* Filters */}
             <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap gap-4 items-center">
 
                 <select
