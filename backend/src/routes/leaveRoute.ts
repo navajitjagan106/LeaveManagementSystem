@@ -1,5 +1,5 @@
 import express from "express";
-import { applyLeave ,approveLeave,calculateDays,getDashboardData,getHolidays,getLeaveBalance,getLeaveHistory, getLeaveInitData, getLeaveTypes, getManager, getPendingLeaves, getTeamLeaves, getuserdetails} from "../controllers/leaveController";
+import { applyLeave ,approveLeave,calculateDays,getDashboardData,getHolidays,getLeaveBalance,getLeaveHistory, getLeaveInitData, getLeaveTypes, getManager, getManagerLeaves,  getTeamLeaves, getuserdetails} from "../controllers/leaveController";
 import { authorizeRoles } from "../middleware/roleMiddleware";
 
 const router = express.Router();
@@ -9,7 +9,7 @@ router.get('/types', getLeaveTypes);
 router.get('/users/manager',  getManager);
 router.get("/holidays",getHolidays)
 router.get("/history", getLeaveHistory);
-router.get("/pending",authorizeRoles("manager"),getPendingLeaves)
+router.get("/pending",authorizeRoles("manager"),getManagerLeaves)
 router.get("/balance", getLeaveBalance);
 router.get("/team",getTeamLeaves)
 router.get("/dashboard",getDashboardData)
