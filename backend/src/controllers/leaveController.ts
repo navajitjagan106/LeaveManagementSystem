@@ -404,7 +404,7 @@ export const getManagerLeaves = async (req: Request, res: Response) => {
             SELECT
                 l.id, u.name as employee_name, u.department,
                 lt.name as leave_type, l.from_date, l.to_date,
-                l.total_days, l.reason, l.status
+                l.total_days, l.reason, l.status,l.rejection_reason, l.approved_at
             FROM leaves l
             JOIN users u ON l.user_id = u.id
             JOIN leave_types lt ON l.leave_type_id = lt.id
@@ -434,7 +434,11 @@ export const getManagerLeaves = async (req: Request, res: Response) => {
         }
 
         const offset = (Number(page) - 1) * Number(limit);
-        query += ` ORDER BY l.created_at DESC LIMIT $${index} OFFSET $${index + 1}`;
+        query += ` ORDER BY 
+    CASE WHEN l.status = 'pending' THEN 0 ELSE 1 END,
+    CASE WHEN l.status = 'pending' THEN l.created_at END ASC,
+    CASE WHEN l.status!='pending' THEN l.created_at END DESC
+    LIMIT $${index} OFFSET $${index + 1}`;
         values.push(limit, offset);
 
         const [dataResult, countResult] = await Promise.all([
@@ -470,7 +474,7 @@ export const approveLeave = async (req: Request, res: Response) => {
         }
 
         const leaveId = req.params.id;
-        const { status } = req.body;
+       const { status, rejection_reason: rejectionReason } = req.body;
         const manager_id = req.user.id;
 
         if (!["approved", "rejected"].includes(status)) {
@@ -517,10 +521,10 @@ export const approveLeave = async (req: Request, res: Response) => {
 
         const result = await client.query(
             `UPDATE leaves 
-            SET status = $1, approved_by = $2, total_days = $3
+            SET status = $1, approved_by = $2, total_days = $3 , approved_at= NOW() ,rejection_reason = CASE WHEN $6 = 'rejected' THEN $5 ELSE NULL END
             WHERE id = $4
             RETURNING *`,
-            [status, manager_id, correctDays, leaveId]
+            [status, manager_id, correctDays, leaveId,rejectionReason ??null,status]
         );
 
         if (status === "approved") {

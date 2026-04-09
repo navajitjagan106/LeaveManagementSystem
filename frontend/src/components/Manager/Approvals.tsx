@@ -73,17 +73,20 @@ useEffect(() => {
         }
     };
 
-    const handleReject = async (id: number) => {
-        try {
-            await approveLeave(id, "rejected");
-            alert("Rejected!");
+ const handleReject = async (id: number, reason: string) => {
+    try {
+        setProcessingId(id);
+        const res = await approveLeave(id, "rejected", reason);
+        if (res.data.success) {
             fetchApprovals();
-        } catch (err) {
-            alert("Failed to reject");
-        } finally {
-            setProcessingId(null);
+            alert("Rejected!");
         }
-    };
+    } catch (err) {
+        alert("Failed to reject");
+    } finally {
+        setProcessingId(null);
+    }
+};
 
     const paginationButtons = [
         { label: "Prev", disabled: page === 1, onClick: () => setPage(prev => prev - 1) },
