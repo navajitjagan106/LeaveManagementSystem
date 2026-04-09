@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import ApprovalCard from '../cards/ApprovalCard';
 import { getPending, approveLeave } from '../../api/leaveApi';
 import { ApprovalRequest } from "../../types";
@@ -21,20 +21,7 @@ const Approvals: React.FC = () => {
         { label: "Rejected", value: "rejected" },
     ];
 
-    const filterFields = [
-        {
-            type: "select",
-            key: "status",
-            options: statusOptions,
-            value: filters.status,
-        },
-        {
-            type: "input",
-            key: "search",
-            placeholder: "Search by employee name",
-            value: searchInput,
-        },
-    ];
+
     useEffect(() => {
         const timer = setTimeout(() => {
             setFilters(prev => ({ ...prev, search: searchInput }));
@@ -42,27 +29,27 @@ const Approvals: React.FC = () => {
         }, 500);
         return () => clearTimeout(timer);
     }, [searchInput]);
+    
+   const fetchApprovals = useCallback(async () => {
+    try {
+        setLoading(true);
+        const params: any = {};
+        if (filters.status) params.status = filters.status;
+        if (filters.search) params.search = filters.search;
 
-    useEffect(() => {
-        fetchApprovals();
-    }, [filters, page]);
+        const res = await getPending({ ...params, page, limit: 10 });
+        setApprovalQueue(res.data.data);
+        setTotalPages(res.data.totalPages);
+    } catch (err) {
+        console.error("Failed to get leave requests", err);
+    } finally {
+        setLoading(false);
+    }
+}, [filters, page]);
 
-    const fetchApprovals = async () => {
-        try {
-            setLoading(true);
-            const params: any = {};
-            if (filters.status) params.status = filters.status;
-            if (filters.search) params.search = filters.search;
-
-            const res = await getPending({ ...params, page, limit: 10 });
-            setApprovalQueue(res.data.data);
-            setTotalPages(res.data.totalPages);
-        } catch (err) {
-            console.error("Failed to get leave requests", err);
-        } finally {
-            setLoading(false);
-        }
-    };
+useEffect(() => {
+    fetchApprovals();
+}, [fetchApprovals]);
 
     const handleFilterChange = (key: string, value: string) => {
         setPage(1);
