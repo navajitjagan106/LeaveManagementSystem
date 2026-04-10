@@ -25,7 +25,6 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
     });
 
     const [balances, setBalances] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
     const [managers, setManagers] = useState<any[]>([]);
 
     const [balanceChanges, setBalanceChanges] = useState<Record<number, number>>({});
@@ -35,7 +34,6 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
             ...prev,
             [leave_type_id]: (prev[leave_type_id] || 0) + change
         }));
-        // update display locally
         setBalances(prev => prev.map(b =>
             b.leave_type_id === leave_type_id
                 ? { ...b, total_allocated: b.total_allocated + change, remaining: b.remaining + change }
@@ -190,7 +188,6 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                                 ].map((btn, i) => (
                                     <button
                                         key={i}
-                                        disabled={loading}
                                         onClick={() => adjustLeave(b.leave_type_id, btn.value)}
                                         className={`px-2 py-1 text-sm rounded ${btn.style}`}
                                     >
