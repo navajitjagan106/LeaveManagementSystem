@@ -277,9 +277,9 @@ export const updateLeaveBalance = async (req: Request, res: Response) => {
 
         const { total_allocated, used } = balance.rows[0];
 
-        const newTotal = total_allocated + change;
+        const newTotal = Number(total_allocated) + Number(change); 
 
-        if (newTotal < used) {
+        if (newTotal < Number(used)) {
             return res.status(400).json({
                 error: "Cannot reduce below used leaves"
             });
