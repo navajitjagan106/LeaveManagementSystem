@@ -49,7 +49,13 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
     };
     const fetchBalance = useCallback(async () => {
         const res = await getuserBalance(user.id);
-        setBalances(res.data.data || []);
+        const data = (res.data.data || []).map((b: any) => ({
+            ...b,
+            total_allocated: Number(b.total_allocated),
+            used: Number(b.used),
+            remaining: Number(b.remaining),
+        }));
+        setBalances(data);
     }, [user.id]);
     useEffect(() => {
         fetchBalance();
