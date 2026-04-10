@@ -6,6 +6,7 @@ declare global {
       user?: JwtPayload & {
         id: number;
         role: string;
+        name:string;
       };
     }
   }

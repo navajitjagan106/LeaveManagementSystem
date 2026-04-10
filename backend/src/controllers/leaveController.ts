@@ -222,7 +222,14 @@ export const applyLeave = async (req: Request, res: Response) => {
             RETURNING *`,
             [user_id, leave_type_id, from_date, to_date, total_days, reason, manager_id, duration_type]
         );
-
+        await pool.query(
+            `INSERT INTO notifications (user_id, message)
+            VALUES ($1, $2)`,
+            [
+                manager_id,
+                `${req.user.name} has applied for leave from ${new Date(from_date).toLocaleDateString("en-GB")} to ${new Date(to_date).toLocaleDateString("en-GB")} (${total_days} day${total_days === 1 ? "" : "s"}).`
+            ]
+        );
         res.json({
             success: true,
             data: result.rows[0]
@@ -381,7 +388,7 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
             leave_type: row.leave_type,
             from_date: row.from_date,
             to_date: row.to_date,
-            duration_type:row.duration_type
+            duration_type: row.duration_type
         }));
 
         res.json(events);
@@ -411,17 +418,17 @@ export const getManagerLeaves = async (req: Request, res: Response) => {
                 l.id, u.name as employee_name, u.department,
                 lt.name as leave_type, l.from_date, l.to_date,
                 l.total_days, l.reason, l.status,l.rejection_reason, l.approved_at
-            FROM leaves l
-            JOIN users u ON l.user_id = u.id
-            JOIN leave_types lt ON l.leave_type_id = lt.id
-            WHERE l.applied_to = $1
-        `;
+                FROM leaves l
+                JOIN users u ON l.user_id = u.id
+                JOIN leave_types lt ON l.leave_type_id = lt.id
+                WHERE l.applied_to = $1
+                `;
 
         let countQuery = `
-    SELECT COUNT(*) FROM leaves l
-    JOIN users u ON l.user_id = u.id
-    WHERE l.applied_to = $1
-`;
+        SELECT COUNT(*) FROM leaves l
+        JOIN users u ON l.user_id = u.id
+        WHERE l.applied_to = $1
+        `;
 
         const values: any[] = [manager_id];
         let index = 2;
@@ -523,7 +530,21 @@ export const approveLeave = async (req: Request, res: Response) => {
             if (correctDays === 0) {
                 throw new Error("Leave falls only on holidays/weekends");
             }
+            const balanceRes = await client.query(
+                `SELECT total_allocated, used 
+                FROM leave_balances 
+                WHERE user_id = $1 AND leave_type_id = $2`,
+                [leaveData.user_id, leaveData.leave_type_id]
+            );
+
+            const { total_allocated, used } = balanceRes.rows[0];
+            const remaining = Number(total_allocated) - Number(used);
+
+            if (correctDays > remaining) {
+                throw new Error(`Insufficient leave balance. Employee has ${remaining} day(s) remaining but requested ${correctDays}.`);
+            }
         }
+
 
         const result = await client.query(
             `UPDATE leaves 
@@ -547,7 +568,20 @@ export const approveLeave = async (req: Request, res: Response) => {
         }
 
         await client.query("COMMIT");
-
+        try {
+            await pool.query(
+                `INSERT INTO notifications (user_id, message)
+                VALUES ($1, $2)`,
+                [leaveData.user_id,
+                    status === "approved"
+                    ? `Your leave request from ${new Date(leaveData.from_date).toLocaleDateString("en-GB")} to ${new Date(leaveData.to_date).toLocaleDateString("en-GB")} has been approved.`
+                    : `Your leave request from ${new Date(leaveData.from_date).toLocaleDateString("en-GB")} to ${new Date(leaveData.to_date).toLocaleDateString("en-GB")} was rejected. Reason: ${rejectionReason || "No reason provided"}`
+                ]
+            );
+        }
+        catch (notifErr) {
+            console.error("Failed to insert notification:", notifErr);
+        }
         res.json({
             success: true,
             data: result.rows[0]
@@ -611,7 +645,7 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
         const weeklyPattern = daysMap.map((day, i) => ({
             day,
             value: 0
-        }));    
+        }));
 
         weeklyResult.rows.forEach((row: any) => {
             weeklyPattern[row.day].value = Number(row.count);
@@ -640,9 +674,9 @@ export const getuserdetails = async (req: Request, res: Response) => {
         u.role,
         u.department,
         m.name AS manager_name
-     FROM users u
-     LEFT JOIN users m ON u.manager_id = m.id
-     WHERE u.id = $1`,
+        FROM users u
+        LEFT JOIN users m ON u.manager_id = m.id
+        WHERE u.id = $1`,
             [user_id]
         );
         if (result.rows.length === 0) {
@@ -728,3 +762,36 @@ export const calculateDays = async (req: Request, res: Response) => {
     }
 };
 
+export const getNotifications = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+        const result = await pool.query(
+            `SELECT id, message, is_read, created_at 
+            FROM notifications 
+            WHERE user_id = $1 
+            ORDER BY created_at DESC 
+            LIMIT 20`,
+            [req.user.id]
+        );
+
+        res.json({ success: true, data: result.rows });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+};
+
+export const markNotificationsRead = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+        await pool.query(
+            `UPDATE notifications SET is_read = true WHERE user_id = $1`,
+            [req.user.id]
+        );
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to mark notifications as read" });
+    }
+};
