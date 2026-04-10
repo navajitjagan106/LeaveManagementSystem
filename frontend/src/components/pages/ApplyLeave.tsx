@@ -119,7 +119,6 @@ const ApplyLeave: React.FC = () => {
                 <div className="bg-white p-8 rounded-lg shadow-sm w-full">
                     <form onSubmit={handleSubmit}>
 
-                        {/* leave type */}
                         <FormField label="Leave Type">
                             <RadioGroup
                                 name="leaveType"

@@ -4,32 +4,33 @@ import bcrypt from "bcrypt";
 
 export const createEmployee = async (req: Request, res: Response) => {
     try {
-        const { name, password, email, role, manager_id, department } = req.body;
+        const { name, password, email, role, manager_id, department, leave_allocations } = req.body;
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const result = await pool.query(
-            `INSERT INTO users (name,password, email, role, manager_id, department)
-            VALUES ($1, $2, $3, $4, $5,$6)
+            `INSERT INTO users (name, password, email, role, manager_id, department)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *`,
             [name, hashedPassword, email, role, manager_id || null, department]
         );
-        const user = result.rows[0]
-        const leaveTypes = await pool.query(
-            "SELECT id, max_days FROM leave_types"
-        );
 
-        const balanceQueries = leaveTypes.rows.map((lt: any) =>
-            pool.query(
-                `INSERT INTO leave_balances (user_id, leave_type_id, total_allocated, used)
-                VALUES ($1, $2, $3, 0)`,
-                [user.id, lt.id, lt.max_days]
-            )
-        );
+        const user = result.rows[0];
 
-        await Promise.all(balanceQueries);
+        if (leave_allocations && leave_allocations.length > 0) {
+            const balanceQueries = leave_allocations.map((alloc: any) =>
+                pool.query(
+                    `INSERT INTO leave_balances (user_id, leave_type_id, total_allocated, used)
+                    VALUES ($1, $2, $3, 0)`,
+                    [user.id, alloc.leave_type_id, alloc.total_allocated]
+                )
+            );
+            await Promise.all(balanceQueries);
+        }
 
         res.json({ success: true, data: result.rows[0] });
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: "Failed to create employee" });
     }
 };
