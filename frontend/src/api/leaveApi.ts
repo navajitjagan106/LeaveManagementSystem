@@ -42,3 +42,11 @@ export const getLeaveInitData = () =>
 
 export const getuserdata = () =>
     API.get("/leaves/getuserdata")
+
+
+
+export const getNotifications = () =>
+    API.get("/leaves/notifications");
+
+export const markNotificationsRead = () =>
+    API.patch("/leaves/notifications/read");

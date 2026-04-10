@@ -74,6 +74,14 @@ const seed = async () => {
         name VARCHAR(100) NOT NULL,
         date DATE NOT NULL
       );
+      
+      CREATE TABLE notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES users(id),
+        message TEXT,
+        is_read BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
 
       
     `);
