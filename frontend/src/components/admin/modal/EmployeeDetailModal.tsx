@@ -10,9 +10,7 @@ import {
 const roles = ["employee", "manager", "admin"];
 
 const profileFields = [
-    { name: "name", placeholder: "Name", type: "text" },
-    { name: "email", placeholder: "Email", type: "text" },
-    { name: "manager_id", placeholder: "Manager ID", type: "text" },
+    
     { name: "department", placeholder: "Department", type: "text" },
 ];
 
@@ -30,7 +28,41 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
     const [loading, setLoading] = useState(false);
     const [managers, setManagers] = useState<any[]>([]);
 
+    const [balanceChanges, setBalanceChanges] = useState<Record<number, number>>({});
 
+    const adjustLeave = (leave_type_id: number, change: number) => {
+        setBalanceChanges(prev => ({
+            ...prev,
+            [leave_type_id]: (prev[leave_type_id] || 0) + change
+        }));
+        // update display locally
+        setBalances(prev => prev.map(b =>
+            b.leave_type_id === leave_type_id
+                ? { ...b, total_allocated: b.total_allocated + change, remaining: b.remaining + change }
+                : b
+        ));
+    };
+
+    const handleSave = async () => {
+        try {
+            // Save profile changes
+            await updateEmployee(user.id, form);
+
+            // Save all balance changes
+            await Promise.all(
+                Object.entries(balanceChanges).map(([leave_type_id, change]) =>
+                    change !== 0
+                        ? updateLeaveBalance({ user_id: user.id, leave_type_id: Number(leave_type_id), change })
+                        : Promise.resolve()
+                )
+            );
+
+            onSuccess();
+            onClose();
+        } catch (err) {
+            alert("Failed to save changes");
+        }
+    };
     useEffect(() => {
         fetchManagers();
     }, []);
@@ -66,11 +98,7 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
 
-    const handleSave = async () => {
-        await updateEmployee(user.id, form);
-        onSuccess();
-        onClose();
-    };
+
 
     const handleDelete = async () => {
         await deleteEmployee(user.id);
@@ -78,22 +106,7 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
         onClose();
     };
 
-    const adjustLeave = async (leave_type_id: number, change: number) => {
-        try {
-            setLoading(true);
-            await updateLeaveBalance({
-                user_id: user.id,
-                leave_type_id,
-                change
-            });
-            fetchBalance();
-        } catch (err) {
-            console.error(err);
-            alert("Failed to update balance");
-        } finally {
-            setLoading(false);
-        }
-    };
+
 
     return (
         <div className="fixed inset-0 bg-black/40 flex justify-end z-50">

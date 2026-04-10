@@ -92,7 +92,7 @@ export const getLeaveInitData = async (req: Request, res: Response) => {
 
         const user_id = req.user.id;
 
-        const [managerRes, typesRes, balanceRes] = await Promise.all([
+        const [managerRes, leaveDataRes] = await Promise.all([
             pool.query(
                 `SELECT u.id, u.name, u.email 
                 FROM users u
@@ -101,23 +101,19 @@ export const getLeaveInitData = async (req: Request, res: Response) => {
                 [user_id]
             ),
 
-            pool.query(
-                `SELECT id, name, max_days 
-                FROM leave_types 
-                ORDER BY id`
-            ),
 
             pool.query(
-                `SELECT 
-                    lb.leave_type_id,
-                    lt.name as type,
-                    lb.total_allocated,
-                    lb.used,
-                    (lb.total_allocated - lb.used) AS remaining
-                    FROM leave_balances lb
-                    JOIN leave_types lt ON lb.leave_type_id = lt.id
-                    WHERE lb.user_id = $1`,
-                [user_id]
+            `SELECT 
+            lt.id, lt.name, lt.max_days,
+            lb.leave_type_id,
+            lb.total_allocated,
+            lb.used,
+            (lb.total_allocated - lb.used) AS remaining
+            FROM leave_balances lb
+            JOIN leave_types lt ON lt.id = lb.leave_type_id
+            WHERE lb.user_id = $1
+            ORDER BY lt.id`,
+            [user_id]
             )
         ]);
 
@@ -125,8 +121,8 @@ export const getLeaveInitData = async (req: Request, res: Response) => {
             success: true,
             data: {
                 manager: managerRes.rows[0] || null,
-                leaveTypes: typesRes.rows,
-                balances: balanceRes.rows
+                leaveTypes: leaveDataRes.rows.map(r => ({ id: r.id, name: r.name, max_days: r.max_days })),
+                balances: leaveDataRes.rows.map(r => ({ leave_type_id: r.leave_type_id, type: r.name, total_allocated: r.total_allocated, used: r.used, remaining: r.remaining }))
             }
         });
 
@@ -573,7 +569,7 @@ export const approveLeave = async (req: Request, res: Response) => {
                 `INSERT INTO notifications (user_id, message)
                 VALUES ($1, $2)`,
                 [leaveData.user_id,
-                    status === "approved"
+                status === "approved"
                     ? `Your leave request from ${new Date(leaveData.from_date).toLocaleDateString("en-GB")} to ${new Date(leaveData.to_date).toLocaleDateString("en-GB")} has been approved.`
                     : `Your leave request from ${new Date(leaveData.from_date).toLocaleDateString("en-GB")} to ${new Date(leaveData.to_date).toLocaleDateString("en-GB")} was rejected. Reason: ${rejectionReason || "No reason provided"}`
                 ]
