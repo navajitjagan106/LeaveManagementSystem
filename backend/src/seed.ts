@@ -48,8 +48,8 @@ const seed = async () => {
         id SERIAL PRIMARY KEY,
         user_id INT REFERENCES users(id) ON DELETE CASCADE,
         leave_type_id INT REFERENCES leave_types(id) ON DELETE CASCADE,
-        total_allocated INT DEFAULT 0,
-        used INT DEFAULT 0
+        total_allocated NUMERIC DEFAULT 0,   -- was INT
+        used NUMERIC DEFAULT 0  
       );
 
       CREATE TABLE leaves (
@@ -63,9 +63,10 @@ const seed = async () => {
         status leave_status DEFAULT 'pending',
         applied_to INT,
         approved_by INT,
+        duration_type VARCHAR(20) DEFAULT 'full',   
         rejection_reason TEXT,
         approved_at TIMESTAMPTZ,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP        
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP       
       );
 
       CREATE TABLE holidays (
@@ -74,13 +75,7 @@ const seed = async () => {
         date DATE NOT NULL
       );
 
-      CREATE TABLE notifications (
-        id SERIAL PRIMARY KEY,
-        user_id INT REFERENCES users(id),
-        message TEXT,
-        is_read BOOLEAN DEFAULT false,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      
     `);
 
     console.log(" Inserting users...");
@@ -146,11 +141,11 @@ const seed = async () => {
 
     await pool.query(`
         INSERT INTO leaves 
-        (user_id, leave_type_id, from_date, to_date, total_days, reason, status, applied_to, approved_by, approved_at, rejection_reason)
+        (user_id, leave_type_id, from_date, to_date, total_days, reason, status, applied_to, approved_by, approved_at, rejection_reason, duration_type)
         VALUES
-        (5, 1, '2026-04-01', '2026-04-03', 3, 'Fever', 'approved', 2, 2, NOW(), NULL),
-        (4, 2, '2026-04-10', '2026-04-12', 3, 'Family Function', 'pending', 2, NULL, NULL, NULL),
-        (6, 3, '2026-05-01', '2026-05-02', 2, 'Vacation', 'rejected', 2, 2, NOW(), 'Insufficient leave balance');`)
+        (5, 1, '2026-04-01', '2026-04-03', 3, 'Fever', 'approved', 2, 2, NOW(), NULL, 'full'),
+        (4, 2, '2026-04-10', '2026-04-12', 3, 'Family Function', 'pending', 2, NULL, NULL, NULL, 'full'),
+        (6, 3, '2026-05-01', '2026-05-02', 2, 'Vacation', 'rejected', 2, 2, NOW(), 'Insufficient leave balance', 'full');`)
 
     console.log("Updating used leaves...");
 
