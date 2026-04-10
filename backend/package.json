@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build":  "./node_modules/typescript/bin/tsc",
+    "build":  "npx tsc",
     "start": "node dist/app.js",
-    "dev": "ts-node-dev --project ./tsconfig.json --respawn --transpile-only src/app.ts",
-    "seed": "node dist/seed.js",
+    "dev": "ts-node-dev  src/app.ts",
+    "seed": "npx ts-node dist/seed.js",
     "seed:dev": "ts-node src/seed.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
