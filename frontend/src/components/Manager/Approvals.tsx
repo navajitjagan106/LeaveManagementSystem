@@ -4,6 +4,7 @@ import { getPending, approveLeave } from '../../api/leaveApi';
 import { ApprovalRequest } from "../../types";
 import PageHeader from '../common/PageHeader';
 import Loader from '../common/Loader';
+import { useToast } from '../common/ToastContext';
 
 const Approvals: React.FC = () => {
     const [approvalQueue, setApprovalQueue] = useState<ApprovalRequest[]>([]);
@@ -13,6 +14,7 @@ const Approvals: React.FC = () => {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [searchInput, setSearchInput] = useState('');
+const toast = useToast();
 
     const statusOptions = [
         { label: "All Status", value: "" },
@@ -29,27 +31,27 @@ const Approvals: React.FC = () => {
         }, 500);
         return () => clearTimeout(timer);
     }, [searchInput]);
-    
-   const fetchApprovals = useCallback(async () => {
-    try {
-        setLoading(true);
-        const params: any = {};
-        if (filters.status) params.status = filters.status;
-        if (filters.search) params.search = filters.search;
 
-        const res = await getPending({ ...params, page, limit: 10 });
-        setApprovalQueue(res.data.data);
-        setTotalPages(res.data.totalPages);
-    } catch (err) {
-        console.error("Failed to get leave requests", err);
-    } finally {
-        setLoading(false);
-    }
-}, [filters, page]);
+    const fetchApprovals = useCallback(async () => {
+        try {
+            setLoading(true);
+            const params: any = {};
+            if (filters.status) params.status = filters.status;
+            if (filters.search) params.search = filters.search;
 
-useEffect(() => {
-    fetchApprovals();
-}, [fetchApprovals]);
+            const res = await getPending({ ...params, page, limit: 10 });
+            setApprovalQueue(res.data.data);
+            setTotalPages(res.data.totalPages);
+        } catch (err) {
+            console.error("Failed to get leave requests", err);
+        } finally {
+            setLoading(false);
+        }
+    }, [filters, page]);
+
+    useEffect(() => {
+        fetchApprovals();
+    }, [fetchApprovals]);
 
     const handleFilterChange = (key: string, value: string) => {
         setPage(1);
@@ -62,31 +64,31 @@ useEffect(() => {
             const res = await approveLeave(id, "approved");
             if (res.data.success) {
                 setApprovalQueue(prev => prev.filter(item => item.id !== id));
-                alert("Approved");
+                toast.success("Approved");
             } else {
                 throw new Error("Not successful");
             }
         } catch (err: any) {
-            alert(err?.response?.data?.error || "Failed to approve");
+            toast.error(err?.response?.data?.error || "Failed to approve");
         } finally {
             setProcessingId(null);
         }
     };
 
- const handleReject = async (id: number, reason: string) => {
-    try {
-        setProcessingId(id);
-        const res = await approveLeave(id, "rejected", reason);
-        if (res.data.success) {
-            fetchApprovals();
-            alert("Rejected!");
+    const handleReject = async (id: number, reason: string) => {
+        try {
+            setProcessingId(id);
+            const res = await approveLeave(id, "rejected", reason);
+            if (res.data.success) {
+                fetchApprovals();
+                toast.success("Rejected!");
+            }
+        } catch (err) {
+            toast.error("Failed to reject");
+        } finally {
+            setProcessingId(null);
         }
-    } catch (err) {
-        alert("Failed to reject");
-    } finally {
-        setProcessingId(null);
-    }
-};
+    };
 
     const paginationButtons = [
         { label: "Prev", disabled: page === 1, onClick: () => setPage(prev => prev - 1) },

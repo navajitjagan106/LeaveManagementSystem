@@ -12,9 +12,12 @@ import LeaveBalance from "./components/pages/LeaveBalance";
 import Profile from "./components/pages/Profile";
 import AdminDashboard from "./components/admin/AdminDashboard";
 import RedirectHandler from "./components/common/ReDirectHandler";
+import { ToastProvider } from "./components/common/ToastContext";
 
 const App: React.FC = () => {
   return (
+    <ToastProvider>
+
     <Router>
       <Routes>
       <Route path="*" element={<RedirectHandler />} />
@@ -31,7 +34,7 @@ const App: React.FC = () => {
           <Route path="leave-history" element={<LeaveHistory />} />
           <Route path="profile" element={<Profile />} />
           <Route
-            path="/approvals"
+            path="approvals"
             element={
               <ProtectedRoute allowedRoles={["manager"]}>
                 <Approvals />
@@ -51,6 +54,8 @@ const App: React.FC = () => {
 
       </Routes>
     </Router>
+    </ToastProvider>
+
   );
 };
 

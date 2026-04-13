@@ -6,6 +6,7 @@ import {
     getuserBalance,
     getEmployees
 } from "../../../api/adminApi";
+import { useToast } from "../../common/ToastContext";
 
 const roles = ["employee", "manager", "admin"];
 
@@ -15,7 +16,7 @@ const profileFields = [
 ];
 
 const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
-
+    const toast = useToast();
     const [form, setForm] = useState({
         name: user.name,
         email: user.email,
@@ -58,7 +59,7 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
             onSuccess();
             onClose();
         } catch (err) {
-            alert("Failed to save changes");
+            toast.error("Failed to save changes");
         }
     };
     useEffect(() => {

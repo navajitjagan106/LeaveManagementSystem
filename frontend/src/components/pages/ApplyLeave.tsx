@@ -8,6 +8,7 @@ import {
 } from "../../api/leaveApi";
 import { LeaveBalance, LeaveType } from "../../types";
 import PageHeader from '../common/PageHeader';
+import { useToast } from '../common/ToastContext';
 
 
 const ApplyLeave: React.FC = () => {
@@ -23,6 +24,7 @@ const ApplyLeave: React.FC = () => {
     const [totalDays, setTotalDays] = useState(0);
     const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
     const [balances, setBalances] = useState<LeaveBalance[]>([]);
+    const toast = useToast();
 
     useEffect(() => {
         fetchInitialData();
@@ -68,7 +70,7 @@ const ApplyLeave: React.FC = () => {
         e.preventDefault();
 
         if (!formData.fromDate || !formData.toDate || !formData.reason) {
-            alert('Please fill all required fields');
+            toast.warning('Please fill all required fields');
             return;
         }
 
@@ -83,7 +85,7 @@ const ApplyLeave: React.FC = () => {
 
             await applyLeave(payload);
 
-            alert('Leave applied successfully!');
+            toast.success('Leave applied successfully!');
 
             setFormData({
                 leaveType: '1',
@@ -98,7 +100,7 @@ const ApplyLeave: React.FC = () => {
         } catch (err: any) {
             console.error(err);
 
-            alert(err.response?.data?.error || 'Failed to apply leave');
+            toast.error(err.response?.data?.error || 'Failed to apply leave');
         }
     };
 

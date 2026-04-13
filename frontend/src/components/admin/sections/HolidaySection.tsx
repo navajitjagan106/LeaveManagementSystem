@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { getHolidays } from "../../../api/leaveApi";
 import { addHoliday, deleteHoliday } from "../../../api/adminApi";
 import { Trash2, Plus } from "lucide-react";
+import { useToast } from "../../common/ToastContext";
 
 const HolidaySection = () => {
+  const toast = useToast();
   const [holidays, setHolidays] = useState<any[]>([]);
   const [form, setForm] = useState({ name: "", date: "" });
   const [showForm, setShowForm] = useState(false);
@@ -20,7 +22,7 @@ const HolidaySection = () => {
 
   const handleAdd = async () => {
     if (!form.name || !form.date) {
-      alert("Fill all fields");
+      toast.warning("Fill all fields");
       return;
     }
     try {
@@ -30,7 +32,7 @@ const HolidaySection = () => {
       setShowForm(false);
       fetchHolidays();
     } catch {
-      alert("Failed to add holiday");
+      toast.error("Failed to add holiday");
     } finally {
       setLoading(false);
     }
@@ -41,7 +43,7 @@ const HolidaySection = () => {
       await deleteHoliday(id);
       fetchHolidays();
     } catch {
-      alert("Failed to delete holiday");
+      toast.error("Failed to delete holiday");
     }
   };
 
