@@ -22,7 +22,7 @@ const Login: React.FC = () => {
             localStorage.setItem("user", JSON.stringify(res.data.user));
             navigate("/dashboard");
         } catch (err) {
-            setError("Invalid email or password");
+            setError("Invalid email or password ");
         }
     };
 
@@ -38,10 +38,8 @@ const Login: React.FC = () => {
 
             <div className="w-full md:w-1/3 flex flex-col justify-between px-12 py-10 bg-white">
                 
-                {/* Top —  + form */}
                 <div className="flex flex-col justify-center flex-1">
             
-
                     <h2 className="text-2xl font-semibold text-gray-800 mb-8">
                         Login to LeaveMS
                     </h2>

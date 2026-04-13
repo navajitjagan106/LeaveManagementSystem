@@ -6,7 +6,7 @@ import { getUserLocal } from '../../utils/getUser';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { DashboardData, User } from "../../types";
 import PageHeader from '../common/PageHeader';
-import { Loader } from 'lucide-react';
+import Loader from '../common/Loader';
 
 type Balance = {
     label: string;

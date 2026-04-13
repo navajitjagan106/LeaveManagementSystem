@@ -266,7 +266,7 @@ export const cancelLeave = async (req: Request, res: Response) => {
 
 export const getLeaveHistory = async (req: Request, res: Response) => {
     try {
-        const { status, leave_type_id, search, page = 1, limit = 10 } = req.query;
+        const { status, leave_type_id, search, from_date, to_date, page = 1, limit = 10 } = req.query;
         if (!req.user) {
             return res.status(401).json({ error: "Unauthorized" });
         }
@@ -307,6 +307,13 @@ export const getLeaveHistory = async (req: Request, res: Response) => {
             countQuery += ` AND l.reason ILIKE $${index} `
             values.push(`%${search}%`);
             index++;
+        }
+
+        if (from_date && to_date) {
+            query += ` AND l.from_date <= $${index} AND l.to_date >= $${index + 1}`;
+            countQuery += ` AND l.from_date <= $${index} AND l.to_date >= $${index + 1}`;
+            values.push(to_date, from_date);
+            index += 2;
         }
 
         const offset = (Number(page) - 1) * Number(limit);

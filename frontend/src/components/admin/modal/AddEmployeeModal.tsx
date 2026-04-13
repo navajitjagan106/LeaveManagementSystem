@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { createEmployee, getEmployees } from "../../../api/adminApi";
 import { getLeaveTypes } from "../../../api/leaveApi";
+import { useToast } from "../../common/ToastContext";
 
 const roles = ["employee", "manager", "admin"];
 
 const AddEmployeeModal = ({ onClose, onSuccess }: any) => {
+    const toast = useToast();
     const [form, setForm] = useState({
         name: "",
         email: "",
@@ -44,7 +46,7 @@ const AddEmployeeModal = ({ onClose, onSuccess }: any) => {
 
     const handleSubmit = async () => {
         if (!form.name || !form.email || !form.password) {
-            alert("Name, Email and Password are required");
+            toast.warning("Name, Email and Password are required");
             return;
         }
 
@@ -61,7 +63,7 @@ const AddEmployeeModal = ({ onClose, onSuccess }: any) => {
             onSuccess();
             onClose();
         } catch {
-            alert("Failed to create employee");
+            toast.error("Failed to create employee");
         } finally {
             setLoading(false);
         }

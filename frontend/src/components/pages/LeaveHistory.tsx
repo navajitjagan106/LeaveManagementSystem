@@ -7,6 +7,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import { MoreVertical, X, Palmtree } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
+import { useToast } from '../common/ToastContext';
 
 type Status = 'approved' | 'pending' | 'rejected';
 type DrawerField = {
@@ -49,12 +50,12 @@ const COLUMNS = [
     { key: 'actions', label: 'Actions' },
 ];
 
-const FIELDS :DrawerField[]= [
+const FIELDS: DrawerField[] = [
     { label: 'Leave Type', key: 'leave_type' },
     { label: 'From', key: 'from_date', format: true },
     { label: 'To', key: 'to_date', format: true },
     { label: 'Applied On', key: 'created_at', format: true },
-] 
+]
 
 const VIEWS = ['table', 'calendar'] as const;
 type View = typeof VIEWS[number];
@@ -80,6 +81,15 @@ const StatusBadge = ({ status }: { status: Status }) => (
 );
 
 
+const getMonthRange = (date = new Date()) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    return {
+        from: `${y}-${m}-01`,
+        to: `${y}-${m}-${new Date(y, date.getMonth() + 1, 0).getDate()}`,
+    };
+};
+
 const LeaveHistory: React.FC = () => {
     const { holidays } = useOutletContext<{ holidays: any[] }>();
     const [filters, setFilters] = useState({ leaveType: '', status: '', search: '' });
@@ -91,6 +101,8 @@ const LeaveHistory: React.FC = () => {
     const [view, setView] = useState<View>('table');
     const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
     const [cancelling, setCancelling] = useState(false);
+    const [calendarRange, setCalendarRange] = useState(getMonthRange());
+    const toast = useToast();
 
 
     useEffect(() => {
@@ -108,17 +120,25 @@ const LeaveHistory: React.FC = () => {
                 if (filters.leaveType) params.leave_type_id = filters.leaveType;
                 if (filters.search) params.search = filters.search;
 
-                const response = await getHistory({ ...params, page, limit: view === 'calendar' ? 200 : 5 });
+                if (view === 'calendar') {
+                    params.from_date = calendarRange.from;
+                    params.to_date = calendarRange.to;
+                    params.limit = 100;
+                } else {
+                    params.limit = 5;
+                }
+
+                const response = await getHistory({ ...params, page });
                 setLeaveHistory(response.data.data || []);
                 setTotalPages(response.data.totalPages || 1);
             } catch {
-                alert('Failed to load leave history');
+                toast.error('Failed to load leave history');
             } finally {
                 setLoading(false);
             }
         };
         fetchLeaveHistory();
-    }, [filters, page, view]);
+    }, [filters, page, view, calendarRange]);
 
 
     const handleFilterChange = (key: string, value: string) => {
@@ -139,7 +159,7 @@ const LeaveHistory: React.FC = () => {
             setLeaveHistory((prev) => prev.filter((l) => l.id !== selectedLeave.id));
             setSelectedLeave(null);
         } catch {
-            alert('Failed to cancel leave');
+            toast.error('Failed to cancel leave');
         } finally {
             setCancelling(false);
         }
@@ -315,7 +335,11 @@ const LeaveHistory: React.FC = () => {
                                 </div>
                             );
                         }}
-                        headerToolbar={{ left: 'prev,next today', center: 'title', right: '' }}
+                        datesSet={(arg) => setCalendarRange({
+                        from: toISO(arg.view.currentStart),
+                        to: toISO(new Date(arg.view.currentEnd.getTime() - 1)),
+                    })}
+                    headerToolbar={{ left: 'prev,next today', center: 'title', right: '' }}
                     />
                 </div>
             )}

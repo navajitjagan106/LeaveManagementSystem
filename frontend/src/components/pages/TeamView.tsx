@@ -6,6 +6,7 @@ import { useOutletContext } from "react-router-dom"
 import PageHeader from "../common/PageHeader"
 import Loader from "../common/Loader"
 import { Palmtree } from "lucide-react"
+import { useToast } from "../common/ToastContext"
 
 type CalendarEvent = {
     title: string
@@ -14,6 +15,7 @@ type CalendarEvent = {
     borderColor?: string
 }
 const TeamView: React.FC = () => {
+    const toast = useToast()
     const [events, setEvents] = useState<CalendarEvent[]>([])
     const [loading, setLoading] = useState(true)
     const [leaveEvents, setLeaveEvents] = useState<CalendarEvent[]>([])
@@ -68,7 +70,7 @@ const TeamView: React.FC = () => {
                 setLeaveEvents(leaveEvents)
                 setEvents([...leaveEvents, ...holidayEvents])
             } catch (error) {
-                alert('Failed to load team calendar')
+                toast.error('Failed to load team calendar')
             } finally {
                 setLoading(false)
             }
