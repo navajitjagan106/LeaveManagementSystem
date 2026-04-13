@@ -152,8 +152,8 @@ const seed = async () => {
         (user_id, leave_type_id, from_date, to_date, total_days, reason, status, applied_to, approved_by, approved_at, rejection_reason, duration_type)
         VALUES
         (5, 1, '2026-04-01', '2026-04-03', 3, 'Fever', 'approved', 2, 2, NOW(), NULL, 'full'),
-        (4, 2, '2026-04-10', '2026-04-12', 3, 'Family Function', 'pending', 2, NULL, NULL, NULL, 'full'),
-        (6, 3, '2026-05-01', '2026-05-02', 2, 'Vacation', 'rejected', 2, 2, NOW(), 'Insufficient leave balance', 'full');`)
+        (4, 2, '2026-04-10', '2026-04-10', 1, 'Family Function', 'pending', 2, NULL, NULL, NULL, 'full'),
+        (6, 3, '2026-04-27', '2026-04-29', 3, 'Vacation', 'rejected', 2, 2, NOW(), 'Insufficient leave balance', 'full');`)
 
     console.log("Updating used leaves...");
 
