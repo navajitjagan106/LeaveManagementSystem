@@ -236,6 +236,33 @@ export const applyLeave = async (req: Request, res: Response) => {
         res.status(500).json({ error: "Failed to apply leave" });
     }
 };
+export const cancelLeave = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+        const { id } = req.params;
+
+        const result = await pool.query(
+            `SELECT * FROM leaves WHERE id = $1 AND user_id = $2`,
+            [id, req.user.id]
+        );
+
+        if (result.rows.length === 0)
+            return res.status(404).json({ error: "Leave not found" });
+
+        if (result.rows[0].status !== 'pending')
+            return res.status(400).json({ error: "Only pending leaves can be cancelled" });
+
+        await pool.query(
+            `DELETE FROM leaves WHERE id = $1`,
+            [id]
+        );
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to cancel leave" });
+    }
+};
 
 export const getLeaveHistory = async (req: Request, res: Response) => {
     try {

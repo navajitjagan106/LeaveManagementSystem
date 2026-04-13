@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import Card from '../cards/Card';
 import StatCard from "../cards/StatCard";
-import { getDashboard, getHolidays } from "../../api/leaveApi";
+import { getDashboard } from "../../api/leaveApi";
 import { getUserLocal } from '../../utils/getUser';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { DashboardData, User } from "../../types";
 import PageHeader from '../common/PageHeader';
 import { Loader } from 'lucide-react';
@@ -23,7 +23,7 @@ const DashBoard: React.FC = () => {
 
     const [data, setData] = useState<DashboardData | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [holidays, setHolidays] = useState<any[]>([]);
+    const { holidays } = useOutletContext<{ holidays: any[] }>();
 
     const navigate = useNavigate()
 
@@ -43,17 +43,6 @@ const DashBoard: React.FC = () => {
         fetchData();
     }, []);
 
-    useEffect(() => {
-        fetchHolidays();
-    }, []);
-    const fetchHolidays = async () => {
-        try {
-            const res = await getHolidays();
-            setHolidays(res.data);
-        } catch (err) {
-            console.error("Failed to fetch holidays", err);
-        }
-    };
     const today = new Date()
     const upcomingHolidays = holidays.filter((h) => {
         return new Date(h.date) >= today
