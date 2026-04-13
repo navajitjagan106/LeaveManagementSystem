@@ -43,6 +43,8 @@ export const getLeaveInitData = () =>
 export const getuserdata = () =>
     API.get("/leaves/getuserdata")
 
+export const cancelLeave = (id: number) =>
+    API.delete(`/leaves/cancel/${id}`);
 
 
 export const getNotifications = () =>

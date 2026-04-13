@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react"
 import FullCalendar from "@fullcalendar/react"
 import dayGridPlugin from "@fullcalendar/daygrid"
-import { getTeamLeaves, getHolidays } from "../../api/leaveApi"
+import { getTeamLeaves } from "../../api/leaveApi"
+import { useOutletContext } from "react-router-dom"
 import PageHeader from "../common/PageHeader"
 import Loader from "../common/Loader"
 import { Palmtree } from "lucide-react"
@@ -15,21 +16,8 @@ type CalendarEvent = {
 const TeamView: React.FC = () => {
     const [events, setEvents] = useState<CalendarEvent[]>([])
     const [loading, setLoading] = useState(true)
-    const [holidays, setHolidays] = useState<any[]>([])
     const [leaveEvents, setLeaveEvents] = useState<CalendarEvent[]>([])
-
-    useEffect(() => {
-        fetchHolidays()
-    }, [])
-
-    const fetchHolidays = async () => {
-        try {
-            const res = await getHolidays()
-            setHolidays(res.data)
-        } catch (err) {
-            console.error("Failed to fetch holidays", err)
-        }
-    }
+    const { holidays } = useOutletContext<{ holidays: any[] }>()
 
     useEffect(() => {
         const fetchTeamLeaves = async () => {
@@ -156,7 +144,8 @@ const TeamView: React.FC = () => {
             />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {stats.map((s, i) => (
-                    <div key={i} className={`bg-white p-4 rounded-xl shadow-sm border-l-4 ${s.border}`}>                        <p className="text-sm text-gray-500">{s.label}</p>
+                    <div key={i} className={`bg-white p-4 rounded-xl shadow-sm border-l-4 ${s.border}`}>
+                        <p className="text-sm text-gray-500">{s.label}</p>
                         <p className={`text-2xl font-semibold ${s.color}`}>
                             {s.value}
                         </p>
