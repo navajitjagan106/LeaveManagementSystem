@@ -138,7 +138,7 @@ const LeaveHistory: React.FC = () => {
             }
         };
         fetchLeaveHistory();
-    }, [filters, page, view, calendarRange]);
+    }, [filters, page, view, calendarRange, toast]);
 
 
     const handleFilterChange = (key: string, value: string) => {
@@ -212,8 +212,6 @@ const LeaveHistory: React.FC = () => {
     ];
 
 
-    if (loading) return <div className="text-center py-8"><Loader /></div>;
-
     return (
         <div>
             <PageHeader title="Leave History" subtitle="View all your past leave requests" />
@@ -273,7 +271,12 @@ const LeaveHistory: React.FC = () => {
 
             {/* Calendar view */}
             {view === 'calendar' && (
-                <div className="bg-white p-4 rounded-lg shadow-sm">
+                <div className="bg-white p-4 rounded-lg shadow-sm relative">
+                    {loading && (
+                        <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10 rounded-lg">
+                            <Loader />
+                        </div>
+                    )}
                     <div className="flex gap-6 text-sm mb-4">
                         {STATUSES.map((s) => (
                             <div key={s} className="flex items-center gap-2">
@@ -334,10 +337,13 @@ const LeaveHistory: React.FC = () => {
                                 </div>
                             );
                         }}
-                        datesSet={(arg) => setCalendarRange({
-                        from: toISO(arg.view.currentStart),
-                        to: toISO(new Date(arg.view.currentEnd.getTime() - 1)),
-                    })}
+                        datesSet={(arg) => {
+                            const newFrom = toISO(arg.view.currentStart);
+                            const newTo = toISO(new Date(arg.view.currentEnd.getTime() - 1));
+                            setCalendarRange((prev) =>
+                                prev.from === newFrom && prev.to === newTo ? prev : { from: newFrom, to: newTo }
+                            );
+                        }}
                     headerToolbar={{ left: 'prev,next today', center: 'title', right: '' }}
                     />
                 </div>
@@ -346,7 +352,9 @@ const LeaveHistory: React.FC = () => {
             {/* Table view */}
             {view === 'table' && (
                 <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                    {leaveHistory.length === 0 ? (
+                    {loading ? (
+                        <div className="text-center py-8"><Loader /></div>
+                    ) : leaveHistory.length === 0 ? (
                         <div className="text-center py-8 text-gray-500">No leave history found</div>
                     ) : (
                         <table className="w-full text-sm">
