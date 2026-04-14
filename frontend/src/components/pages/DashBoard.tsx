@@ -44,6 +44,10 @@ const DashBoard: React.FC = () => {
     }, []);
 
     const today = new Date()
+    const toLocalStr = (d: Date) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const todayStr = toLocalStr(today)
+    const todayHoliday = holidays.find((h) => toLocalStr(new Date(h.date)) === todayStr)
     const upcomingHolidays = holidays.filter((h) => {
         return new Date(h.date) >= today
     })
@@ -138,12 +142,17 @@ const DashBoard: React.FC = () => {
                 <div className="bg-white p-6 rounded-lg shadow-sm">
                     <h3 className="text-lg font-semibold mb-4">Team members on leave</h3>
 
-                    {data.team_on_leave.length === 0 ? (
+                    {todayHoliday ? (
+                        <p className="text-yellow-600 font-medium">
+                            Today is a holiday — {todayHoliday.name}
+                        </p>
+                    ) : data.team_on_leave.length === 0 ? (
                         <p className="text-gray-500">No one is on leave today</p>
                     ) : (
                         data.team_on_leave.map((member, i) => (
                             <p key={i} className="text-gray-700">
-                                {member.name} ( {new Date(member.from_date).toLocaleDateString("en-GB")} →
+                                {member.name} (
+                                {new Date(member.from_date).toLocaleDateString("en-GB")} →{" "}
                                 {new Date(member.to_date).toLocaleDateString("en-GB")})
                             </p>
                         ))

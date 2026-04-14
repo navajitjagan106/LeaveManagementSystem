@@ -232,7 +232,6 @@ const LeaveHistory: React.FC = () => {
                 ))}
             </div>
 
-            {/* Filters — table only */}
             {view === 'table' && (
                 <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap gap-4 items-center">
                     <select
@@ -418,7 +417,6 @@ const LeaveHistory: React.FC = () => {
                 </div>
             )}
 
-            {/* Slide-in drawer */}
             {selectedLeave && (
                 <>
                     <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setSelectedLeave(null)} />
