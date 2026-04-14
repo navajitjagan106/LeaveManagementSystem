@@ -78,7 +78,7 @@ const TeamView: React.FC = () => {
         if (holidays.length > 0) {
             fetchTeamLeaves()
         }
-    }, [holidays])
+    }, [holidays, toast])
 
     const formatDate = (date: Date) => {
         const year = date.getFullYear()
