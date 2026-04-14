@@ -35,7 +35,7 @@ const Header: React.FC = () => {
 
     useEffect(() => {
         fetchNotifications();
-        const interval = setInterval(fetchNotifications, 30000); 
+        const interval = setInterval(fetchNotifications, 30000);
         return () => clearInterval(interval);
     }, []);
 
@@ -121,7 +121,6 @@ const Header: React.FC = () => {
                         <div className="absolute right-0 mt-2 w-48 bg-white text-black rounded-lg shadow-lg p-3 z-50"
                             onClick={(e) => e.stopPropagation()}>
                             <p className="font-semibold">{user?.name}</p>
-                            <p className="text-sm text-gray-500 mb-2">{user?.role}</p>
                             <button
                                 onClick={() => { navigate("/profile"); setShowProfile(false); }}
                                 className="w-full text-left hover:bg-gray-100 px-2 py-1 rounded"
