@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build":  "npx tsc",
+    "build": "npx tsc",
     "start": "node dist/app.js",
     "dev": "ts-node-dev  src/app.ts",
     "seed": "node dist/seed.js",
@@ -20,7 +20,9 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "pg": "^8.20.0"
+    "nodemailer": "^8.0.5",
+    "pg": "^8.20.0",
+    "resend": "^6.11.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -28,6 +30,7 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.5.0",
+    "@types/nodemailer": "^8.0.0",
     "@types/pg": "^8.20.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.4.5"

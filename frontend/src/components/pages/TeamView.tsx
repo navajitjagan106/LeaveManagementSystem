@@ -119,8 +119,8 @@ const TeamView: React.FC = () => {
         },
         {
             label: "Employees On Leave Today",
-            value: events.filter(
-                (e) => e.start === new Date().toISOString().split("T")[0]
+            value: leaveEvents.filter(
+                (e) => e.start === formatDate(new Date())
             ).length,
             color: "text-green-600",
             border: "border-green-600",
