@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { pool } from "../config/db";
 import { calculateWorkingDays } from "../utils/calculateWorkingDays";
 import { getHolidaysinRange } from "../utils/getHolidaysinRange";
+import { sendLeaveApplicationEmail, sendLeaveApprovedEmail, sendLeaveRejectedEmail } from "../utils/emailService";
 
 export const getDashboardData = async (req: Request, res: Response) => {
     try {
@@ -149,13 +150,17 @@ export const applyLeave = async (req: Request, res: Response) => {
         const holidays = await getHolidaysinRange(from_date, to_date, pool);
 
         const data = await pool.query(
-            `SELECT 
+            `SELECT
             u.manager_id,
             lb.total_allocated,
-            lb.used
+            lb.used,
+            m.email AS manager_email,
+            m.name  AS manager_name,
+            lt.name AS leave_type_name
             FROM users u
-            JOIN leave_balances lb 
-            ON lb.user_id = u.id AND lb.leave_type_id = $2
+            JOIN leave_balances lb ON lb.user_id = u.id AND lb.leave_type_id = $2
+            LEFT JOIN users m ON m.id = u.manager_id
+            JOIN leave_types lt ON lt.id = $2
             WHERE u.id = $1`,
             [user_id, leave_type_id]
         );
@@ -164,7 +169,7 @@ export const applyLeave = async (req: Request, res: Response) => {
             return res.status(404).json({ error: "Data not found" });
         }
 
-        const { manager_id, total_allocated, used } = data.rows[0];
+        const { manager_id, total_allocated, used, manager_email, manager_name, leave_type_name } = data.rows[0];
         const remaining = total_allocated - used;
 
         if (!manager_id) {
@@ -226,6 +231,18 @@ export const applyLeave = async (req: Request, res: Response) => {
                 `${req.user.name} has applied for leave from ${new Date(from_date).toLocaleDateString("en-GB")} to ${new Date(to_date).toLocaleDateString("en-GB")} (${total_days} day${total_days === 1 ? "" : "s"}).`
             ]
         );
+
+        void sendLeaveApplicationEmail({
+            managerEmail: manager_email,
+            managerName: manager_name,
+            employeeName: req.user.name,
+            leaveType: leave_type_name,
+            fromDate: from_date,
+            toDate: to_date,
+            totalDays: total_days,
+            reason,
+        }).catch((emailErr) => console.error("Failed to send leave application email:", emailErr));
+
         res.json({
             success: true,
             data: result.rows[0]
@@ -236,6 +253,7 @@ export const applyLeave = async (req: Request, res: Response) => {
         res.status(500).json({ error: "Failed to apply leave" });
     }
 };
+
 export const cancelLeave = async (req: Request, res: Response) => {
     try {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
@@ -527,7 +545,11 @@ export const approveLeave = async (req: Request, res: Response) => {
         await client.query("BEGIN");
 
         const leave = await client.query(
-            "SELECT * FROM leaves WHERE id = $1",
+            `SELECT l.*, u.email AS employee_email, u.name AS employee_name, lt.name AS leave_type_name
+             FROM leaves l
+             JOIN users u ON u.id = l.user_id
+             JOIN leave_types lt ON lt.id = l.leave_type_id
+             WHERE l.id = $1`,
             [leaveId]
         );
 
@@ -598,6 +620,9 @@ export const approveLeave = async (req: Request, res: Response) => {
         }
 
         await client.query("COMMIT");
+
+        const { employee_email: employeeEmail, employee_name: employeeName, leave_type_name } = leaveData;
+
         try {
             await pool.query(
                 `INSERT INTO notifications (user_id, message)
@@ -612,6 +637,28 @@ export const approveLeave = async (req: Request, res: Response) => {
         catch (notifErr) {
             console.error("Failed to insert notification:", notifErr);
         }
+
+        const emailPromise = status === "approved"
+            ? sendLeaveApprovedEmail({
+                employeeEmail,
+                employeeName,
+                managerName: req.user!.name,
+                leaveType: leave_type_name,
+                fromDate: leaveData.from_date,
+                toDate: leaveData.to_date,
+                totalDays: correctDays,
+            })
+            : sendLeaveRejectedEmail({
+                employeeEmail,
+                employeeName,
+                managerName: req.user!.name,
+                leaveType: leave_type_name,
+                fromDate: leaveData.from_date,
+                toDate: leaveData.to_date,
+                totalDays: correctDays,
+                rejectionReason: rejectionReason || "No reason provided",
+            });
+        void emailPromise.catch((emailErr) => console.error("Failed to send leave decision email:", emailErr));
         res.json({
             success: true,
             data: result.rows[0]
@@ -655,13 +702,15 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
 
             pool.query(
                 `
-                SELECT 
+                SELECT
                     EXTRACT(DOW FROM d)::int AS day,
                     COUNT(*) as count
                 FROM leaves l,
                 GENERATE_SERIES(l.from_date, l.to_date, INTERVAL '1 day') AS d
                 WHERE l.user_id = $1
                 AND l.status = 'approved'
+                AND EXTRACT(DOW FROM d) NOT IN (0, 6)
+                AND d::date NOT IN (SELECT date FROM holidays)
                 GROUP BY day
                 ORDER BY day;
                 `,

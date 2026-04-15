@@ -1,12 +1,14 @@
 import express from "express";
 import {
-    applyLeave, approveLeave, calculateDays, cancelLeave, getDashboardData, getHolidays, getLeaveBalance, getLeaveHistory, getLeaveInitData,
-    getLeaveTypes, getManager, getManagerLeaves, getNotifications, getTeamLeaves, getuserdetails, markNotificationsRead
+    applyLeave, approveLeave, calculateDays, cancelLeave,
+    getDashboardData, getHolidays, getLeaveBalance, getLeaveHistory,
+    getLeaveInitData, getLeaveTypes, getManager, getManagerLeaves,
+    getNotifications, getTeamLeaves, getuserdetails, markNotificationsRead
 } from "../controllers/leaveController";
 import { authorizeRoles } from "../middleware/roleMiddleware";
 
 const router = express.Router();
-router.patch("/approve/:id", authorizeRoles("manager"), approveLeave);
+router.patch("/approve/:id", authorizeRoles("manager", "admin"), approveLeave);
 router.post("/apply", authorizeRoles("employee", "manager"), applyLeave);
 router.get('/types', getLeaveTypes);
 router.get('/users/manager', getManager);

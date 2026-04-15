@@ -48,7 +48,8 @@ export const login = async (req: Request, res: Response) => {
             {
                 id: dbUser.id,
                 role: dbUser.role,
-                name:dbUser.name
+                name: dbUser.name,
+                email: dbUser.email,
             },
             process.env.JWT_SECRET as string,
             {
