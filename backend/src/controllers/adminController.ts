@@ -86,9 +86,9 @@ export const updateManager = async (req: Request, res: Response) => {
 
         const result = await pool.query(
             `UPDATE users
-             SET manager_id = $1
-             WHERE id = $2
-             RETURNING *`,
+            SET manager_id = $1
+            WHERE id = $2
+            RETURNING *`,
             [manager_id, id]
         );
 
@@ -104,8 +104,8 @@ export const createLeaveType = async (req: Request, res: Response) => {
 
         const result = await pool.query(
             `INSERT INTO leave_types (name, max_days)
-             VALUES ($1, $2)
-             RETURNING *`,
+            VALUES ($1, $2)
+            RETURNING *`,
             [name, max_days]
         );
 
