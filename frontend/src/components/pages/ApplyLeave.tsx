@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import FormField from '../forms/FormField';
 import RadioGroup from '../forms/RadioGroup';
-import {
-    applyLeave,
-    calculateDays,
-    getLeaveInitData,
-} from "../../api/leaveApi";
+import { applyLeave, calculateDays, getLeaveInitData, } from "../../api/leaveApi";
 import { LeaveBalance, LeaveType } from "../../types";
 import PageHeader from '../common/PageHeader';
 import { useToast } from '../common/ToastContext';

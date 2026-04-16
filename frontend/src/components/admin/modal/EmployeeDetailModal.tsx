@@ -97,15 +97,11 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
 
-
-
     const handleDelete = async () => {
         await deleteEmployee(user.id);
         onSuccess();
         onClose();
     };
-
-
 
     return (
         <div className="fixed inset-0 bg-black/40 flex justify-end z-50">

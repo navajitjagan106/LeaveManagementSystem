@@ -104,7 +104,6 @@ const LeaveHistory: React.FC = () => {
     const [calendarRange, setCalendarRange] = useState(getMonthRange());
     const toast = useToast();
 
-
     useEffect(() => {
         getLeaveInitData()
             .then((res) => setLeaveTypes(res.data.data.leaveTypes))
@@ -140,7 +139,6 @@ const LeaveHistory: React.FC = () => {
         fetchLeaveHistory();
     }, [filters, page, view, calendarRange, toast]);
 
-
     const handleFilterChange = (key: string, value: string) => {
         setPage(1);
         setFilters((prev) => ({ ...prev, [key]: value }));
@@ -164,7 +162,6 @@ const LeaveHistory: React.FC = () => {
             setCancelling(false);
         }
     };
-
 
     const hasActiveFilters = Object.values(filters).some(Boolean);
 
@@ -405,7 +402,6 @@ const LeaveHistory: React.FC = () => {
                 </div>
             )}
 
-            {/* Pagination table only */}
             {view === 'table' && (
                 <div className="flex justify-center gap-4 mt-4">
                     {[

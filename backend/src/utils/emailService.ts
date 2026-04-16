@@ -19,9 +19,9 @@ export async function sendLeaveApplicationEmail(params: {
     const { managerEmail, managerName, employeeName, leaveType, fromDate, toDate, totalDays, reason } = params;
 
     const { error } = await resend.emails.send({
-        from: "onboarding@resend.dev",
+        from: "noreply@resend.dev",
         to: toAlias(managerEmail),
-        subject: `Leave Request from ${employeeName}`,
+        subject: `[To: ${managerName}] Leave Request from ${employeeName}`,
         text: `
         Hi ${managerName},
 
@@ -50,9 +50,9 @@ export async function sendLeaveApprovedEmail(params: {
     const { employeeEmail, employeeName, managerName, leaveType, fromDate, toDate, totalDays } = params;
 
     const { error } = await resend.emails.send({
-        from: "onboarding@resend.dev",
+        from: "noreply@resend.dev",
         to: toAlias(employeeEmail),
-        subject: `Your Leave Request Has Been Approved`,
+        subject: `[To: ${employeeName}] Your Leave Request Has Been Approved`,
         text: `
         Hi ${employeeName},
 
@@ -82,9 +82,9 @@ export async function sendLeaveRejectedEmail(params: {
     const { employeeEmail, employeeName, managerName, leaveType, fromDate, toDate, totalDays, rejectionReason } = params;
 
     const { error } = await resend.emails.send({
-        from: "onboarding@resend.dev",
+        from: "noreply@resend.dev",
         to: toAlias(employeeEmail),
-        subject: `Your Leave Request Has Been Rejected`,
+        subject: `[To: ${employeeName}] Your Leave Request Has Been Rejected`,
         text: `
         Hi ${employeeName},
 

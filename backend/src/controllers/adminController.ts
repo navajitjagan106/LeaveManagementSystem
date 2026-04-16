@@ -145,18 +145,27 @@ export const getAllLeaves = async (req: Request, res: Response) => {
 };
 
 export const updateLeaveType = async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { max_days } = req.body;
+    try {
+        const { id } = req.params;
+        const { max_days } = req.body;
 
-    const result = await pool.query(
-        `UPDATE leave_types
-     SET max_days = $1
-     WHERE id = $2
-     RETURNING *`,
-        [max_days, id]
-    );
+        const result = await pool.query(
+            `UPDATE leave_types
+            SET max_days = $1
+            WHERE id = $2
+            RETURNING *`,
+            [max_days, id]
+        );
 
-    res.json({ success: true, data: result.rows[0] });
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Leave type not found" });
+        }
+
+        res.json({ success: true, data: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to update leave type" });
+    }
 };
 
 export const addHoliday = async (req: Request, res: Response) => {

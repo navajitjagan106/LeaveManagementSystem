@@ -15,20 +15,20 @@ const LeaveBalance: React.FC = () => {
 
     const [leaveBalances, setLeaveBalances] = useState<LeaveBalanceType[]>([])
     const [weeklyData, setWeeklyData] = useState([])
-            const [loading, setLoading] = useState(true);
-    
+    const [loading, setLoading] = useState(true);
+
     useEffect(() => {
         fetchBalances();
     }, []);
 
     const fetchBalances = async () => {
         try {
-                    setLoading(true)
+            setLoading(true)
             const res = await getBalance();
-    
+
             setLeaveBalances(res.data.leaveBalances || []);
             setWeeklyData(res.data.weeklyPattern || [])
-                    setLoading(false)
+            setLoading(false)
         } catch (err) {
             console.error("Failed to fetch leave balance", err);
         }
@@ -49,7 +49,7 @@ const LeaveBalance: React.FC = () => {
 
     const chartDatarem = leaveBalances.map((lb) => ({
         name: lb.type,
-        value:Number( lb.remaining),
+        value: Number(lb.remaining),
     }));
     const chartDataused = leaveBalances.map((lb) => ({
         name: lb.type,
@@ -57,7 +57,7 @@ const LeaveBalance: React.FC = () => {
     }));
 
     if (loading) {
-        return <div className="text-center py-8"><Loader/></div>;
+        return <div className="text-center py-8"><Loader /></div>;
     }
 
     return (
@@ -108,8 +108,7 @@ const LeaveBalance: React.FC = () => {
                             </ResponsiveContainer>
                         </div>
                     </Card>
-                    
-                    {/* Pie Chart Placeholder */}
+
                     <Card>
                         <h3 className="text-lg font-semibold mb-4">Leave Balances</h3>
                         <div className="h-64">
@@ -136,9 +135,8 @@ const LeaveBalance: React.FC = () => {
                             </ResponsiveContainer>
                         </div>
                     </Card>
-
-                    {/* Detailed Table */}
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Card>
                         <h3 className="text-lg font-semibold mb-4">Leave Used</h3>
