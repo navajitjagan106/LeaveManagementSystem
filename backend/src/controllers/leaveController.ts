@@ -12,7 +12,6 @@ export const getDashboardData = async (req: Request, res: Response) => {
 
         const user_id = req.user.id;
 
-
         const userResult = await pool.query(
             "SELECT manager_id FROM users WHERE id = $1",
             [user_id]
@@ -336,7 +335,6 @@ export const getLeaveHistory = async (req: Request, res: Response) => {
 
         const offset = (Number(page) - 1) * Number(limit);
 
-
         query += ` ORDER BY l.created_at DESC LIMIT $${index} OFFSET $${index + 1}`;
         values.push(limit, offset);
         const [dataResult, countResult] = await Promise.all([
@@ -351,7 +349,6 @@ export const getLeaveHistory = async (req: Request, res: Response) => {
             page: Number(page),
             totalPages: Math.ceil(countResult.rows[0].count / Number(limit))
         });
-
 
     } catch (err) {
         console.error(err);
@@ -423,23 +420,23 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
         }
 
         else if (role === "manager") {
-            const parentRes = await pool.query("SELECT manager_id from users where id=$1", [user_id])
-            const parentManagerId = parentRes.rows[0]?.manager_id
-            query += `AND (u.manager_id =$${index} OR u.manager_id=$${index + 1})`
-            values.push(user_id, parentManagerId);
+            query += ` AND (u.manager_id = $${index} OR u.manager_id = $${index + 1})`
+            values.push(user_id, manager_id);
         }
 
         const result = await pool.query(query, values);
 
         const events = result.rows.map((row) => ({
+            id: row.id,
             name: row.name,
             leave_type: row.leave_type,
             from_date: row.from_date,
             to_date: row.to_date,
-            duration_type: row.duration_type
+            duration_type: row.duration_type,
+            ...(role === "manager" && { reason: row.reason })
         }));
 
-        res.json(events);
+        res.json({ events, role });
 
     } catch (err) {
         console.error(err);
@@ -457,12 +454,11 @@ export const getManagerLeaves = async (req: Request, res: Response) => {
             return res.status(403).json({ error: "Forbidden" });
         }
 
-
         const manager_id = req.user.id;
         const { status, search, page = 1, limit = 10 } = req.query;
 
         let query = `
-            SELECT
+                SELECT
                 l.id, u.name as employee_name, u.department,
                 lt.name as leave_type, l.from_date, l.to_date,
                 l.total_days, l.reason, l.status,l.rejection_reason, l.approved_at
@@ -496,10 +492,10 @@ export const getManagerLeaves = async (req: Request, res: Response) => {
 
         const offset = (Number(page) - 1) * Number(limit);
         query += ` ORDER BY 
-    CASE WHEN l.status = 'pending' THEN 0 ELSE 1 END,
-    CASE WHEN l.status = 'pending' THEN l.created_at END ASC,
-    CASE WHEN l.status!='pending' THEN l.created_at END DESC
-    LIMIT $${index} OFFSET $${index + 1}`;
+        CASE WHEN l.status = 'pending' THEN 0 ELSE 1 END,
+        CASE WHEN l.status = 'pending' THEN l.created_at END ASC,
+        CASE WHEN l.status!='pending' THEN l.created_at END DESC
+        LIMIT $${index} OFFSET $${index + 1}`;
         values.push(limit, offset);
 
         const [dataResult, countResult] = await Promise.all([
@@ -514,7 +510,6 @@ export const getManagerLeaves = async (req: Request, res: Response) => {
             page: Number(page),
             totalPages: Math.ceil(countResult.rows[0].count / Number(limit))
         });
-
 
     } catch (err) {
         console.error(err);
@@ -546,25 +541,31 @@ export const approveLeave = async (req: Request, res: Response) => {
 
         const leave = await client.query(
             `SELECT l.*, u.email AS employee_email, u.name AS employee_name, lt.name AS leave_type_name
-             FROM leaves l
-             JOIN users u ON u.id = l.user_id
-             JOIN leave_types lt ON lt.id = l.leave_type_id
-             WHERE l.id = $1`,
+            FROM leaves l
+            JOIN users u ON u.id = l.user_id
+            JOIN leave_types lt ON lt.id = l.leave_type_id
+            WHERE l.id = $1`,
             [leaveId]
         );
 
         if (leave.rows.length === 0) {
-            throw new Error("Leave not found");
+            const err: any = new Error("Leave not found");
+            err.statusCode = 404;
+            throw err;
         }
 
         const leaveData = leave.rows[0];
 
         if (leaveData.applied_to !== manager_id) {
-            throw new Error("Not authorized");
+            const err: any = new Error("Not authorized");
+            err.statusCode = 403;
+            throw err;
         }
 
         if (leaveData.status !== "pending") {
-            throw new Error("Already processed");
+            const err: any = new Error("Already processed");
+            err.statusCode = 409;
+            throw err;
         }
 
         let correctDays = leaveData.total_days
@@ -596,7 +597,6 @@ export const approveLeave = async (req: Request, res: Response) => {
                 throw new Error(`Insufficient leave balance. Employee has ${remaining} day(s) remaining but requested ${correctDays}.`);
             }
         }
-
 
         const result = await client.query(
             `UPDATE leaves 
@@ -668,7 +668,7 @@ export const approveLeave = async (req: Request, res: Response) => {
         await client.query("ROLLBACK");
         console.error(err);
 
-        res.status(400).json({
+        res.status(err.statusCode ?? 400).json({
             error: err.message || "Failed to update leave"
         });
 
@@ -689,11 +689,11 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
 
             pool.query(
                 `SELECT 
-                    lb.leave_type_id,          
-                    lt.name as type,
-                    lb.total_allocated,
-                    lb.used,
-                    (lb.total_allocated - lb.used) AS remaining
+                lb.leave_type_id,          
+                lt.name as type,
+                lb.total_allocated,
+                lb.used,
+                (lb.total_allocated - lb.used) AS remaining
                 FROM leave_balances lb
                 JOIN leave_types lt ON lb.leave_type_id = lt.id
                 WHERE lb.user_id = $1`,
@@ -703,8 +703,8 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
             pool.query(
                 `
                 SELECT
-                    EXTRACT(DOW FROM d)::int AS day,
-                    COUNT(*) as count
+                EXTRACT(DOW FROM d)::int AS day,
+                COUNT(*) as count
                 FROM leaves l,
                 GENERATE_SERIES(l.from_date, l.to_date, INTERVAL '1 day') AS d
                 WHERE l.user_id = $1
@@ -747,7 +747,7 @@ export const getuserdetails = async (req: Request, res: Response) => {
         }
         const user_id = req.user.id
         const result = await pool.query(
-            `SELECT 
+        `SELECT 
         u.name,
         u.email,
         u.role,
@@ -817,6 +817,14 @@ export const getManager = async (req: Request, res: Response) => {
 export const calculateDays = async (req: Request, res: Response) => {
     try {
         const { from_date, to_date, duration_type } = req.body;
+
+        if (!from_date || !to_date) {
+            return res.status(400).json({ error: "from_date and to_date are required" });
+        }
+
+        if (new Date(to_date) < new Date(from_date)) {
+            return res.status(400).json({ error: "to_date must be on or after from_date" });
+        }
 
         const holidayRes = await pool.query(
             `SELECT date FROM holidays WHERE date BETWEEN $1 AND $2`,
