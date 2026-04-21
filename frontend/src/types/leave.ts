@@ -25,4 +25,7 @@ export interface LeaveHistory {
     created_at?: string;
     updated_at?: string;
     user_name?: string;
+    rejection_reason?: string;
+    approved_at?: string;
+    approved_by_name?: string;
 }

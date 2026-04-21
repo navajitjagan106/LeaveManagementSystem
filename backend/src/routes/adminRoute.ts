@@ -12,7 +12,8 @@ import {
     updateLeaveType,
     getAllLeaves,
     getUserLeaveBalance,
-    updateLeaveBalance
+    updateLeaveBalance,
+    exportLeaves,
 } from "../controllers/adminController";
 
 const router = express.Router();
@@ -28,8 +29,8 @@ router.post("/leave-types", createLeaveType);
 router.patch("/leave-types/:id", updateLeaveType);
 router.post("/holidays", addHoliday);
 router.delete("/holidays/:id", deleteHoliday);
-router.get("/leaves",getAllLeaves)
-router.get("/user-balance/:id",getUserLeaveBalance)
-router.patch("/user-balance",updateLeaveBalance)
-
+router.get("/leaves", getAllLeaves)
+router.get("/user-balance/:id", getUserLeaveBalance)
+router.patch("/user-balance", updateLeaveBalance)
+router.get('/export', exportLeaves)
 export default router;

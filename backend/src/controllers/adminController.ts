@@ -267,7 +267,7 @@ export const updateLeaveBalance = async (req: Request, res: Response) => {
         }
 
         const role = req.user.role;
-        
+
         const { user_id, leave_type_id, change } = req.body;
 
         if (!["admin"].includes(role)) {
@@ -287,7 +287,7 @@ export const updateLeaveBalance = async (req: Request, res: Response) => {
 
         const { total_allocated, used } = balance.rows[0];
 
-        const newTotal = Number(total_allocated) + Number(change); 
+        const newTotal = Number(total_allocated) + Number(change);
 
         if (newTotal < Number(used)) {
             return res.status(400).json({
@@ -319,3 +319,68 @@ export const updateLeaveBalance = async (req: Request, res: Response) => {
         res.status(500).json({ error: "Failed to update leave balance" });
     }
 };
+
+export const exportLeaves = async (req: Request, res: Response) => {
+    try {
+        const { status, from_date, to_date, department } = req.query;
+
+        const values: any[] = [];
+        let index = 1;
+        let where = 'WHERE 1=1';
+
+        if (status) { where += ` AND l.status = $${index++}`; values.push(status); }
+        if (department) { where += ` AND u.department = $${index++}`; values.push(department); }
+        if (from_date) { where += ` AND l.from_date >= $${index++}`; values.push(from_date); }
+        if (to_date) { where += ` AND l.to_date <= $${index++}`; values.push(to_date); }
+
+        const result = await pool.query(`
+            SELECT
+                u.name AS employee,
+                u.department,
+                lt.name  AS leave_type,
+                l.from_date,
+                l.to_date,
+                l.total_days,
+                l.status,
+                l.reason,
+                l.rejection_reason,
+                m.name          AS reviewed_by,
+                l.approved_at,
+                l.created_at    AS applied_on
+            FROM leaves l
+            JOIN users u       ON l.user_id     = u.id
+            JOIN leave_types lt ON l.leave_type_id = lt.id
+            LEFT JOIN users m  ON l.approved_by  = m.id
+            ${where}
+            ORDER BY l.created_at DESC
+        `, values);
+
+        const headers = ['Employee', 'Department', 'Leave Type', 'From', 'To', 'Days', 'Status', 'Reason', 'Manager Note', 'Reviewed By', 'Reviewed At', 'Applied On'];
+
+        const escape = (v: any) => {
+            if (v == null) return '';
+            const s = String(v).replace(/"/g, '""');
+            return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s}"` : s;
+        };
+
+        const fmt = (d: any) => d ? new Date(d).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+
+        const rows = result.rows.map(r => [
+            r.employee, r.department, r.leave_type,
+            fmt(r.from_date), fmt(r.to_date), r.total_days,
+            r.status, r.reason, r.rejection_reason,
+            r.reviewed_by, fmt(r.approved_at), fmt(r.applied_on),
+        ].map(escape).join(','));
+
+        const csv = [headers.join(','), ...rows].join('\n');
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="leaves_export.csv"');
+        res.send(csv);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to export leaves' });
+    }
+};
+

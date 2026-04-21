@@ -3,7 +3,7 @@ import {
     applyLeave, approveLeave, calculateDays, cancelLeave,
     getDashboardData, getHolidays, getLeaveBalance, getLeaveHistory,
     getLeaveInitData, getLeaveTypes, getManager, getManagerLeaves,
-    getNotifications, getTeamLeaves, getuserdetails, markNotificationsRead
+    getNotifications, getTeamLeaves, getuserdetails, markNotificationsRead, 
 } from "../controllers/leaveController";
 import { authorizeRoles } from "../middleware/roleMiddleware";
 
@@ -24,5 +24,6 @@ router.get("/getinitdata", getLeaveInitData)
 router.get("/notifications", getNotifications);
 router.patch("/notifications/read", markNotificationsRead);
 router.delete("/cancel/:id", authorizeRoles("employee", "manager"), cancelLeave);
+
 
 export default router;

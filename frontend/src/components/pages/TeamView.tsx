@@ -210,6 +210,12 @@ const TeamView: React.FC = () => {
     }).length
 
 
+    const STATS = [
+        { label: "Holidays This Month", value: holidaysThisMonth, unit: "holidays", color: "text-purple-600", border: "border-purple-600" },
+        { label: "Employees On Leave This Month", value: employeesThisMonth, unit: "employees", color: "text-blue-600", border: "border-blue-600" },
+        { label: "On Leave Today", value: onLeaveToday, unit: "employees today", color: "text-green-600", border: "border-green-600" },
+    ]
+
     if (loading) return <div className="text-center py-8"><Loader /></div>
 
     return (
@@ -217,27 +223,7 @@ const TeamView: React.FC = () => {
             <PageHeader title="Team View" subtitle="View your team members on leave" />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <StatCard
-                    label="Holidays This Month"
-                    value={holidaysThisMonth}
-                    unit="holidays"
-                    color="text-purple-600"
-                    border="border-purple-600"
-                />
-                <StatCard
-                    label="Employees On Leave This Month"
-                    value={employeesThisMonth}
-                    unit="employees"
-                    color="text-blue-600"
-                    border="border-blue-600"
-                />
-                <StatCard
-                    label="On Leave Today"
-                    value={onLeaveToday}
-                    unit="employees today"
-                    color="text-green-600"
-                    border="border-green-600"
-                />
+                {STATS.map((s) => <StatCard key={s.label} {...s} />)}
             </div>
 
             {leaveCalEvents.length === 0 && (

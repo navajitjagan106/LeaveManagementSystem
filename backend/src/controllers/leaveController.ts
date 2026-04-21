@@ -15,7 +15,7 @@ export const getDashboardData = async (req: Request, res: Response) => {
         const userResult = await pool.query(
             "SELECT manager_id FROM users WHERE id = $1",
             [user_id]
-        );
+        )
 
         if (userResult.rows.length === 0) {
             return res.status(404).json({ error: "User not found" });
@@ -113,7 +113,7 @@ export const getLeaveInitData = async (req: Request, res: Response) => {
             JOIN leave_types lt ON lt.id = lb.leave_type_id
             WHERE lb.user_id = $1
             ORDER BY lt.id`,
-            [user_id]
+                [user_id]
             )
         ]);
 
@@ -290,10 +290,12 @@ export const getLeaveHistory = async (req: Request, res: Response) => {
 
         const user_id = req.user.id;
         let query = `
-        SELECT l.*, lt.name as leave_type,u.name as user_name
+        SELECT l.*, lt.name as leave_type, u.name as user_name,
+        m.name as approved_by_name
         FROM leaves l
         JOIN leave_types lt ON l.leave_type_id = lt.id
-        JOIN users u ON l.user_id=u.id
+        JOIN users u ON l.user_id = u.id
+        LEFT JOIN users m ON l.approved_by = m.id
         WHERE l.user_id = $1
         `;
 
@@ -377,10 +379,8 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
         if (!req.user) {
             return res.status(401).json({ error: "Unauthorized" });
         }
-
         const user_id = req.user.id;
         const role = req.user.role;
-
         const userResult = await pool.query(
             "SELECT manager_id FROM users WHERE id = $1",
             [user_id]
@@ -458,15 +458,15 @@ export const getManagerLeaves = async (req: Request, res: Response) => {
         const { status, search, page = 1, limit = 10 } = req.query;
 
         let query = `
-                SELECT
-                l.id, u.name as employee_name, u.department,
-                lt.name as leave_type, l.from_date, l.to_date,
-                l.total_days, l.reason, l.status,l.rejection_reason, l.approved_at
-                FROM leaves l
-                JOIN users u ON l.user_id = u.id
-                JOIN leave_types lt ON l.leave_type_id = lt.id
-                WHERE l.applied_to = $1
-                `;
+        SELECT
+        l.id, u.name as employee_name, u.department,
+        lt.name as leave_type, l.from_date, l.to_date,
+        l.total_days, l.reason, l.status,l.rejection_reason, l.approved_at
+        FROM leaves l
+        JOIN users u ON l.user_id = u.id
+        JOIN leave_types lt ON l.leave_type_id = lt.id
+        WHERE l.applied_to = $1
+        `;
 
         let countQuery = `
         SELECT COUNT(*) FROM leaves l
@@ -718,7 +718,6 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
             )
         ]);
 
-
         const daysMap = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
         const weeklyPattern = daysMap.map((day, i) => ({
@@ -766,7 +765,6 @@ export const getuserdetails = async (req: Request, res: Response) => {
             success: true,
             data: result.rows[0]
         });
-
 
     }
     catch (err) {
