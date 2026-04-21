@@ -2,7 +2,7 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const toAlias = (_email: string): string => {
-    return "leavemsmail2026@gmail.com";
+    return process.env.EMAIL_ALIAS || _email;
 };
 
 function formatDate(date: Date | string): string {
@@ -39,7 +39,8 @@ export async function sendLeaveApplicationEmail(params: {
 
         ---
         This is an automated message. Please do not reply.   
-        `.trim(),});
+        `.trim(),
+    });
     if (error) throw new Error(`Resend error: ${error.message}`);
 }
 
@@ -106,3 +107,58 @@ export async function sendLeaveRejectedEmail(params: {
     });
     if (error) throw new Error(`Resend error: ${error.message}`);
 }
+
+export async function sendInvitationEmail(params: {
+    name: string;
+    email: string; inviterName: string; role: string;
+    token: string; frontendUrl: string;
+}) {
+    const { name, email, inviterName, role, token, frontendUrl } = params;
+    const link = `${frontendUrl}/accept-invitation/${token}`;
+
+    const { error } = await resend.emails.send({
+        from: "noreply@resend.dev",
+        to: toAlias(email),
+        subject: `[To: ${email}] You've been invited to LeaveMS`,
+        text: `
+        Hi ${name},
+
+        ${inviterName} has invited you to join LeaveMS as a ${role}.
+
+        Click the link below to set up your account (valid for 48 hours):
+        ${link}
+
+        If you did not expect this invitation, please ignore this email.
+
+        ---
+        This is an automated message. Please do not reply.
+            `.trim(),
+    });
+    if (error) throw new Error(`Resend error: ${error.message}`);
+}
+
+
+export async function sendOTPEmail(params: {
+    email: string; name: string; code: string;
+}) {
+    const { email, name, code } = params;
+    const { error } = await resend.emails.send({
+        from: "noreply@resend.dev",
+        to: toAlias(email),
+        subject: `[To: ${email}] Your LeaveMS login code`,
+        text: `
+Hi ${name},
+
+Your one-time login code is:
+
+  ${code}
+
+This code expires in 10 minutes. Do not share it with anyone.
+
+---
+This is an automated message. Please do not reply.
+        `.trim(),
+    });
+    if (error) throw new Error(`Resend error: ${error.message}`);
+}
+

@@ -13,6 +13,9 @@ import Profile from "./components/pages/Profile";
 import AdminDashboard from "./components/admin/AdminDashboard";
 import RedirectHandler from "./components/common/ReDirectHandler";
 import { ToastProvider } from "./components/common/ToastContext";
+import AcceptInvitation from "./components/pages/AcceptInvitation";
+
+// Add alongside the /login route (outside ProtectedRoute):
 
 const App: React.FC = () => {
   return (
@@ -22,6 +25,8 @@ const App: React.FC = () => {
       <Routes>
       <Route path="*" element={<RedirectHandler />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
+
         <Route
           element={
             <ProtectedRoute>

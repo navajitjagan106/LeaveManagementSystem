@@ -8,7 +8,10 @@ type Props = {
 };
 
 const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles }) => {
-    const user: User | null = JSON.parse(localStorage.getItem("user") || "null");
+    const user: User | null = (() => {
+        try { return JSON.parse(localStorage.getItem("user") || "null"); }
+        catch { localStorage.removeItem("user"); localStorage.removeItem("token"); return null; }
+    })();
 
     const token = localStorage.getItem("token");
 

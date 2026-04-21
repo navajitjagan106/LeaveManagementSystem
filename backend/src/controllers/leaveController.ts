@@ -104,7 +104,7 @@ export const getLeaveInitData = async (req: Request, res: Response) => {
 
             pool.query(
             `SELECT 
-            lt.id, lt.name, lt.max_days,
+            lt.id, lt.name, 
             lb.leave_type_id,
             lb.total_allocated,
             lb.used,
@@ -121,7 +121,7 @@ export const getLeaveInitData = async (req: Request, res: Response) => {
             success: true,
             data: {
                 manager: managerRes.rows[0] || null,
-                leaveTypes: leaveDataRes.rows.map(r => ({ id: r.id, name: r.name, max_days: r.max_days })),
+                leaveTypes: leaveDataRes.rows.map(r => ({ id: r.id, name: r.name })),
                 balances: leaveDataRes.rows.map(r => ({ leave_type_id: r.leave_type_id, type: r.name, total_allocated: r.total_allocated, used: r.used, remaining: r.remaining }))
             }
         });
@@ -361,7 +361,7 @@ export const getLeaveHistory = async (req: Request, res: Response) => {
 export const getLeaveTypes = async (req: Request, res: Response) => {
     try {
         const result = await pool.query(
-            "SELECT id, name, max_days FROM leave_types ORDER BY id"
+            "SELECT id, name FROM leave_types ORDER BY id"
         );
 
         res.json({
@@ -784,33 +784,7 @@ export const getHolidays = async (req: Request, res: Response) => {
     }
 }
 
-export const getManager = async (req: Request, res: Response) => {
-    try {
-        if (!req.user) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
 
-        const result = await pool.query(
-            `SELECT u.id, u.name, u.email 
-            FROM users u
-            JOIN users emp ON emp.manager_id = u.id
-            WHERE emp.id = $1`,
-            [req.user.id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: "Manager not found" });
-        }
-
-        res.json({
-            success: true,
-            data: result.rows[0]
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed to fetch manager" });
-    }
-};
 
 export const calculateDays = async (req: Request, res: Response) => {
     try {
