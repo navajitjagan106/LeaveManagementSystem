@@ -2,52 +2,57 @@ import { Request, Response } from "express";
 import { pool } from "../config/db";
 import bcrypt from "bcrypt";
 
+
+
 export const createEmployee = async (req: Request, res: Response) => {
-    try {
-        const { name, password, email, role, manager_id, department, leave_allocations } = req.body;
+  try {
+    const { name, password, email, role, manager_id, department, leave_allocations } = req.body;
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+    const { validatePassword } = await import("../utils/passwordValidator");
+    const validation = validatePassword(password);
+    if (!validation.valid) return res.status(400).json({ error: validation.errors.join(", ") });
 
-        const result = await pool.query(
-            `INSERT INTO users (name, password, email, role, manager_id, department)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING *`,
-            [name, hashedPassword, email, role, manager_id || null, department]
-        );
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-        const user = result.rows[0];
+    const result = await pool.query(
+      `INSERT INTO users (name, password, email, role, manager_id, department, email_verified)
+       VALUES ($1, $2, $3, $4, $5, $6, true) RETURNING *`,
+      [name, hashedPassword, email, role, manager_id || null, department]
+    );
 
-        if (leave_allocations && leave_allocations.length > 0) {
-            const balanceQueries = leave_allocations.map((alloc: any) =>
-                pool.query(
-                    `INSERT INTO leave_balances (user_id, leave_type_id, total_allocated, used)
-                    VALUES ($1, $2, $3, 0)`,
-                    [user.id, alloc.leave_type_id, alloc.total_allocated]
-                )
-            );
-            await Promise.all(balanceQueries);
-        }
-
-        res.json({ success: true, data: result.rows[0] });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed to create employee" });
+    const user = result.rows[0];
+    if (leave_allocations && leave_allocations.length > 0) {
+      const balanceQueries = leave_allocations.map((alloc: any) =>
+        pool.query(
+          `INSERT INTO leave_balances (user_id, leave_type_id, total_allocated, used) VALUES ($1, $2, $3, 0)`,
+          [user.id, alloc.leave_type_id, alloc.total_allocated]
+        )
+      );
+      await Promise.all(balanceQueries);
     }
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to create employee" });
+  }
 };
+
 
 export const getAllEmployees = async (req: Request, res: Response) => {
     try {
         const result = await pool.query(`
-            SELECT u.*, m.name AS manager_name
+            SELECT u.*, m.name AS manager_name, p.name AS policy_name
             FROM users u
             LEFT JOIN users m ON u.manager_id = m.id
+            LEFT JOIN leave_policies p ON u.policy_id = p.id
         `);
-
         res.json({ success: true, data: result.rows });
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch employees" });
     }
 };
+
 
 export const updateEmployee = async (req: Request, res: Response) => {
     try {
@@ -100,20 +105,18 @@ export const updateManager = async (req: Request, res: Response) => {
 
 export const createLeaveType = async (req: Request, res: Response) => {
     try {
-        const { name, max_days } = req.body;
-
+        const { name, description } = req.body;
+        if (!name) return res.status(400).json({ error: "Name is required" });
         const result = await pool.query(
-            `INSERT INTO leave_types (name, max_days)
-            VALUES ($1, $2)
-            RETURNING *`,
-            [name, max_days]
+            `INSERT INTO leave_types (name, description) VALUES ($1, $2) RETURNING *`,
+            [name, description || null]
         );
-
         res.json({ success: true, data: result.rows[0] });
     } catch {
         res.status(500).json({ error: "Failed to create leave type" });
     }
 };
+
 
 export const getAllLeaves = async (req: Request, res: Response) => {
     try {
@@ -147,26 +150,18 @@ export const getAllLeaves = async (req: Request, res: Response) => {
 export const updateLeaveType = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { max_days } = req.body;
-
+        const { name } = req.body;
         const result = await pool.query(
-            `UPDATE leave_types
-            SET max_days = $1
-            WHERE id = $2
-            RETURNING *`,
-            [max_days, id]
+            `UPDATE leave_types SET name = $1 WHERE id = $2 RETURNING *`,
+            [name, id]
         );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: "Leave type not found" });
-        }
-
+        if (result.rows.length === 0) return res.status(404).json({ error: "Leave type not found" });
         res.json({ success: true, data: result.rows[0] });
-    } catch (err) {
-        console.error(err);
+    } catch {
         res.status(500).json({ error: "Failed to update leave type" });
     }
 };
+
 
 export const addHoliday = async (req: Request, res: Response) => {
     try {

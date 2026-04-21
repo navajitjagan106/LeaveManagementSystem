@@ -1,98 +1,86 @@
 import { useEffect, useState } from "react";
 import { getLeaveTypes } from "../../../api/leaveApi";
-import { updateLeaveType, addLeaveType } from "../../../api/adminApi";
+import { addLeaveType } from "../../../api/adminApi";
+import { Plus } from "lucide-react";
+import { useToast } from "../../common/ToastContext";
 
 const LeaveSection = () => {
+    const toast = useToast();
     const [types, setTypes] = useState<any[]>([]);
-    const [editingId, setEditingId] = useState<number | null>(null);
     const [showAdd, setShowAdd] = useState(false);
-    const [newType, setNewType] = useState({
-        name: "",
-        max_days: 0
-    });
+    const [newName, setNewName] = useState("");
+    const [newDesc, setNewDesc] = useState("");
+
     const fetchTypes = async () => {
         const res = await getLeaveTypes();
-        setTypes(res.data.data);
+        setTypes(res.data.data || []);
+    };
+    useEffect(() => { fetchTypes(); }, []);
+
+    const handleAdd = async () => {
+        if (!newName.trim()) { toast.warning("Name is required"); return; }
+        try {
+            await addLeaveType({ name: newName.trim(), description: newDesc.trim() || undefined });
+            setNewName("");
+            setNewDesc("");
+            setShowAdd(false);
+            fetchTypes();
+            toast.success("Leave type added!");
+        } catch { toast.error("Failed to add leave type"); }
     };
 
-    useEffect(() => {
-        fetchTypes();
-    }, []);
-
     return (
-        <div className="bg-white p-6 rounded-xl shadow-sm">
-            <div className="flex justify-between mb-4">
-                <h3 className="font-semibold">Leave Types</h3>
-                <button className="bg-purple-600 text-white px-3 py-1 rounded text-sm"
-                    onClick={() => setShowAdd(!showAdd)}>+ Add</button>
+        <div className="space-y-5">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="text-xl font-semibold">Leave Types</h2>
+                    <p className="text-sm text-gray-500">Categories used across all policies</p>
+                </div>
+                <button
+                    onClick={() => setShowAdd(!showAdd)}
+                    className="flex items-center gap-1.5 bg-purple-600 text-white px-4 py-2 rounded-xl text-sm"
+                >
+                    <Plus size={14} /> Add Type
+                </button>
             </div>
+
             {showAdd && (
-                <div className="flex gap-2 mb-3">
+                <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 space-y-3">
+                    <p className="text-sm font-medium text-purple-700">New Leave Type</p>
                     <input
-                        placeholder="Type name"
-                        value={newType.name}
-                        onChange={(e) =>
-                            setNewType({ ...newType, name: e.target.value })
-                        }
-                        className="border p-2 rounded"
+                        placeholder="e.g. Paternity Leave"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        className="w-full border border-gray-200 p-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
                     />
-
                     <input
-                        type="number"
-                        placeholder="Days"
-                        value={newType.max_days}
-                        onChange={(e) =>
-                            setNewType({
-                                ...newType,
-                                max_days: Number(e.target.value)
-                            })
-                        }
-                        className="border p-2 rounded w-20"
+                        placeholder="Description (optional)"
+                        value={newDesc}
+                        onChange={(e) => setNewDesc(e.target.value)}
+                        className="w-full border border-gray-200 p-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
                     />
-
-                    <button
-                        onClick={async () => {
-                            await addLeaveType(newType);
-                            setShowAdd(false);
-                            setNewType({ name: "", max_days: 0 });
-                            fetchTypes();
-                        }}
-                        className="bg-purple-600 text-white px-3 rounded"
-                    >
-                        Save
-                    </button>
+                    <div className="flex gap-2">
+                        <button onClick={handleAdd} className="flex-1 bg-purple-600 text-white py-2 rounded-lg text-sm">Save</button>
+                        <button onClick={() => setShowAdd(false)} className="flex-1 border text-gray-500 py-2 rounded-lg text-sm">Cancel</button>
+                    </div>
                 </div>
             )}
 
-            <div className="space-y-3">
-                {types.map(t => (
-                    <div key={t.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-
-                        <span>{t.name}</span>
-
-                        {editingId === t.id ? (
-                            <input
-                                type="number"
-                                defaultValue={t.max_days}
-                                onBlur={(e) => {
-                                    updateLeaveType(t.id, Number(e.target.value));
-                                    setEditingId(null);
-                                }}
-                                className="border px-2 py-1 rounded w-20"
-                            />
-                        ) : (
-                            <span
-                                onClick={() => setEditingId(t.id)}
-                                className="cursor-pointer text-purple-600 font-medium"
-                            >
-                                {t.max_days} days
-                            </span>
-                        )}
+            <div className="grid gap-3">
+                {types.map((t) => (
+                    <div key={t.id} className="bg-white rounded-xl border px-4 py-3">
+                        <p className="font-medium text-gray-800">{t.name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{t.description || "Allocations defined per policy"}</p>
                     </div>
                 ))}
+                {types.length === 0 && (
+                    <div className="text-center py-12 text-gray-400 text-sm bg-white rounded-xl border">
+                        No leave types configured
+                    </div>
+                )}
             </div>
         </div>
-
     );
 };
+
 export default LeaveSection;
