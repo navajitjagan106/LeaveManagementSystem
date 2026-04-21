@@ -55,6 +55,8 @@ const FIELDS: DrawerField[] = [
     { label: 'From', key: 'from_date', format: true },
     { label: 'To', key: 'to_date', format: true },
     { label: 'Applied On', key: 'created_at', format: true },
+    { label: 'Reviewed At', key: 'approved_at', format: true },
+    { label: 'Reviewed By', key: 'approved_by_name' },
 ]
 
 const VIEWS = ['table', 'calendar'] as const;
@@ -382,6 +384,11 @@ const LeaveHistory: React.FC = () => {
                                         <td className="px-6 py-4 font-medium">{row.leave_type}</td>
                                         <td className="px-6 py-4">
                                             <StatusBadge status={row.status as Status} />
+                                            {row.approved_by_name && row.status !== 'pending' && (
+                                                <div className="text-xs text-gray-400 mt-1">
+                                                    by {row.approved_by_name}
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4">{row.user_name || 'You'}</td>
                                         <td className="px-6 py-4 text-gray-500">{formatDate(row.created_at || '')}</td>
@@ -440,10 +447,17 @@ const LeaveHistory: React.FC = () => {
                         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-500">Status</span>
-                                <StatusBadge status={selectedLeave.status as Status} />
+                                <div className="flex flex-col items-end gap-0.5">
+                                    <StatusBadge status={selectedLeave.status as Status} />
+                                    {selectedLeave.approved_by_name && selectedLeave.status !== 'pending' && (
+                                        <span className="text-xs text-gray-400">
+                                            by {selectedLeave.approved_by_name}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
 
-                            {FIELDS.map(({ label, key, format }) => (
+                            {FIELDS.filter(({ key }) => selectedLeave[key]).map(({ label, key, format }) => (
                                 <div key={key} className="flex items-center justify-between">
                                     <span className="text-sm text-gray-500">{label}</span>
                                     <span className="font-medium text-gray-800">
@@ -461,10 +475,19 @@ const LeaveHistory: React.FC = () => {
                                 </span>
                             </div>
 
-                            <div className="border-t pt-4">
-                                <p className="text-sm text-gray-500 mb-2">Reason</p>
-                                <p className="text-gray-800 text-sm leading-relaxed">{selectedLeave.reason}</p>
-                            </div>
+                            {[
+                                { label: 'Reason', value: selectedLeave.reason },
+                                ...(selectedLeave.rejection_reason
+                                    ? [{ label: "Manager's Note", value: selectedLeave.rejection_reason }]
+                                    : []),
+                            ].map(({ label, value }) => (
+                                <div key={label} className="border-t pt-4">
+                                    <p className="text-sm text-gray-500 mb-2">{label}</p>
+                                    <p className={`text-sm leading-relaxed ${label === "Manager's Note" ? 'text-red-600' : 'text-gray-800'}`}>
+                                        {value}
+                                    </p>
+                                </div>
+                            ))}
                         </div>
 
                         {selectedLeave.status === 'pending' && (

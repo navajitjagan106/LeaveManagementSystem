@@ -32,3 +32,6 @@ export const getuserBalance=(id:number)=>
 
 export const updateLeaveBalance=(data:{user_id:number,leave_type_id:number,change:number})=>
     API.patch(`/admin/user-balance`,data)
+
+export const exportLeaves = (params?: Record<string, string>) =>
+    API.get('/admin/export', { params, responseType: 'blob' })
