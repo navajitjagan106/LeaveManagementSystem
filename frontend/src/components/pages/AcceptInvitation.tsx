@@ -1,6 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getInvitationByToken, acceptInvitation } from "../../api/authApi";
+import { setCookie } from "../../utils/cookies";
+
+const PASSWORD_RULES = [
+    { label: "At least 8 characters",       test: (p: string) => p.length >= 8 },
+    { label: "One uppercase letter",         test: (p: string) => /[A-Z]/.test(p) },
+    { label: "One lowercase letter",         test: (p: string) => /[a-z]/.test(p) },
+    { label: "One number",                   test: (p: string) => /[0-9]/.test(p) },
+    { label: "One special character",        test: (p: string) => /[!@#$%^&*()_\-+={}[\];':"\\|,.<>/?]/.test(p) },
+];
 
 const AcceptInvitation: React.FC = () => {
     const { token } = useParams<{ token: string }>();
@@ -10,6 +19,7 @@ const AcceptInvitation: React.FC = () => {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const [tokenError, setTokenError] = useState("");
+    const [passwordFocused, setPasswordFocused] = useState(false);
 
     useEffect(() => {
         if (!token) return;
@@ -28,8 +38,8 @@ const AcceptInvitation: React.FC = () => {
         try {
             setLoading(true);
             const res = await acceptInvitation(token!, { password: form.password });
-            localStorage.setItem("token", res.data.token);
-            localStorage.setItem("user", JSON.stringify(res.data.user));
+            setCookie("token", res.data.token);
+            setCookie("user", JSON.stringify(res.data.user));
             navigate("/dashboard");
         } catch (err: any) {
             setError(err?.response?.data?.error || "Failed to set up account");
@@ -62,9 +72,8 @@ const AcceptInvitation: React.FC = () => {
             <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow border">
                 <h2 className="text-xl font-semibold text-gray-800 mb-1">Set Up Your Password</h2>
                 <p className="text-sm text-gray-500 mb-6">
-                    Welcome, <span className="font-medium text-gray-700">{invitation.name}</span>! You've been invited as a{" "}
-                    <span className="font-medium text-purple-600">{invitation.role}</span>
-                    {invitation.department ? ` in ${invitation.department}` : ""}.
+                    Welcome, <span className="font-medium text-gray-700">{invitation.name}</span>! You've been invited to join
+                    {invitation.department ? <> the <span className="font-medium text-gray-700">{invitation.department}</span> team</> : " the organisation"}.
                 </p>
 
                 <div className="bg-gray-50 rounded-xl px-4 py-3 mb-6 text-sm text-gray-600">
@@ -80,9 +89,23 @@ const AcceptInvitation: React.FC = () => {
                             placeholder="Create a password"
                             value={form.password}
                             onChange={(e) => setForm({ ...form, password: e.target.value })}
+                            onFocus={() => setPasswordFocused(true)}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500"
                             required
                         />
+                        {passwordFocused && (
+                            <ul className="mt-2 space-y-1">
+                                {PASSWORD_RULES.map((rule) => {
+                                    const passed = rule.test(form.password);
+                                    return (
+                                        <li key={rule.label} className={`flex items-center gap-1.5 text-xs ${passed ? "text-emerald-600" : "text-gray-400"}`}>
+                                            <span>{passed ? "✓" : "○"}</span>
+                                            {rule.label}
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
                     </div>
                     <div>
                         <label className="text-sm text-gray-600 block mb-1">Confirm Password</label>

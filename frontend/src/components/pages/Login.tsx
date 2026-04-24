@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { login, verifyOtp } from "../../api/authApi";
 import { useNavigate } from "react-router-dom";
 import { OTPInput, SlotProps } from "input-otp";
+import { getCookie, setCookie } from "../../utils/cookies";
 
 const OtpSlot = (props: SlotProps) => (
     <div
@@ -28,7 +29,7 @@ const Login: React.FC = () => {
     const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     useEffect(() => {
-        const token = localStorage.getItem("token");
+        const token = getCookie("token");
         if (token) navigate("/dashboard");
     }, [navigate]);
 
@@ -66,8 +67,8 @@ const Login: React.FC = () => {
         setLoading(true);
         try {
             const res = await verifyOtp({ email, code: otp });
-            localStorage.setItem("token", res.data.token);
-            localStorage.setItem("user", JSON.stringify(res.data.user));
+            setCookie("token", res.data.token);
+            setCookie("user", JSON.stringify(res.data.user));
             navigate("/dashboard");
         } catch (err: any) {
             setError(err?.response?.data?.error || "Invalid or expired OTP");

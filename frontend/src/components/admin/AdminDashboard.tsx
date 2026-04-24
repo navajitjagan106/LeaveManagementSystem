@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import AdminEmployees from "./AdminEmployees";
 import LeaveSection from "./sections/LeaveSection";
 import HolidaySection from "./sections/HolidaySection";
@@ -8,13 +8,12 @@ import { getHolidays } from "../../api/leaveApi";
 import PageHeader from "../common/PageHeader";
 import {
     LayoutDashboard, Users, Mail, CalendarDays, Umbrella,
-    UserCheck, Clock, CalendarCheck, Palmtree,
+    UserCheck, Clock, CalendarCheck, Palmtree, BookOpen,
 } from "lucide-react";
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
 import PoliciesSection from "./sections/PolicySection";
-import { BookOpen } from "lucide-react";
 
 
 const MONTH_ORDER = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -143,13 +142,12 @@ const AdminDashboard = () => {
 
                     <div>
                         <p className="text-sm font-semibold text-gray-600 mb-3">Quick Actions</p>
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                             <ShortcutCard icon={Users} label="Manage Employees" desc="View, edit or remove employees" onClick={() => setTab("employees")} color="bg-purple-500" />
                             <ShortcutCard icon={Mail} label="Invitations" desc="Invite new team members" onClick={() => setTab("invitations")} color="bg-blue-500" />
                             <ShortcutCard icon={CalendarDays} label="Leave Types" desc="Configure leave categories" onClick={() => setTab("leave-types")} color="bg-violet-500" />
                             <ShortcutCard icon={Palmtree} label="Holidays" desc="Add or remove holidays" onClick={() => setTab("holidays")} color="bg-emerald-500" />
                             <ShortcutCard icon={BookOpen} label="Policies" desc="Define leave entitlements by level" onClick={() => setTab("policies")} color="bg-indigo-500" />
-
                         </div>
                     </div>
                 </div>

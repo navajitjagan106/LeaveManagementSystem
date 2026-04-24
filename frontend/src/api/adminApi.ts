@@ -1,7 +1,6 @@
 import API from "./axios";
 
 export const getEmployees = () => API.get("/admin/users");
-export const createEmployee = (data: any) => API.post("/admin/users", data);
 export const updateEmployee = (id: number, data: any) => API.patch(`/admin/users/${id}`, data);
 export const deleteEmployee = (id: number) => API.delete(`/admin/users/${id}`);
 export const updateManager = (id: number, manager_id: number | null) => API.patch(`/admin/users/${id}/manager`, { manager_id });
@@ -30,7 +29,7 @@ export const exportLeaves = (params?: Record<string, string>) =>
 
 export const sendInvitation = (data: {
     name: string; email: string; role: string;
-    department?: string; manager_id?: number; policy_id?: number;
+    department?: string; manager_id?: number; policy_id?: number; expires_in_hours?: number;
 }) => API.post("/admin/invitations", data);
 
 export const getInvitations = (status?: string) =>

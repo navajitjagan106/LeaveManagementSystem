@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getUserLocal } from "../../utils/getUser";
 import { Bell } from "lucide-react";
 import { getNotifications, markNotificationsRead } from "../../api/leaveApi";
+import { removeCookie } from "../../utils/cookies";
 
 type Notification = {
     id: number;
@@ -49,8 +50,8 @@ const Header: React.FC = () => {
     };
 
     const logout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        removeCookie("token");
+        removeCookie("user");
         window.location.href = "/login";
     };
 

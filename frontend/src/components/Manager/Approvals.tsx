@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import ApprovalCard from '../cards/ApprovalCard';
+import ApprovalCard from '../common/cards/ApprovalCard';
 import { getPending, approveLeave } from '../../api/leaveApi';
 import { ApprovalRequest } from "../../types";
 import PageHeader from '../common/PageHeader';

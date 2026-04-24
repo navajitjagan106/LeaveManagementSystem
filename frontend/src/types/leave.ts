@@ -1,8 +1,10 @@
 export interface LeaveType {
     id: number;
     name: string;
-    max_days: number;
+    description?: string;
+    is_unlimited?: boolean;
 }
+
 
 export interface LeaveBalance {
     leave_type_id: number;

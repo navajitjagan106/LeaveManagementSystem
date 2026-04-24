@@ -3,12 +3,17 @@ import { getHolidays } from "../../../api/leaveApi";
 import { addHoliday, deleteHoliday } from "../../../api/adminApi";
 import { Trash2, Plus, CalendarCheck } from "lucide-react";
 import { useToast } from "../../common/ToastContext";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "../../ui/dialog";
+import { Button } from "../../ui/button";
+import { Field, FieldGroup } from "../../ui/field";
+import { Input } from "../../ui/input";
+import { Label } from "../../ui/label";
 
 const HolidaySection = () => {
   const toast = useToast();
   const [holidays, setHolidays] = useState<any[]>([]);
-  const [form, setForm] = useState({ name: "", date: "" });
-  const [showForm, setShowForm] = useState(false);
+  const [name, setName] = useState("");
+  const [date, setDate] = useState("");
   const [loading, setLoading] = useState(false);
 
   const fetchHolidays = async () => {
@@ -18,15 +23,19 @@ const HolidaySection = () => {
   useEffect(() => { fetchHolidays(); }, []);
 
   const handleAdd = async () => {
-    if (!form.name || !form.date) { toast.warning("Fill all fields"); return; }
+    if (!name || !date) { toast.warning("Fill all fields"); return; }
     try {
       setLoading(true);
-      await addHoliday(form);
-      setForm({ name: "", date: "" });
-      setShowForm(false);
+      await addHoliday({ name, date });
+      setName("");
+      setDate("");
       fetchHolidays();
-    } catch { toast.error("Failed to add holiday"); }
-    finally { setLoading(false); }
+      toast.success("Holiday added!");
+    } catch {
+      toast.error("Failed to add holiday");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -40,6 +49,26 @@ const HolidaySection = () => {
   const fmt = (d: string) =>
     new Date(d).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 
+  const HolidayRow = ({ h }: { h: any }) => (
+    <div className="bg-white rounded-xl border p-4 flex items-center justify-between group">
+      <div className="flex items-center gap-3">
+        <div className="bg-purple-100 text-purple-700 rounded-xl p-2">
+          <CalendarCheck size={16} />
+        </div>
+        <div>
+          <p className="font-medium text-gray-800 text-sm">{h.name}</p>
+          <p className="text-xs text-gray-400">{fmt(h.date)}</p>
+        </div>
+      </div>
+      <button
+        onClick={() => handleDelete(h.id)}
+        className="text-gray-300 group-hover:text-red-400 transition p-1.5 rounded-lg hover:bg-red-50"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
+
   return (
     <div className="space-y-5">
       <div className="flex justify-between items-center">
@@ -47,86 +76,63 @@ const HolidaySection = () => {
           <h2 className="text-lg font-semibold text-gray-900">Holidays</h2>
           <p className="text-sm text-gray-400">{upcoming.length} upcoming this year</p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-1.5 bg-purple-600 text-white px-4 py-2 rounded-xl text-sm"
-        >
-          <Plus size={14} /> Add Holiday
-        </button>
+        <Dialog>
+          <DialogTrigger asChild>
+            <button className="flex items-center gap-1.5 bg-purple-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-purple-700 transition">
+              <Plus size={14} /> Add Holiday
+            </button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>New Holiday</DialogTitle>
+              <DialogDescription>Add a public holiday to the calendar.</DialogDescription>
+            </DialogHeader>
+            <FieldGroup>
+              <Field>
+                <Label htmlFor="h-name">Holiday name</Label>
+                <Input
+                  id="h-name"
+                  placeholder="e.g. Republic Day"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </Field>
+              <Field>
+                <Label htmlFor="h-date">Date</Label>
+                <Input
+                  id="h-date"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              </Field>
+            </FieldGroup>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline">Cancel</Button>
+              </DialogClose>
+              <Button onClick={handleAdd} disabled={loading}>
+                {loading ? "Adding..." : "Confirm"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {showForm && (
-        <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 space-y-3">
-          <p className="text-sm font-medium text-purple-700">New Holiday</p>
-          <input
-            placeholder="Holiday name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full border border-gray-200 p-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-          />
-          <input
-            type="date" value={form.date}
-            onChange={(e) => setForm({ ...form, date: e.target.value })}
-            className="w-full border border-gray-200 p-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-          />
-          <div className="flex gap-2">
-            <button onClick={handleAdd} disabled={loading} className="flex-1 bg-purple-600 text-white py-2 rounded-lg text-sm disabled:opacity-50">
-              {loading ? "Adding..." : "Confirm"}
-            </button>
-            <button onClick={() => { setShowForm(false); setForm({ name: "", date: "" }); }}
-              className="flex-1 border text-gray-500 py-2 rounded-lg text-sm">
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Upcoming */}
       {upcoming.length > 0 && (
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Upcoming</p>
           <div className="grid gap-2">
-            {upcoming.map((h) => (
-              <div key={h.id} className="bg-white rounded-xl border p-4 flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <div className="bg-purple-100 text-purple-700 rounded-xl p-2">
-                    <CalendarCheck size={16} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-800 text-sm">{h.name}</p>
-                    <p className="text-xs text-gray-400">{fmt(h.date)}</p>
-                  </div>
-                </div>
-                <button onClick={() => handleDelete(h.id)} className="text-gray-300 group-hover:text-red-400 transition p-1.5 rounded-lg hover:bg-red-50">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
+            {upcoming.map((h) => <HolidayRow key={h.id} h={h} />)}
           </div>
         </div>
       )}
 
-      {/* Past */}
       {past.length > 0 && (
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Past</p>
           <div className="grid gap-2 opacity-50">
-            {past.map((h) => (
-              <div key={h.id} className="bg-white rounded-xl border p-4 flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <div className="bg-gray-100 text-gray-400 rounded-xl p-2">
-                    <CalendarCheck size={16} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700 text-sm">{h.name}</p>
-                    <p className="text-xs text-gray-400">{fmt(h.date)}</p>
-                  </div>
-                </div>
-                <button onClick={() => handleDelete(h.id)} className="text-gray-300 group-hover:text-red-400 transition p-1.5 rounded-lg hover:bg-red-50">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
+            {past.map((h) => <HolidayRow key={h.id} h={h} />)}
           </div>
         </div>
       )}

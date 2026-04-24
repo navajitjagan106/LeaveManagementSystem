@@ -6,4 +6,5 @@ export interface User {
     manager_id: number | null;
     manager_name?: string;
     department?: string;
+    policy_name?: string;
 }

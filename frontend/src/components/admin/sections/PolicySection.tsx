@@ -3,6 +3,11 @@ import { getPolicies, createPolicy, deletePolicy, getPolicyRules, setPolicyRules
 import { getLeaveTypes } from "../../../api/leaveApi";
 import { useToast } from "../../common/ToastContext";
 import { Plus, Trash2, ChevronDown, ChevronUp, Save } from "lucide-react";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "../../ui/dialog";
+import { Button } from "../../ui/button";
+import { Field, FieldGroup } from "../../ui/field";
+import { Input } from "../../ui/input";
+import { Label } from "../../ui/label";
 
 const PoliciesSection = () => {
     const toast = useToast();
@@ -10,7 +15,6 @@ const PoliciesSection = () => {
     const [leaveTypes, setLeaveTypes] = useState<any[]>([]);
     const [expandedId, setExpandedId] = useState<number | null>(null);
     const [rulesMap, setRulesMap] = useState<Record<number, any[]>>({});
-    const [showAdd, setShowAdd] = useState(false);
     const [newPolicy, setNewPolicy] = useState({ name: "", description: "" });
     const [saving, setSaving] = useState(false);
 
@@ -29,9 +33,7 @@ const PoliciesSection = () => {
         setExpandedId(id);
         if (!rulesMap[id]) {
             const res = await getPolicyRules(id);
-            const rules = res.data.data || [];
-            // Build a full map: one entry per leave type, pre-filled or zeroed
-            setRulesMap((prev) => ({ ...prev, [id]: rules }));
+            setRulesMap((prev) => ({ ...prev, [id]: res.data.data || [] }));
         }
     };
 
@@ -71,7 +73,6 @@ const PoliciesSection = () => {
         try {
             await createPolicy(newPolicy);
             setNewPolicy({ name: "", description: "" });
-            setShowAdd(false);
             fetchPolicies();
             toast.success("Policy created!");
         } catch (err: any) {
@@ -96,35 +97,46 @@ const PoliciesSection = () => {
                     <h2 className="text-xl font-semibold">Employment Policies</h2>
                     <p className="text-sm text-gray-500">Define leave entitlements per employment level</p>
                 </div>
-                <button
-                    onClick={() => setShowAdd(!showAdd)}
-                    className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 transition"
-                >
-                    <Plus size={15} /> New Policy
-                </button>
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <button className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 transition">
+                            <Plus size={15} /> New Policy
+                        </button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>New Policy</DialogTitle>
+                            <DialogDescription>Create a leave entitlement policy for an employment level.</DialogDescription>
+                        </DialogHeader>
+                        <FieldGroup>
+                            <Field>
+                                <Label htmlFor="p-name">Policy name</Label>
+                                <Input
+                                    id="p-name"
+                                    placeholder="e.g. Senior Developer"
+                                    value={newPolicy.name}
+                                    onChange={(e) => setNewPolicy({ ...newPolicy, name: e.target.value })}
+                                />
+                            </Field>
+                            <Field>
+                                <Label htmlFor="p-desc">Description (optional)</Label>
+                                <Input
+                                    id="p-desc"
+                                    placeholder="Short description"
+                                    value={newPolicy.description}
+                                    onChange={(e) => setNewPolicy({ ...newPolicy, description: e.target.value })}
+                                />
+                            </Field>
+                        </FieldGroup>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button variant="outline">Cancel</Button>
+                            </DialogClose>
+                            <Button onClick={handleAdd}>Create</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
-
-            {showAdd && (
-                <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 space-y-3">
-                    <p className="text-sm font-medium text-purple-700">New Policy</p>
-                    <input
-                        placeholder="Policy name (e.g. Senior Developer)"
-                        value={newPolicy.name}
-                        onChange={(e) => setNewPolicy({ ...newPolicy, name: e.target.value })}
-                        className="w-full border border-gray-200 p-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-                    />
-                    <input
-                        placeholder="Description (optional)"
-                        value={newPolicy.description}
-                        onChange={(e) => setNewPolicy({ ...newPolicy, description: e.target.value })}
-                        className="w-full border border-gray-200 p-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-                    />
-                    <div className="flex gap-2">
-                        <button onClick={handleAdd} className="flex-1 bg-purple-600 text-white py-2 rounded-lg text-sm">Create</button>
-                        <button onClick={() => setShowAdd(false)} className="flex-1 border text-gray-500 py-2 rounded-lg text-sm">Cancel</button>
-                    </div>
-                </div>
-            )}
 
             {policies.length === 0 ? (
                 <div className="text-center py-12 text-gray-400 text-sm bg-white rounded-xl border">
@@ -146,7 +158,6 @@ const PoliciesSection = () => {
                                     <button
                                         onClick={() => handleDelete(policy.id)}
                                         className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition"
-                                        title="Delete policy"
                                     >
                                         <Trash2 size={15} />
                                     </button>

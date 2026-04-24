@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import FormField from '../forms/FormField';
-import RadioGroup from '../forms/RadioGroup';
-import { applyLeave, calculateDays, getLeaveInitData, } from "../../api/leaveApi";
+import FormField from '../common/forms/FormField';
+import RadioGroup from '../common/forms/RadioGroup';
+import DateRangePicker from '../common/forms/DateRangePicker';
+import { applyLeave, calculateDays, getLeaveInitData, getTeamOnLeave } from "../../api/leaveApi";
+
 import { LeaveBalance, LeaveType } from "../../types";
 import PageHeader from '../common/PageHeader';
 import { useToast } from '../common/ToastContext';
@@ -21,6 +23,17 @@ const ApplyLeave: React.FC = () => {
     const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
     const [balances, setBalances] = useState<LeaveBalance[]>([]);
     const toast = useToast();
+    const [teamOnLeave, setTeamOnLeave] = useState<{ id: number; name: string; from_date: string; to_date: string; leave_type: string }[]>([]);
+
+    useEffect(() => {
+        if (!formData.fromDate || !formData.toDate) {
+            setTeamOnLeave([]);
+            return;
+        }
+        getTeamOnLeave(formData.fromDate, formData.toDate)
+            .then(res => setTeamOnLeave(res.data.data))
+            .catch(() => setTeamOnLeave([]));
+    }, [formData.fromDate, formData.toDate]);
 
     useEffect(() => {
         fetchInitialData();
@@ -38,6 +51,8 @@ const ApplyLeave: React.FC = () => {
             console.error("Failed to fetch initial data", error);
         }
     };
+
+
 
     useEffect(() => {
         const fetchTotalDays = async () => {
@@ -100,11 +115,14 @@ const ApplyLeave: React.FC = () => {
         }
     };
 
+    const selectedLeaveType = leaveTypes.find(
+        (t: any) => t.id === parseInt(formData.leaveType)
+    );
     const selectedBalance = balances.find(
         (b: any) => b.leave_type_id === parseInt(formData.leaveType)
     );
-
     const remaining = selectedBalance?.remaining || 0;
+
 
     return (
         <>
@@ -129,15 +147,24 @@ const ApplyLeave: React.FC = () => {
                                     setFormData({ ...formData, leaveType: val })
                                 }
                             />
-
-                            {selectedBalance && (
+                            {selectedLeaveType?.description && (
+                                <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                                    <p className="text-sm text-blue-600">{selectedLeaveType.description}</p>
+                                </div>
+                            )}
+                            
+                            {selectedLeaveType && (
                                 <div className="mb-4 p-3 bg-green-50 rounded-lg">
                                     <p className="text-sm text-green-700">
                                         Remaining Leave:{" "}
-                                        <span className="font-semibold">{remaining}</span>
+                                        <span className="font-semibold">
+                                            {selectedLeaveType.is_unlimited ? "∞ Unlimited" : remaining}
+                                        </span>
                                     </p>
                                 </div>
                             )}
+
+
                         </FormField>
 
                         {/* duration */}
@@ -156,39 +183,13 @@ const ApplyLeave: React.FC = () => {
                         </FormField>
 
                         {/* dates */}
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                            <FormField label="From Date">
-                                <input
-                                    type="date"
-                                    value={formData.fromDate}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, fromDate: e.target.value })
-                                    }
-                                    className="w-full border px-4 py-2 rounded-lg"
-                                    required
-                                />
-                            </FormField>
-
-                            <FormField label="To Date">
-                                <input
-                                    type="date"
-                                    value={formData.toDate}
-                                    min={formData.fromDate}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, toDate: e.target.value })
-                                    }
-                                    className="w-full border px-4 py-2 rounded-lg"
-                                    required
-                                />
-                            </FormField>
-                            {totalDays > 0 && (
-                                <div className="mb-1 p-3 bg-blue-50 rounded-lg">
-                                    <p className="text-sm text-blue-700">
-                                        Total Days: <span className="font-semibold">{totalDays}</span>
-                                    </p>
-                                </div>
-                            )}
-                        </div>
+                        <DateRangePicker
+                            fromDate={formData.fromDate}
+                            toDate={formData.toDate}
+                            totalDays={totalDays}
+                            onFromChange={(val) => setFormData({ ...formData, fromDate: val })}
+                            onToChange={(val) => setFormData({ ...formData, toDate: val })}
+                        />
 
 
                         {/* reason */}
@@ -212,6 +213,30 @@ const ApplyLeave: React.FC = () => {
                                 {manager ? manager.name : "Loading..."}
                             </div>
                         </div>
+
+                        {teamOnLeave.length > 0 && (
+                            <div className="mb-6">
+                                <p className="text-sm text-blue-500 mb-2">Also on leave during this period</p>
+                                <div className="flex gap-2 flex-wrap">
+                                    {teamOnLeave.map((person, i) => (
+                                        <div key={`${person.id}-${i}`} className="relative group flex flex-col items-center">
+                                            <div className="w-9 h-9 rounded-full bg-purple-200 flex items-center justify-center text-xs font-bold text-purple-700 cursor-default">
+                                                {person.name.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-10">
+                                                <div className="bg-gray-800 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
+                                                    <p className="font-semibold">{person.name}</p>
+                                                    <p className="text-gray-300 mt-0.5">{person.leave_type}</p>
+                                                    <p className="text-gray-400 mt-0.5">{person.from_date} to {person.to_date}</p>
+                                                </div>
+                                                <div className="border-4 border-transparent border-t-gray-800" />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
 
                         {/* submit */}
                         <button
