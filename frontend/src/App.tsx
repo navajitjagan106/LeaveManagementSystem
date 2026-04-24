@@ -6,7 +6,7 @@ import MainLayout from "./components/layout/MainLayout";
 import Dashboard from "./components/pages/DashBoard";
 import ApplyLeave from "./components/pages/ApplyLeave";
 import LeaveHistory from "./components/pages/LeaveHistory";
-import Approvals from "./components/manager/Approvals";
+import Approvals from "./components/Manager/Approvals";
 import TeamView from "./components/pages/TeamView";
 import LeaveBalance from "./components/pages/LeaveBalance";
 import Profile from "./components/pages/Profile";
