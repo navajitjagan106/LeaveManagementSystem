@@ -47,6 +47,7 @@ const seed = async () => {
         id          SERIAL PRIMARY KEY,
         name        VARCHAR(50) NOT NULL,
         description TEXT
+        is_unlimited BOOLEAN DEFAULT false
       );
 
       CREATE TABLE leave_policies (
@@ -84,10 +85,7 @@ const seed = async () => {
         token        VARCHAR(255) UNIQUE NOT NULL,
         status       VARCHAR(20)  DEFAULT 'pending',
         expires_at   TIMESTAMP    NOT NULL,
-        invited_by   INT REFERENCES users(id) ON DELETE SET NULL,
-        created_at   TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
-        accepted_at  TIMESTAMP,
-        leave_allocations JSONB
+        created_at   TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE leaves (
@@ -131,7 +129,7 @@ const seed = async () => {
       );
     `);
 
-    // ── FK constraints ────────────────────────────────────────────────────────
+    // ── FK constraints 
     await pool.query(`
       ALTER TABLE users ADD CONSTRAINT fk_users_manager  FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE SET NULL;
       ALTER TABLE users ADD CONSTRAINT fk_users_policy   FOREIGN KEY (policy_id)  REFERENCES leave_policies(id) ON DELETE SET NULL;
@@ -139,19 +137,20 @@ const seed = async () => {
       ALTER TABLE leaves ADD CONSTRAINT fk_leaves_approved_by  FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL;
     `);
 
-    // ── Leave Types ───────────────────────────────────────────────────────────
+    // ── Leave Types 
     console.log("Seeding leave types...");
     await pool.query(`
-      INSERT INTO leave_types (id, name, description) VALUES
-      (1, 'Casual Leave',    'For personal errands and unplanned day-to-day absences'),
-      (2, 'Sick Leave',      'For medical appointments, illness and health recovery'),
-      (3, 'Earned Leave',    'Annual leave accrued through continuous service'),
-      (4, 'Floater Leave',   'Flexible leave redeemable for festivals or personal occasions'),
-      (5, 'Maternity Leave', 'Paid leave for childbirth and newborn care'),
-      (6, 'Paternity Leave', 'Paid leave for new fathers after childbirth');
+      INSERT INTO leave_types (id, name, description, is_unlimited) VALUES
+      (1, 'Casual Leave',    'For personal errands and unplanned day-to-day absences',   false),
+      (2, 'Sick Leave',      'For medical appointments, illness and health recovery',     false),
+      (3, 'Earned Leave',    'Annual leave accrued through continuous service',           false),
+      (4, 'Floater Leave',   'Flexible leave redeemable for festivals or personal occasions', false),
+      (5, 'Maternity Leave', 'Paid leave for childbirth and newborn care',                false),
+      (6, 'Paternity Leave', 'Paid leave for new fathers after childbirth',               false),
+      (7, 'Loss Of Pay',     'Unpaid leave deducted from salary. No balance limit.',      true);
     `);
 
-    // ── Leave Policies ────────────────────────────────────────────────────────
+    //  Leave Policies 
     console.log("Seeding leave policies...");
     await pool.query(`
       INSERT INTO leave_policies (id, name, description) VALUES
@@ -170,7 +169,7 @@ const seed = async () => {
       (3, 1,  6), (3, 2,  5), (3, 3,  0), (3, 4,  1);
     `);
 
-    // ── Users ─────────────────────────────────────────────────────────────────
+    // ── Users 
     // Inserted without manager_id/policy_id first (self-referencing FK), then updated
     console.log("Seeding users...");
     await pool.query(`
@@ -195,7 +194,7 @@ const seed = async () => {
       UPDATE users SET manager_id = 8, policy_id = 1 WHERE id = 9;
     `);
 
-    // ── Leave Balances (from policy rules) ────────────────────────────────────
+    // ── Leave Balances (from policy rules) 
     console.log("Seeding leave balances...");
     await pool.query(`
       INSERT INTO leave_balances (user_id, leave_type_id, total_allocated, used)
@@ -205,7 +204,11 @@ const seed = async () => {
       WHERE u.policy_id IS NOT NULL;
     `);
 
-    // ── Leaves ────────────────────────────────────────────────────────────────
+    await pool.query(`
+      INSERT INTO leave_balances (user_id, leave_type_id, total_allocated, used)
+      SELECT id, 7, 0, 0 FROM users;`)
+
+    // ── Leaves 
     console.log("Seeding leaves...");
     await pool.query(`
       INSERT INTO leaves (user_id, leave_type_id, from_date, to_date, total_days, reason, status, applied_to, approved_by, approved_at, rejection_reason, duration_type, created_at) VALUES
@@ -227,7 +230,7 @@ const seed = async () => {
       (9, 1, '2026-04-02', '2026-04-02', 1, 'Personal work',                               'approved', 8, 8, '2026-04-01 10:00:00', NULL,                              'full', '2026-03-31 15:00:00');
     `);
 
-    // ── Update used counts from approved leaves ────────────────────────────────
+    // ── Update used counts from approved leaves 
     await pool.query(`
       UPDATE leave_balances lb
       SET used = sub.total
@@ -241,7 +244,7 @@ const seed = async () => {
         AND lb.leave_type_id = sub.leave_type_id;
     `);
 
-    // ── Holidays 2026 ─────────────────────────────────────────────────────────
+    // ── Holidays 2026 
     console.log("Seeding holidays...");
     await pool.query(`
       INSERT INTO holidays (date, name) VALUES
