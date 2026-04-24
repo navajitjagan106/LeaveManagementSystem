@@ -6,7 +6,7 @@ const roles = ["employee", "manager", "admin"];
 
 const InviteEmployeeModal = ({ onClose, onSuccess }: any) => {
     const toast = useToast();
-    const [form, setForm] = useState({ name: "", email: "", role: "employee", department: "", manager_id: "", policy_id: "" });
+    const [form, setForm] = useState({ name: "", email: "", role: "employee", department: "", manager_id: "", policy_id: "", expires_in_hours: "48" });
     const [managers, setManagers] = useState<any[]>([]);
     const [policies, setPolicies] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -30,6 +30,7 @@ const InviteEmployeeModal = ({ onClose, onSuccess }: any) => {
                 department: form.department || undefined,
                 manager_id: form.manager_id ? Number(form.manager_id) : undefined,
                 policy_id: form.policy_id ? Number(form.policy_id) : undefined,
+                expires_in_hours: Number(form.expires_in_hours),
             });
             toast.success("Invitation sent!");
             onSuccess?.();
@@ -98,6 +99,19 @@ const InviteEmployeeModal = ({ onClose, onSuccess }: any) => {
                         {policies.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                     <p className="text-xs text-gray-400">Leave allocations will be applied automatically based on the selected policy</p>
+                </div>
+
+                <div className="space-y-3 mb-8">
+                    <p className="text-sm font-medium text-gray-700">Link Expiry</p>
+                    <select
+                        value={form.expires_in_hours} onChange={(e) => setForm({ ...form, expires_in_hours: e.target.value })}
+                        className="w-full border border-gray-200 p-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                    >
+                        <option value="24">24 hours</option>
+                        <option value="48">48 hours (default)</option>
+                        <option value="72">72 hours</option>
+                        <option value="168">7 days</option>
+                    </select>
                 </div>
 
                 <div className="flex gap-3">

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ApprovalRequest } from "../../types";
+import { ApprovalRequest } from "../../../types";
 import { Check, X } from 'lucide-react';
 
 type Props = {

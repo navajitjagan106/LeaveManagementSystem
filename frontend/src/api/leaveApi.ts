@@ -52,3 +52,18 @@ export const getNotifications = () =>
 
 export const markNotificationsRead = () =>
     API.patch("/leaves/notifications/read");
+
+export const getTeamOnLeave = (from_date: string, to_date: string) =>
+    API.get("/leaves/teamonleave", { params: { from_date, to_date } });
+
+export const getTeamMembers = () =>
+    API.get("/leaves/team-members");
+
+export const getTeamMemberBalance = (id: number) =>
+    API.get(`/leaves/team-member-balance/${id}`);
+
+export const getTeamBalanceSummary = () =>
+    API.get("/leaves/team-balance-summary");
+
+export const getLeaveTrend = () =>
+  API.get("/leaves/leave-trend");

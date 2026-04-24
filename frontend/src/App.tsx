@@ -1,21 +1,21 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Login from "./components/login/Login";
+import Login from "./components/pages/Login";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import MainLayout from "./components/layout/MainLayout";
 import Dashboard from "./components/pages/DashBoard";
 import ApplyLeave from "./components/pages/ApplyLeave";
 import LeaveHistory from "./components/pages/LeaveHistory";
-import Approvals from "./components/Manager/Approvals";
+import Approvals from "./components/manager/Approvals";
 import TeamView from "./components/pages/TeamView";
 import LeaveBalance from "./components/pages/LeaveBalance";
 import Profile from "./components/pages/Profile";
 import AdminDashboard from "./components/admin/AdminDashboard";
+import EmployeeDirectory from "./components/pages/EmployeeDirectory";
 import RedirectHandler from "./components/common/ReDirectHandler";
 import { ToastProvider } from "./components/common/ToastContext";
 import AcceptInvitation from "./components/pages/AcceptInvitation";
 
-// Add alongside the /login route (outside ProtectedRoute):
 
 const App: React.FC = () => {
   return (
@@ -44,12 +44,18 @@ const App: React.FC = () => {
               <ProtectedRoute allowedRoles={["manager"]}>
                 <Approvals />
               </ProtectedRoute>
-
-
             }
           />
           <Route path="team-view" element={<TeamView />} />
           <Route path="leave-balance" element={<LeaveBalance />} />
+          <Route
+            path="employees"
+            element={
+              <ProtectedRoute allowedRoles={["manager", "admin"]}>
+                <EmployeeDirectory />
+              </ProtectedRoute>
+            }
+          />
           <Route path="admin/employees" element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <AdminDashboard />

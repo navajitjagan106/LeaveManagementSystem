@@ -1,11 +1,12 @@
 import axios from "axios";
+import { getCookie, removeCookie } from "../utils/cookies";
 
 const API = axios.create({
-  baseURL:  process.env.REACT_APP_API_URL+"/api",
+  baseURL: process.env.REACT_APP_API_URL + "/api",
 });
 
 API.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  const token = getCookie("token");
 
   const isAuthRoute =
     config.url?.includes("/auth/login") ||
@@ -23,7 +24,7 @@ API.interceptors.response.use(
     if (error.response?.status === 401) {
       console.log("Token expired or invalid");
 
-      localStorage.removeItem("token");
+      removeCookie("token");
 
       window.location.href = "/login";
     }

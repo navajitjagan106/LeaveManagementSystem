@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getInvitations, resendInvitation, cancelInvitation } from "../../../api/adminApi";
 import InviteEmployeeModal from "../modal/InviteEmployeeModal";
 import { useToast } from "../../common/ToastContext";
@@ -17,7 +17,7 @@ const StatusBadge = ({ status }: { status: string }) => (
     </span>
 );
 
-const FILTERS = ["all", "pending", "accepted", "expired"];
+const FILTERS = ["all", "pending", "accepted", "expired", "cancelled"];
 
 const InvitationsSection = () => {
     const toast = useToast();
@@ -26,7 +26,7 @@ const InvitationsSection = () => {
     const [showModal, setShowModal] = useState(false);
     const [filter, setFilter] = useState("all");
 
-    const fetchInvitations = async () => {
+    const fetchInvitations = useCallback(async () => {
         setLoading(true);
         try {
             const res = await getInvitations(filter === "all" ? undefined : filter);
@@ -34,9 +34,9 @@ const InvitationsSection = () => {
         } finally {
             setLoading(false);
         }
-    };
-// eslint-disable-next-line
-    useEffect(() => { fetchInvitations(); }, [filter]);
+    }, [filter]);
+
+    useEffect(() => { fetchInvitations(); }, [fetchInvitations]);
 
     const handleResend = async (id: number) => {
         try {

@@ -7,6 +7,7 @@ import PageHeader from "../common/PageHeader"
 import Loader from "../common/Loader"
 import { CalendarDays, Palmtree, Users, X } from "lucide-react"
 import { useToast } from "../common/ToastContext"
+import { getCookie } from "../../utils/cookies"
 
 type RawLeave = {
     id: number
@@ -101,13 +102,13 @@ const TeamView: React.FC = () => {
 
     const [calEvents, setCalEvents] = useState<CalendarEvent[]>([])
     const [role, setRole] = useState<string>(() => {
-        const user = JSON.parse(localStorage.getItem("user") || "null")
+        const user = JSON.parse(getCookie("user") || "null")
         return user?.role ?? ""
     })
     const [selectedLeave, setSelectedLeave] = useState<RawLeave | null>(null)
     const [loading, setLoading] = useState(true)
 
-    const isManager = role === "manager"
+    const isManagerOrAdmin = role === "manager" || role === "admin"
 
     const holidayDates = useMemo(
         () => holidays.map((h: any) => toYMD(new Date(h.date))),
@@ -238,7 +239,7 @@ const TeamView: React.FC = () => {
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2 text-gray-500 text-sm">
                         <CalendarDays size={16} />
-                        {isManager && <span>Click a leave event to see details</span>}
+                        {isManagerOrAdmin && <span>Click a leave event to see details</span>}
                     </div>
                     <div className="flex gap-4">
                         {LEGEND.map((item) => (
@@ -255,7 +256,7 @@ const TeamView: React.FC = () => {
                     initialView="dayGridMonth"
                     height="auto"
                     events={calEvents}
-                    eventClick={isManager ? (info) => {
+                    eventClick={isManagerOrAdmin ? (info) => {
                         const leave = info.event.extendedProps as RawLeave
                         if (leave?.id) setSelectedLeave(leave)
                     } : undefined}
@@ -302,7 +303,7 @@ const TeamView: React.FC = () => {
             {selectedLeave && (
                 <LeaveDetailDrawer
                     leave={selectedLeave}
-                    isManager={isManager}
+                    isManager={isManagerOrAdmin}
                     onClose={() => setSelectedLeave(null)}
                 />
             )}
