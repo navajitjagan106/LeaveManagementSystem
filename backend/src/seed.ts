@@ -46,7 +46,7 @@ const seed = async () => {
       CREATE TABLE leave_types (
         id          SERIAL PRIMARY KEY,
         name        VARCHAR(50) NOT NULL,
-        description TEXT
+        description TEXT,
         is_unlimited BOOLEAN DEFAULT false
       );
 
