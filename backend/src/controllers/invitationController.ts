@@ -4,15 +4,20 @@ import crypto from "crypto";
 import bcrypt from "bcrypt";
 import { sendInvitationEmail } from "../utils/emailService";
 
-const TOKEN_EXPIRY_HOURS = 48;
+const MIN_EXPIRY_HOURS = 1;
+const MAX_EXPIRY_HOURS = 168; // 7 days
 
 export const sendInvitation = async (req: Request, res: Response) => {
     try {
-        const { name, email, role, department, manager_id, policy_id } = req.body;
+        const { name, email, role, department, manager_id, policy_id, expires_in_hours } = req.body;
         const invitedBy = (req as any).user.id;
 
         if (!name || !email || !role)
             return res.status(400).json({ error: "Name, email and role are required" });
+
+        const expiryHours = Number(expires_in_hours) || 48;
+        if (expiryHours < MIN_EXPIRY_HOURS || expiryHours > MAX_EXPIRY_HOURS)
+            return res.status(400).json({ error: `Expiry must be between ${MIN_EXPIRY_HOURS} and ${MAX_EXPIRY_HOURS} hours` });
 
         const existing = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
         if (existing.rows.length > 0)
@@ -25,19 +30,19 @@ export const sendInvitation = async (req: Request, res: Response) => {
             return res.status(400).json({ error: "A pending invitation already exists for this email" });
 
         const token = crypto.randomBytes(32).toString("hex");
-        const expiresAt = new Date(Date.now() + TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
+        const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000);
 
         const result = await pool.query(
-            `INSERT INTO invitations (name, email, role, department, manager_id, policy_id, token, expires_at, invited_by)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-            [name, email, role, department || null, manager_id || null, policy_id || null, token, expiresAt, invitedBy]
+            `INSERT INTO invitations (name, email, role, department, manager_id, policy_id, token, expires_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+            [name, email, role, department || null, manager_id || null, policy_id || null, token, expiresAt]
         );
 
         const inviter = await pool.query("SELECT name FROM users WHERE id = $1", [invitedBy]);
         const inviterName = inviter.rows[0]?.name || "Admin";
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
-        await sendInvitationEmail({name, email, token, inviterName, role, frontendUrl });
+        await sendInvitationEmail({ name, email, token, inviterName, role, frontendUrl });
 
         res.json({ success: true, data: result.rows[0] });
     } catch (err) {
@@ -49,8 +54,7 @@ export const sendInvitation = async (req: Request, res: Response) => {
 export const getInvitations = async (req: Request, res: Response) => {
     try {
         const { status } = req.query;
-        let query = `SELECT i.*, u.name as invited_by_name FROM invitations i
-                    LEFT JOIN users u ON i.invited_by = u.id`;
+        let query = `SELECT * FROM invitations i`;
         const values: any[] = [];
         if (status) { query += " WHERE i.status = $1"; values.push(status); }
         query += " ORDER BY i.created_at DESC";
@@ -74,7 +78,7 @@ export const resendInvitation = async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Can only resend pending invitations" });
 
         const newToken = crypto.randomBytes(32).toString("hex");
-        const expiresAt = new Date(Date.now() + TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
+        const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
         await pool.query("UPDATE invitations SET token = $1, expires_at = $2 WHERE id = $3",
             [newToken, expiresAt, id]);
@@ -84,7 +88,7 @@ export const resendInvitation = async (req: Request, res: Response) => {
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
         await sendInvitationEmail({
-            name:invitation.name,
+            name: invitation.name,
             email: invitation.email, token: newToken,
             inviterName, role: invitation.role, frontendUrl,
         });
@@ -159,7 +163,7 @@ export const acceptInvitation = async (req: Request, res: Response) => {
         );
 
         await pool.query(
-            "UPDATE invitations SET status = 'accepted', accepted_at = NOW() WHERE id = $1",
+            "UPDATE invitations SET status = 'accepted' WHERE id = $1",
             [invitation.id]
         );
 
@@ -176,6 +180,11 @@ export const acceptInvitation = async (req: Request, res: Response) => {
                     [userId, rule.leave_type_id, rule.total_allocated]
                 );
             }
+            await pool.query(
+                `INSERT INTO leave_balances (user_id, leave_type_id, total_allocated, used) VALUES ($1, 7, 0, 0)`,
+                [userId]
+            );
+
         }
 
         const jwt = await import("jsonwebtoken");
@@ -192,5 +201,3 @@ export const acceptInvitation = async (req: Request, res: Response) => {
         res.status(500).json({ error: "Failed to accept invitation" });
     }
 };
-
-

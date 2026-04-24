@@ -103,12 +103,9 @@ export const getLeaveInitData = async (req: Request, res: Response) => {
 
 
             pool.query(
-            `SELECT 
-            lt.id, lt.name, 
-            lb.leave_type_id,
-            lb.total_allocated,
-            lb.used,
-            (lb.total_allocated - lb.used) AS remaining
+                `SELECT lt.id, lt.name, lt.description, 
+            lt.is_unlimited, lb.leave_type_id, lb.total_allocated, 
+            lb.used, (lb.total_allocated - lb.used) AS remaining
             FROM leave_balances lb
             JOIN leave_types lt ON lt.id = lb.leave_type_id
             WHERE lb.user_id = $1
@@ -121,7 +118,7 @@ export const getLeaveInitData = async (req: Request, res: Response) => {
             success: true,
             data: {
                 manager: managerRes.rows[0] || null,
-                leaveTypes: leaveDataRes.rows.map(r => ({ id: r.id, name: r.name })),
+                leaveTypes: leaveDataRes.rows.map(r => ({ id: r.id, name: r.name, description: r.description, is_unlimited: r.is_unlimited })),
                 balances: leaveDataRes.rows.map(r => ({ leave_type_id: r.leave_type_id, type: r.name, total_allocated: r.total_allocated, used: r.used, remaining: r.remaining }))
             }
         });
@@ -155,7 +152,8 @@ export const applyLeave = async (req: Request, res: Response) => {
             lb.used,
             m.email AS manager_email,
             m.name  AS manager_name,
-            lt.name AS leave_type_name
+            lt.name AS leave_type_name,
+            lt.is_unlimited
             FROM users u
             JOIN leave_balances lb ON lb.user_id = u.id AND lb.leave_type_id = $2
             LEFT JOIN users m ON m.id = u.manager_id
@@ -168,7 +166,7 @@ export const applyLeave = async (req: Request, res: Response) => {
             return res.status(404).json({ error: "Data not found" });
         }
 
-        const { manager_id, total_allocated, used, manager_email, manager_name, leave_type_name } = data.rows[0];
+        const { manager_id, total_allocated, used, manager_email, manager_name, leave_type_name, is_unlimited } = data.rows[0];
         const remaining = total_allocated - used;
 
         if (!manager_id) {
@@ -194,7 +192,7 @@ export const applyLeave = async (req: Request, res: Response) => {
             });
         }
 
-        if (total_days > remaining) {
+        if (!is_unlimited && total_days > remaining) {
             return res.status(400).json({
                 error: `Insufficient leave balance. Remaining: ${remaining}`
             });
@@ -400,7 +398,7 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
         l.to_date,
         l.duration_type`;
 
-        if (role === "manager") {
+        if (role === "manager" || role === "admin") {
             selectFields += `, l.reason`;
         }
 
@@ -424,6 +422,7 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
             values.push(user_id, manager_id);
         }
 
+
         const result = await pool.query(query, values);
 
         const events = result.rows.map((row) => ({
@@ -433,7 +432,7 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
             from_date: row.from_date,
             to_date: row.to_date,
             duration_type: row.duration_type,
-            ...(role === "manager" && { reason: row.reason })
+            ...((role === "manager" || role === 'admin') && { reason: row.reason })
         }));
 
         res.json({ events, role });
@@ -540,7 +539,7 @@ export const approveLeave = async (req: Request, res: Response) => {
         await client.query("BEGIN");
 
         const leave = await client.query(
-            `SELECT l.*, u.email AS employee_email, u.name AS employee_name, lt.name AS leave_type_name
+            `SELECT l.*, u.email AS employee_email, u.name AS employee_name, lt.name AS leave_type_name, lt.is_unlimited
             FROM leaves l
             JOIN users u ON u.id = l.user_id
             JOIN leave_types lt ON lt.id = l.leave_type_id
@@ -583,6 +582,7 @@ export const approveLeave = async (req: Request, res: Response) => {
             if (correctDays === 0) {
                 throw new Error("Leave falls only on holidays/weekends");
             }
+            if(!leaveData.is_unlimited){
             const balanceRes = await client.query(
                 `SELECT total_allocated, used 
                 FROM leave_balances 
@@ -597,6 +597,7 @@ export const approveLeave = async (req: Request, res: Response) => {
                 throw new Error(`Insufficient leave balance. Employee has ${remaining} day(s) remaining but requested ${correctDays}.`);
             }
         }
+        }
 
         const result = await client.query(
             `UPDATE leaves 
@@ -606,7 +607,7 @@ export const approveLeave = async (req: Request, res: Response) => {
             [status, manager_id, correctDays, leaveId, rejectionReason ?? null, status]
         );
 
-        if (status === "approved") {
+        if (status === "approved"&&!leaveData.is_unlimited) {
             await client.query(
                 `UPDATE leave_balances
                 SET used = used + $1
@@ -746,14 +747,16 @@ export const getuserdetails = async (req: Request, res: Response) => {
         }
         const user_id = req.user.id
         const result = await pool.query(
-        `SELECT 
+            `SELECT
         u.name,
         u.email,
         u.role,
         u.department,
-        m.name AS manager_name
+        m.name AS manager_name,
+        p.name AS policy_name
         FROM users u
         LEFT JOIN users m ON u.manager_id = m.id
+        LEFT JOIN leave_policies p ON u.policy_id = p.id
         WHERE u.id = $1`,
             [user_id]
         );
@@ -852,5 +855,205 @@ export const markNotificationsRead = async (req: Request, res: Response) => {
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: "Failed to mark notifications as read" });
+    }
+};
+
+
+export const getTeamOnLeave = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+        const { from_date, to_date } = req.query;
+        if (!from_date || !to_date) return res.json({ data: [] });
+
+        const result = await pool.query(
+            `SELECT u.id, u.name,
+                TO_CHAR(l.from_date, 'DD Mon YYYY') AS from_date,
+                TO_CHAR(l.to_date,   'DD Mon YYYY') AS to_date,
+                lt.name AS leave_type
+            FROM leaves l
+            JOIN users u ON l.user_id = u.id
+            JOIN leave_types lt ON lt.id = l.leave_type_id
+            WHERE l.status = 'approved'
+            AND l.from_date <= $2
+            AND l.to_date >= $1
+            AND l.user_id != $3
+            AND u.manager_id = (SELECT manager_id FROM users WHERE id = $3)`,
+            [from_date, to_date, req.user.id]
+        );
+
+        res.json({ data: result.rows });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch team on leave" });
+    }
+};
+
+export const getTeamMembers = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+        const { id: userId, role } = req.user;
+
+        const result = role === "admin"
+            ? await pool.query(
+                `SELECT u.id, u.name, u.email, u.role, u.department,
+                        m.name AS manager_name, p.name AS policy_name
+                FROM users u
+                LEFT JOIN users m ON u.manager_id = m.id
+                LEFT JOIN leave_policies p ON u.policy_id = p.id
+                ORDER BY u.name`)
+            : await pool.query(
+                `SELECT u.id, u.name, u.email, u.role, u.department,
+                        m.name AS manager_name, p.name AS policy_name
+                FROM users u
+                LEFT JOIN users m ON u.manager_id = m.id
+                LEFT JOIN leave_policies p ON u.policy_id = p.id
+                WHERE u.manager_id = $1 ORDER BY u.name`,
+                [userId]);
+
+        res.json({ success: true, data: result.rows });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch team members" });
+    }
+};
+
+export const getTeamMemberBalance = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+        const { id: userId, role } = req.user;
+        const targetId = Number(req.params.id);
+
+        if (role === "manager") {
+            const check = await pool.query(
+                "SELECT id FROM users WHERE id = $1 AND manager_id = $2",
+                [targetId, userId]
+            );
+            if (check.rows.length === 0)
+                return res.status(403).json({ error: "Not your team member" });
+        }
+
+        const [balanceResult, empResult] = await Promise.all([
+            pool.query(
+                `SELECT lb.leave_type_id, lt.name AS type,
+                        lb.total_allocated, lb.used,
+                        (lb.total_allocated - lb.used) AS remaining
+                FROM leave_balances lb
+                JOIN leave_types lt ON lb.leave_type_id = lt.id
+                WHERE lb.user_id = $1
+                ORDER BY lb.leave_type_id`,
+                [targetId]
+            ),
+            pool.query(
+                "SELECT name, email, department, role FROM users WHERE id = $1",
+                [targetId]
+            ),
+        ]);
+
+        res.json({
+            success: true,
+            data: balanceResult.rows.map(r => ({
+                ...r,
+                total_allocated: Number(r.total_allocated),
+                used: Number(r.used),
+                remaining: Number(r.remaining),
+            })),
+            employee: empResult.rows[0] || null,
+        });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch balance" });
+    }
+};
+
+export const getLeaveTrendByType = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        const { id: userId, role } = req.user;
+
+        let query = `
+        SELECT 
+            d::date AS date,
+            lt.name AS type,
+            COUNT(*) as count
+        FROM leaves l
+        JOIN leave_types lt ON l.leave_type_id = lt.id
+        JOIN users u ON l.user_id = u.id
+        CROSS JOIN LATERAL GENERATE_SERIES(l.from_date, l.to_date, INTERVAL '1 day') AS d
+        WHERE l.status = 'approved'
+        `;
+
+        const values: any[] = [];
+        let index = 1;
+
+        // 🔐 Role-based filtering
+        if (role === "manager") {
+            query += ` AND u.manager_id = $${index}`;
+            values.push(userId);
+            index++;
+        } else if (role === "employee") {
+            query += ` AND u.id = $${index}`;
+            values.push(userId);
+            index++;
+        }
+        // admin → no filter
+
+        query += `
+        GROUP BY date, lt.name
+        ORDER BY date;
+        `;
+
+        const result = await pool.query(query, values);
+
+        res.json({
+            success: true,
+            data: result.rows
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch leave trend" });
+    }
+};
+
+export const getTeamBalanceSummary = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+        const { id: userId, role } = req.user;
+
+        const result = role === "admin"
+            ? await pool.query(
+                `SELECT u.id, u.name,
+                        COALESCE(SUM(lb.total_allocated), 0) AS total_allocated,
+                        COALESCE(SUM(lb.used), 0)            AS used,
+                        COALESCE(SUM(lb.total_allocated - lb.used), 0) AS remaining
+                FROM users u
+                LEFT JOIN leave_balances lb ON lb.user_id = u.id
+                GROUP BY u.id, u.name
+                ORDER BY u.name`)
+            : await pool.query(
+                `SELECT u.id, u.name,
+                        COALESCE(SUM(lb.total_allocated), 0) AS total_allocated,
+                        COALESCE(SUM(lb.used), 0)            AS used,
+                        COALESCE(SUM(lb.total_allocated - lb.used), 0) AS remaining
+                FROM users u
+                LEFT JOIN leave_balances lb ON lb.user_id = u.id
+                WHERE u.manager_id = $1
+                GROUP BY u.id, u.name
+                ORDER BY u.name`,
+                [userId]);
+
+        res.json({
+            success: true,
+            data: result.rows.map(r => ({
+                id:              r.id,
+                name:            r.name,
+                total_allocated: Number(r.total_allocated),
+                used:            Number(r.used),
+                remaining:       Number(r.remaining),
+            })),
+        });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch team balance summary" });
     }
 };

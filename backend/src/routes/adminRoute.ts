@@ -1,7 +1,7 @@
 import express from "express";
 import { authorizeRoles } from "../middleware/roleMiddleware";
 import {
-    createEmployee, getAllEmployees, updateEmployee, deleteEmployee,
+    getAllEmployees, updateEmployee, deleteEmployee,
     updateManager, createLeaveType, updateLeaveType, addHoliday,
     deleteHoliday, getAllLeaves, getUserLeaveBalance, updateLeaveBalance, exportLeaves,
 } from "../controllers/adminController";
@@ -16,7 +16,6 @@ router.get("/invitations", getInvitations);
 router.post("/invitations/:id/resend", resendInvitation);
 router.delete("/invitations/:id", cancelInvitation);
 
-router.post("/users", createEmployee);
 router.get("/users", getAllEmployees);
 router.patch("/users/:id", updateEmployee);
 router.delete("/users/:id", deleteEmployee);
