@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import React from "react";
 import { User } from "../../types";
-import { getCookie, removeCookie } from "../../utils/cookies";
+import { getCookie } from "../../utils/cookies";
 
 type Props = {
     children: React.ReactNode;
@@ -11,12 +11,10 @@ type Props = {
 const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles }) => {
     const user: User | null = (() => {
         try { return JSON.parse(getCookie("user") || "null"); }
-        catch { removeCookie("user"); removeCookie("token"); return null; }
+        catch { return null; }
     })();
 
-    const token = getCookie("token");
-
-    if (!token) {
+    if (!user) {
         return <Navigate to="/login" />;
     }
 

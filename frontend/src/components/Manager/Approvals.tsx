@@ -98,17 +98,18 @@ const toast = useToast();
     if (loading) return <div className="text-center py-8"><Loader /></div>;
 
     return (
-        <div>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <PageHeader
                 title="Approvals"
                 subtitle="Manage pending leave requests"
+                divider
             />
 
-            <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap gap-4 items-center">
+            <div className="flex flex-wrap gap-4 items-center pb-5 mb-5 border-b border-gray-100">
                 <select
                     value={filters.status}
                     onChange={(e) => handleFilterChange('status', e.target.value)}
-                    className="border border-gray-300 rounded-lg px-4 py-2"
+                    className="border border-gray-200 rounded-lg px-4 py-2 bg-gray-50 text-sm"
                 >
                     {statusOptions.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -121,7 +122,7 @@ const toast = useToast();
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     placeholder="Search by employee name"
-                    className="flex-1 border border-gray-300 rounded-lg px-4 py-2"
+                    className="flex-1 border border-gray-200 rounded-lg px-4 py-2 bg-gray-50 text-sm"
                 />
 
                 {(filters.status || filters.search) && (

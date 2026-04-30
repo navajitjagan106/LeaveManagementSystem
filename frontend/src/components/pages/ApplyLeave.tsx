@@ -1,13 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import FormField from '../common/forms/FormField';
-import RadioGroup from '../common/forms/RadioGroup';
 import DateRangePicker from '../common/forms/DateRangePicker';
 import { applyLeave, calculateDays, getLeaveInitData, getTeamOnLeave } from "../../api/leaveApi";
-
 import { LeaveBalance, LeaveType } from "../../types";
 import PageHeader from '../common/PageHeader';
 import { useToast } from '../common/ToastContext';
 
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+import { Briefcase, HeartPulse, CalendarDays, AlertTriangle, UserCircle2, Users } from "lucide-react";
+
+const PALETTE = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899", "#14b8a6", "#f97316"];
+const LIGHT_PALETTE = ["#eef2ff", "#d1fae5", "#fef3c7", "#fee2e2", "#dbeafe", "#fce7f3", "#ccfbf1", "#ffedd5"];
+function avatarColor(name: string) { return PALETTE[name.charCodeAt(0) % PALETTE.length]; }
+
+const LEAVE_ICONS: Record<string, React.ReactNode> = {
+    "Casual Leave": <Briefcase className="w-4 h-4" />,
+    "Sick Leave": <HeartPulse className="w-4 h-4" />,
+    "Earned Leave": <CalendarDays className="w-4 h-4" />,
+    "Loss Of Pay": <AlertTriangle className="w-4 h-4" />,
+};
 
 const ApplyLeave: React.FC = () => {
     const [formData, setFormData] = useState({
@@ -17,239 +31,268 @@ const ApplyLeave: React.FC = () => {
         toDate: '',
         reason: '',
     });
-
-    const [manager, setManager] = useState<({ id: '', name: '' }) | null>(null);
+    const [manager, setManager] = useState<{ id: string; name: string } | null>(null);
     const [totalDays, setTotalDays] = useState(0);
     const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
     const [balances, setBalances] = useState<LeaveBalance[]>([]);
+    const [teamOnLeave, setTeamOnLeave] = useState<any[]>([]);
+    const [submitting, setSubmitting] = useState(false);
     const toast = useToast();
-    const [teamOnLeave, setTeamOnLeave] = useState<{ id: number; name: string; from_date: string; to_date: string; leave_type: string }[]>([]);
 
     useEffect(() => {
-        if (!formData.fromDate || !formData.toDate) {
-            setTeamOnLeave([]);
-            return;
-        }
+        getLeaveInitData()
+            .then(res => {
+                setManager(res.data.data.manager);
+                setLeaveTypes(res.data.data.leaveTypes);
+                setBalances(res.data.data.balances);
+                if (res.data.data.leaveTypes?.[0]) {
+                    setFormData(f => ({ ...f, leaveType: String(res.data.data.leaveTypes[0].id) }));
+                }
+            })
+            .catch(console.error);
+    }, []);
+
+    useEffect(() => {
+        if (!formData.fromDate || !formData.toDate) { setTeamOnLeave([]); return; }
         getTeamOnLeave(formData.fromDate, formData.toDate)
-            .then(res => setTeamOnLeave(res.data.data))
+            .then(res => setTeamOnLeave(res.data.data || []))
             .catch(() => setTeamOnLeave([]));
     }, [formData.fromDate, formData.toDate]);
 
     useEffect(() => {
-        fetchInitialData();
-    }, []);
-
-    const fetchInitialData = async () => {
-        try {
-            const res = await getLeaveInitData();
-
-            setManager(res.data.data.manager);
-            setLeaveTypes(res.data.data.leaveTypes);
-            setBalances(res.data.data.balances);
-
-        } catch (error) {
-            console.error("Failed to fetch initial data", error);
-        }
-    };
-
-
-
-    useEffect(() => {
-        const fetchTotalDays = async () => {
-            if (!formData.fromDate || !formData.toDate) {
-                setTotalDays(0);
-                return;
-            }
-
-            try {
-                const res = await calculateDays({
-                    from_date: formData.fromDate,
-                    to_date: formData.toDate,
-                    duration_type: formData.durationType
-                });
-                setTotalDays(res.data.days);
-            } catch (err) {
-                console.error("Failed to calculate days");
-                setTotalDays(0);
-            }
-        };
-
-        fetchTotalDays();
+        if (!formData.fromDate || !formData.toDate) { setTotalDays(0); return; }
+        calculateDays({ from_date: formData.fromDate, to_date: formData.toDate, duration_type: formData.durationType })
+            .then(res => setTotalDays(res.data.days))
+            .catch(() => setTotalDays(0));
     }, [formData.fromDate, formData.toDate, formData.durationType]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        if (!formData.fromDate || !formData.toDate || !formData.reason) {
+        if (!formData.fromDate || !formData.toDate || !formData.reason.trim()) {
             toast.warning('Please fill all required fields');
             return;
         }
-
+        setSubmitting(true);
         try {
-            const payload = {
+            await applyLeave({
                 leave_type_id: parseInt(formData.leaveType),
                 from_date: formData.fromDate,
                 to_date: formData.toDate,
                 reason: formData.reason,
                 duration_type: formData.durationType,
-            };
-
-            await applyLeave(payload);
-
-            toast.success('Leave applied successfully!');
-
-            setFormData({
-                leaveType: '1',
-                durationType: 'full',
-                fromDate: '',
-                toDate: '',
-                reason: '',
             });
-
+            toast.success('Leave applied successfully!');
+            setFormData({ leaveType: String(leaveTypes[0]?.id || '1'), durationType: 'full', fromDate: '', toDate: '', reason: '' });
             setTotalDays(0);
-
         } catch (err: any) {
-            console.error(err);
-
             toast.error(err.response?.data?.error || 'Failed to apply leave');
+        } finally {
+            setSubmitting(false);
         }
     };
 
-    const selectedLeaveType = leaveTypes.find(
-        (t: any) => t.id === parseInt(formData.leaveType)
-    );
-    const selectedBalance = balances.find(
-        (b: any) => b.leave_type_id === parseInt(formData.leaveType)
-    );
-    const remaining = selectedBalance?.remaining || 0;
-
+    const selectedLeaveType = leaveTypes.find(t => t.id === parseInt(formData.leaveType));
 
     return (
-        <>
-            <PageHeader
-                title="Apply Leave"
-                subtitle="Submit a new leave request"
-            />
-            <div className='flex justify-center'>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <PageHeader title="Apply Leave" subtitle="Submit a new leave request" divider />
 
-                <div className="bg-white p-8 rounded-lg shadow-sm w-full">
-                    <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-1">
 
-                        <FormField label="Leave Type">
-                            <RadioGroup
-                                name="leaveType"
-                                value={formData.leaveType}
-                                options={leaveTypes.map((type: any) => ({
-                                    label: type.name,
-                                    value: type.id.toString(),
-                                }))}
-                                onChange={(val) =>
-                                    setFormData({ ...formData, leaveType: val })
-                                }
-                            />
-                            {selectedLeaveType?.description && (
-                                <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                                    <p className="text-sm text-blue-600">{selectedLeaveType.description}</p>
-                                </div>
-                            )}
-                            
-                            {selectedLeaveType && (
-                                <div className="mb-4 p-3 bg-green-50 rounded-lg">
-                                    <p className="text-sm text-green-700">
-                                        Remaining Leave:{" "}
-                                        <span className="font-semibold">
-                                            {selectedLeaveType.is_unlimited ? "∞ Unlimited" : remaining}
+                {/* ── Left: Form ── */}
+                <form onSubmit={handleSubmit} className="lg:col-span-2 flex flex-col gap-5">
+
+                    {/* Leave Type — card grid (no dropdown, no overlay issues) */}
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-semibold text-gray-700">Leave Type</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {leaveTypes.map(type => {
+                                const bal = balances.find(b => b.leave_type_id === type.id);
+                                const isSelected = formData.leaveType === String(type.id);
+                                return (
+                                    <button
+                                        key={type.id}
+                                        type="button"
+                                        onClick={() => setFormData(f => ({ ...f, leaveType: String(type.id) }))}
+                                        className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${
+                                            isSelected
+                                                ? 'border-[#5746AF] bg-purple-50/50 shadow-sm'
+                                                : 'border-gray-200 bg-white hover:border-purple-200 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+                                            isSelected ? 'bg-[#5746AF] text-white' : 'bg-gray-100 text-gray-500'
+                                        }`}>
+                                            {LEAVE_ICONS[type.name] ?? <CalendarDays className="w-4 h-4" />}
                                         </span>
-                                    </p>
-                                </div>
-                            )}
+                                        <div className="min-w-0 flex-1 pt-0.5">
+                                            <p className={`text-sm font-semibold leading-snug ${isSelected ? 'text-[#5746AF]' : 'text-gray-800'}`}>
+                                                {type.name}
+                                            </p>
+                                            <p className="text-[11px] text-gray-400 mt-0.5">
+                                                {type.is_unlimited ? '∞ Unlimited' : `${bal?.remaining ?? 0} / ${bal?.total_allocated ?? 0} days left`}
+                                            </p>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {selectedLeaveType?.description && (
+                            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 leading-relaxed">
+                                {selectedLeaveType.description}
+                            </p>
+                        )}
+                    </div>
 
+                    {/* Duration Type */}
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-semibold text-gray-700">Duration</label>
+                        <div className="inline-flex rounded-lg border border-gray-200 p-1 bg-gray-50 w-fit gap-1">
+                            {[{ label: 'Full Day', value: 'full' }, { label: 'Half Day', value: 'half' }].map(opt => (
+                                <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => setFormData(f => ({ ...f, durationType: opt.value }))}
+                                    className={`px-5 py-1.5 rounded-md text-sm font-medium transition-all ${
+                                        formData.durationType === opt.value
+                                            ? 'bg-white text-[#5746AF] shadow-sm border border-gray-200'
+                                            : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
-                        </FormField>
-
-                        {/* duration */}
-                        <FormField label="Duration Type">
-                            <RadioGroup
-                                name="durationType"
-                                value={formData.durationType}
-                                options={[
-                                    { label: "Full Day", value: "full" },
-                                    { label: "Half Day", value: "half" },
-                                ]}
-                                onChange={(val) =>
-                                    setFormData({ ...formData, durationType: val })
-                                }
-                            />
-                        </FormField>
-
-                        {/* dates */}
+                    {/* Date range */}
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-semibold text-gray-700">Date Range</label>
                         <DateRangePicker
                             fromDate={formData.fromDate}
                             toDate={formData.toDate}
                             totalDays={totalDays}
-                            onFromChange={(val) => setFormData({ ...formData, fromDate: val })}
-                            onToChange={(val) => setFormData({ ...formData, toDate: val })}
+                            onFromChange={val => setFormData(f => ({ ...f, fromDate: val }))}
+                            onToChange={val => setFormData(f => ({ ...f, toDate: val }))}
                         />
+                    </div>
 
+                    {/* Reason */}
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-semibold text-gray-700">
+                            Reason <span className="text-red-400">*</span>
+                        </label>
+                        <Textarea
+                            value={formData.reason}
+                            onChange={e => setFormData(f => ({ ...f, reason: e.target.value }))}
+                            placeholder="Briefly describe the reason for your leave…"
+                            className="h-20 resize-none border-gray-200 focus:border-[#5746AF] focus:ring-[#5746AF]/20 text-sm"
+                            required
+                        />
+                    </div>
 
-                        {/* reason */}
-                        <FormField label="Reason">
-                            <textarea
-                                value={formData.reason}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, reason: e.target.value })
-                                }
-                                className="w-full border px-4 py-2 rounded-lg h-24"
-                                required
-                            />
-                        </FormField>
+                    {/* Submit */}
+                    <Button
+                        type="submit"
+                        disabled={submitting}
+                        className="w-full h-11 bg-[#5746AF] hover:bg-[#4a3a9a] text-white font-semibold text-sm mt-1"
+                    >
+                        {submitting ? 'Submitting…' : 'Submit Request'}
+                    </Button>
+                </form>
 
-                        {/* manager */}
-                        <div className="mb-6">
-                            <label className="block text-sm font-semibold mb-2">
-                                Apply to (Manager)
-                            </label>
-                            <div className="border px-4 py-2 rounded-lg bg-gray-50">
-                                {manager ? manager.name : "Loading..."}
+                {/* ── Right: Sidebar ── */}
+                <div className="flex flex-col gap-4">
+
+                    {/* Leave Balance */}
+                    <Card className="shadow-none border-gray-100">
+                        <CardHeader className="pb-3 pt-4 px-4">
+                            <CardTitle className="text-sm font-semibold text-gray-700">Your Leave Balance</CardTitle>
+                        </CardHeader>
+                        <Separator />
+                        <CardContent className="px-4 pt-3 pb-4 flex flex-col gap-3">
+                            {balances.length === 0 ? (
+                                <p className="text-xs text-gray-400 text-center py-2">No balance data</p>
+                            ) : balances.map((b, i) => {
+                                const lt = leaveTypes.find(t => t.id === b.leave_type_id);
+                                const pct = b.total_allocated > 0 ? Math.round((b.used / b.total_allocated) * 100) : 0;
+                                const col = PALETTE[i % PALETTE.length];
+                                const light = LIGHT_PALETTE[i % LIGHT_PALETTE.length];
+                                const isSelected = String(b.leave_type_id) === formData.leaveType;
+                                return (
+                                    <div
+                                        key={b.leave_type_id}
+                                        onClick={() => setFormData(f => ({ ...f, leaveType: String(b.leave_type_id) }))}
+                                        className={`rounded-lg p-3 cursor-pointer transition-all border ${
+                                            isSelected ? 'border-[#5746AF] bg-purple-50/40' : 'border-transparent hover:border-gray-200 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: light, color: col }}>
+                                                {lt?.name ?? `Type ${b.leave_type_id}`}
+                                            </span>
+                                            <span className="text-xs font-bold" style={{ color: col }}>
+                                                {lt?.is_unlimited ? '∞' : b.remaining}
+                                                {!lt?.is_unlimited && <span className="text-gray-400 font-normal"> / {b.total_allocated}</span>}
+                                            </span>
+                                        </div>
+                                        {!lt?.is_unlimited && (
+                                            <div className="w-full bg-gray-100 rounded-full h-1">
+                                                <div className="h-1 rounded-full" style={{ width: `${pct}%`, background: col }} />
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </CardContent>
+                    </Card>
+
+                    {/* Manager */}
+                    <Card className="shadow-none border-gray-100">
+                        <CardContent className="px-4 py-4 flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-[#ede9fe] flex items-center justify-center flex-shrink-0">
+                                <UserCircle2 className="w-5 h-5 text-[#5746AF]" />
                             </div>
-                        </div>
+                            <div>
+                                <p className="text-[10px] text-gray-400 uppercase tracking-wider">Reporting Manager</p>
+                                <p className="text-sm font-semibold text-gray-800">{manager?.name ?? 'Loading…'}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                        {teamOnLeave.length > 0 && (
-                            <div className="mb-6">
-                                <p className="text-sm text-blue-500 mb-2">Also on leave during this period</p>
-                                <div className="flex gap-2 flex-wrap">
+                    {/* Team on leave */}
+                    {teamOnLeave.length > 0 && (
+                        <Card className="shadow-none border-orange-100 bg-orange-50/40">
+                            <CardContent className="px-4 py-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Users className="w-4 h-4 text-orange-500" />
+                                    <p className="text-xs font-semibold text-orange-600">
+                                        {teamOnLeave.length} teammate{teamOnLeave.length > 1 ? 's' : ''} also on leave
+                                    </p>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
                                     {teamOnLeave.map((person, i) => (
-                                        <div key={`${person.id}-${i}`} className="relative group flex flex-col items-center">
-                                            <div className="w-9 h-9 rounded-full bg-purple-200 flex items-center justify-center text-xs font-bold text-purple-700 cursor-default">
-                                                {person.name.charAt(0).toUpperCase()}
-                                            </div>
-                                            <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-10">
-                                                <div className="bg-gray-800 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
-                                                    <p className="font-semibold">{person.name}</p>
-                                                    <p className="text-gray-300 mt-0.5">{person.leave_type}</p>
-                                                    <p className="text-gray-400 mt-0.5">{person.from_date} to {person.to_date}</p>
-                                                </div>
-                                                <div className="border-4 border-transparent border-t-gray-800" />
-                                            </div>
+                                        <div
+                                            key={i}
+                                            title={person.name}
+                                            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                                            style={{ background: avatarColor(person.name) }}
+                                        >
+                                            {person.name.charAt(0).toUpperCase()}
                                         </div>
                                     ))}
                                 </div>
-                            </div>
-                        )}
-
-
-                        {/* submit */}
-                        <button
-                            type="submit"
-                            className="w-full bg-[#5746AF] text-white py-3 rounded-lg"
-                        >
-                            Submit Request
-                        </button>
-
-                    </form>
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                    {teamOnLeave.map((person, i) => (
+                                        <span key={i} className="text-xs text-orange-700">{person.name}{i < teamOnLeave.length - 1 ? ',' : ''}</span>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             </div>
-        </>
+        </div>
     );
 };
 

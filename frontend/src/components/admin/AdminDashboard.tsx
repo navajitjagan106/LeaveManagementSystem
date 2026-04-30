@@ -29,7 +29,7 @@ const TABS = [
 ];
 
 const StatCard = ({ icon: Icon, label, value, sub, color }: any) => (
-    <div className="bg-white rounded-2xl border p-5 flex items-start gap-4">
+    <div className="bg-gray-50 rounded-2xl border p-5 flex items-start gap-4">
         <div className={`p-3 rounded-xl ${color}`}>
             <Icon size={20} className="text-white" />
         </div>
@@ -44,7 +44,7 @@ const StatCard = ({ icon: Icon, label, value, sub, color }: any) => (
 const ShortcutCard = ({ icon: Icon, label, desc, onClick, color }: any) => (
     <button
         onClick={onClick}
-        className="bg-white rounded-2xl border p-5 text-left hover:shadow-md hover:border-purple-300 transition w-full"
+        className="bg-gray-50 rounded-2xl border p-5 text-left hover:bg-white hover:shadow-sm hover:border-purple-300 transition w-full"
     >
         <div className={`p-2.5 rounded-xl inline-flex mb-3 ${color}`}>
             <Icon size={18} className="text-white" />
@@ -93,8 +93,8 @@ const AdminDashboard = () => {
     }, [tab]);
 
     return (
-        <div className="space-y-6">
-            <PageHeader title="Admin" subtitle="Manage employees, leaves, holidays and more" />
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+            <PageHeader title="Admin" subtitle="Manage employees, leaves, holidays and more" divider />
 
             <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit flex-wrap">
                 {TABS.map(({ id, label, icon: Icon }) => (
@@ -120,7 +120,7 @@ const AdminDashboard = () => {
                     </div>
 
                     {chartData.length > 0 && (
-                        <div className="bg-white rounded-2xl border p-6">
+                        <div className="bg-gray-50 rounded-2xl border p-6">
                             <div className="mb-4">
                                 <h3 className="font-semibold text-gray-800">Approved Leaves by Month</h3>
                                 <p className="text-xs text-gray-400 mt-0.5">Number of approved leaves per month</p>

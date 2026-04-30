@@ -12,6 +12,7 @@ import LeaveBalance from "./components/pages/LeaveBalance";
 import Profile from "./components/pages/Profile";
 import AdminDashboard from "./components/admin/AdminDashboard";
 import EmployeeDirectory from "./components/pages/EmployeeDirectory";
+import EmployeeProfile from "./components/pages/EmployeeProfile";
 import RedirectHandler from "./components/common/ReDirectHandler";
 import { ToastProvider } from "./components/common/ToastContext";
 import AcceptInvitation from "./components/pages/AcceptInvitation";
@@ -53,6 +54,14 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute allowedRoles={["manager", "admin"]}>
                 <EmployeeDirectory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="employees/:id"
+            element={
+              <ProtectedRoute allowedRoles={["manager", "admin"]}>
+                <EmployeeProfile />
               </ProtectedRoute>
             }
           />

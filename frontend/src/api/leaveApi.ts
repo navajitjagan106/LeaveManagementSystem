@@ -43,6 +43,13 @@ export const getLeaveInitData = () =>
 export const getuserdata = () =>
     API.get("/leaves/getuserdata")
 
+export const updateUserProfile = (data: {
+    phone?: string | null;
+    gender?: string | null;
+    date_of_birth?: string | null;
+    location?: string | null;
+}) => API.patch("/leaves/getuserdata", data)
+
 export const cancelLeave = (id: number) =>
     API.delete(`/leaves/cancel/${id}`);
 
@@ -67,3 +74,6 @@ export const getTeamBalanceSummary = () =>
 
 export const getLeaveTrend = () =>
   API.get("/leaves/leave-trend");
+
+export const getTeamMemberMonthly = (id: number) =>
+  API.get(`/leaves/team-member-monthly/${id}`);

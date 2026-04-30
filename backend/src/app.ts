@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import leaveRoutes from "./routes/leaveRoute"
 import authRoutes from "./routes/authRoute";
 import { authenticate } from "./middleware/authMiddleware";
@@ -20,8 +21,9 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
+app.use(cookieParser());
 app.use(express.json());
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
   res.send("API is running");
 });
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, FileText, History, Users, CheckCircle, Scale, ShieldUser, LogOut, UsersRound } from "lucide-react";
+import { LayoutDashboard, FileText, History, Users, CheckCircle, Scale, ShieldCheck, LogOut, UsersRound } from "lucide-react";
 import { getUserLocal } from "../../utils/getUser";
 import { User } from "../../types";
 
@@ -24,7 +24,7 @@ const Sidebar: React.FC = () => {
         { path: "/approvals", label: "Approvals", icon: CheckCircle, roles: ["manager"] },
         { path: "/employees", label: "Employees", icon: UsersRound, roles: ["manager", "admin"] },
         { path: "/leave-balance", label: "Balance", icon: Scale },
-        { path: "/admin/employees", label: "Admin", icon: ShieldUser, roles: ["admin"] },
+        { path: "/admin/employees", label: "Admin", icon: ShieldCheck, roles: ["admin"] },
     ];
 
     return (

@@ -6,76 +6,88 @@ import {
     XAxis, CartesianGrid,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../ui/chart";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import PageHeader from '../common/PageHeader';
-import { Loader, TrendingUp } from 'lucide-react';
+import { Loader } from 'lucide-react';
 
 type LeaveBalanceType = {
     type: string;
     used: number;
     total_allocated: number;
     remaining: number;
+    is_unlimited: boolean;
 };
 
-const PALETTE      = ["#6366f1","#10b981","#f59e0b","#ef4444","#3b82f6","#ec4899","#14b8a6","#f97316"];
-const LIGHT_PALETTE= ["#eef2ff","#d1fae5","#fef3c7","#fee2e2","#dbeafe","#fce7f3","#ccfbf1","#ffedd5"];
+const PALETTE       = ["#6366f1","#10b981","#f59e0b","#ef4444","#3b82f6","#ec4899","#14b8a6","#f97316"];
+const LIGHT_PALETTE = ["#eef2ff","#d1fae5","#fef3c7","#fee2e2","#dbeafe","#fce7f3","#ccfbf1","#ffedd5"];
 
-/* ── Ring card ─────────────────────────────────────────────────── */
+/* ── Slim Ring card — horizontal strip, fixed ~68px tall ── */
 const RingCard: React.FC<{ item: LeaveBalanceType; color: string; light: string }> = ({ item, color, light }) => {
-    const remaining = Number(item.total_allocated) - Number(item.used);
-    const pct       = item.total_allocated > 0 ? Number(item.used) / Number(item.total_allocated) : 0;
-    const size = 68; const radius = 27;
-    const circ   = 2 * Math.PI * radius;
+    const used      = Number(item.used);
+    const allocated = Number(item.total_allocated);
+    const remaining = item.is_unlimited ? null : allocated - used;
+    const pct       = item.is_unlimited
+        ? Math.min(used / Math.max(used * 2, 1), 1)  // visual only — fill half ring per used day
+        : allocated > 0 ? used / allocated : 0;
+    const size = 52; const r = 20;
+    const circ   = 2 * Math.PI * r;
     const offset = circ * (1 - pct);
 
     return (
         <div
-            className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow flex flex-col gap-4"
-            style={{ borderTop: `3px solid ${color}` }}
+            className="bg-gray-50 rounded-xl border border-gray-100 p-2.5 hover:bg-white transition-colors flex items-center gap-3"
+            style={{ borderLeft: `3px solid ${color}` }}
         >
-            <div className="flex items-start justify-between">
-                <div>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: light, color }}>
-                        {item.type}
-                    </span>
-                    <p className="text-xs text-gray-400 mt-2">{item.used} of {item.total_allocated} used</p>
-                </div>
-                <div className="relative" style={{ width: size, height: size }}>
-                    <svg width={size} height={size} className="-rotate-90" style={{ display: "block" }}>
-                        <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#f3f4f6" strokeWidth="5" />
-                        <circle
-                            cx={size/2} cy={size/2} r={radius}
-                            fill="none" stroke={color} strokeWidth="5" strokeLinecap="round"
-                            strokeDasharray={circ} strokeDashoffset={offset}
-                            style={{ transition: "stroke-dashoffset 0.6s ease" }}
-                        />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-[11px] font-bold" style={{ color }}>{Math.round(pct * 100)}%</span>
-                    </div>
+            {/* Mini ring */}
+            <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+                <svg width={size} height={size} className="-rotate-90" style={{ display: "block" }}>
+                    <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#f3f4f6" strokeWidth="4" />
+                    <circle
+                        cx={size/2} cy={size/2} r={r}
+                        fill="none" stroke={color} strokeWidth="4" strokeLinecap="round"
+                        strokeDasharray={circ} strokeDashoffset={offset}
+                        style={{ transition: "stroke-dashoffset 0.6s ease" }}
+                    />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                    {item.is_unlimited
+                        ? <span className="text-[11px] font-bold" style={{ color }}>∞</span>
+                        : <span className="text-[10px] font-bold" style={{ color }}>{Math.round(pct * 100)}%</span>
+                    }
                 </div>
             </div>
-            <div className="flex items-end justify-between">
-                <div>
-                    <p className="text-4xl font-bold leading-none" style={{ color }}>{remaining}</p>
-                    <p className="text-xs text-gray-400 mt-1">days remaining</p>
-                </div>
-                <div className="text-right">
-                    <p className="text-sm font-semibold text-gray-600">{item.total_allocated}</p>
-                    <p className="text-xs text-gray-400">total</p>
-                </div>
-            </div>
-            <div className="w-full bg-gray-100 rounded-full h-1.5">
-                <div
-                    className="h-1.5 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.round(pct * 100)}%`, background: color }}
-                />
+
+            {/* Info */}
+            <div className="min-w-0 flex-1">
+                <span
+                    className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full inline-block mb-1 truncate max-w-full"
+                    style={{ background: light, color }}
+                >
+                    {item.type}
+                </span>
+                {item.is_unlimited ? (
+                    <>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-xl font-bold leading-none" style={{ color }}>{used}</span>
+                            <span className="text-[10px] text-gray-400">days used</span>
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-0.5">no cap</p>
+                    </>
+                ) : (
+                    <>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-xl font-bold leading-none" style={{ color }}>{remaining}</span>
+                            <span className="text-[10px] text-gray-400">/ {allocated}</span>
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-0.5">days left</p>
+                    </>
+                )}
             </div>
         </div>
     );
 };
 
-/* ── Page ──────────────────────────────────────────────────────── */
+/* ── Page ── */
 const LeaveBalance: React.FC = () => {
     const [leaveBalances, setLeaveBalances] = useState<LeaveBalanceType[]>([]);
     const [weeklyData, setWeeklyData]       = useState<{ day: string; value: number }[]>([]);
@@ -91,109 +103,89 @@ const LeaveBalance: React.FC = () => {
             .finally(() => setLoading(false));
     }, []);
 
-    const columns = [
-        { key: "type",             label: "Type"      },
-        { key: "used",             label: "Used"      },
-        { key: "balance",          label: "Remaining" },
-        { key: "total_allocated",  label: "Total"     },
-    ];
-
-    const chartDatarem  = leaveBalances.map((lb, i) => ({ name: lb.type, value: Number(lb.remaining), fill: PALETTE[i % PALETTE.length] }));
-    const chartDataused = leaveBalances.map((lb, i) => ({ name: lb.type, value: Number(lb.used),      fill: PALETTE[i % PALETTE.length] }));
+    // For unlimited types (LOP): remaining is meaningless — show used so the segment always appears
+    const chartDatarem  = leaveBalances.map((lb, i) => ({
+        name: lb.type,
+        value: lb.is_unlimited ? Math.max(Number(lb.used), 0.5) : Math.max(Number(lb.remaining), 0),
+        fill: PALETTE[i % PALETTE.length],
+    }));
+    const chartDataused = leaveBalances.map((lb, i) => ({
+        name: lb.type,
+        value: Math.max(Number(lb.used), 0),
+        fill: PALETTE[i % PALETTE.length],
+    }));
 
     const pieConfig = leaveBalances.reduce((acc, lb, i) => {
         acc[lb.type] = { label: lb.type, color: PALETTE[i % PALETTE.length] };
         return acc;
     }, {} as Record<string, { label: string; color: string }>);
 
-    const totalRemaining = leaveBalances.reduce((s, lb) => s + Number(lb.remaining), 0);
-    const totalUsed      = leaveBalances.reduce((s, lb) => s + Number(lb.used),      0);
+    const totalRemaining = leaveBalances.reduce((s, lb) => s + (lb.is_unlimited ? 0 : Math.max(Number(lb.remaining), 0)), 0);
+    const totalUsed      = leaveBalances.reduce((s, lb) => s + Number(lb.used), 0);
 
     if (loading) return (
-        <div className="flex justify-center items-center h-48">
+        <div className="flex justify-center items-center h-full">
             <Loader className="animate-spin text-purple-500" />
         </div>
     );
 
     return (
-        <div className="flex flex-col gap-6 pb-6">
-            <PageHeader title="Leave Balance" subtitle="View your leave balance" />
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3 h-full min-h-0">
+            <PageHeader title="Leave Balance" subtitle="View your leave balance" divider />
 
-            {/* Ring cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+            {/* Ring cards — fixed height strips, 4 cols, no wrap overflow */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 flex-shrink-0">
                 {leaveBalances.map((item, i) => (
                     <RingCard key={i} item={item} color={PALETTE[i % PALETTE.length]} light={LIGHT_PALETTE[i % LIGHT_PALETTE.length]} />
                 ))}
             </div>
 
-            {/* Charts row 1 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Charts — fill all remaining space */}
+            <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-3">
 
-                {/* ── Area chart — Weekly Pattern ── */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base">Weekly Pattern</CardTitle>
-                        <CardDescription>Leave days taken per day of the week</CardDescription>
+                {/* Weekly Pattern */}
+                <Card className="bg-gray-50 shadow-none flex flex-col min-h-0">
+                    <CardHeader className="pb-1 pt-3 px-4 flex-shrink-0">
+                        <CardTitle className="text-sm">Weekly Pattern</CardTitle>
+                        <CardDescription className="text-xs">Days taken per weekday</CardDescription>
                     </CardHeader>
-                    <CardContent className="px-2 pb-0">
+                    <CardContent className="flex-1 min-h-0 px-2 pb-3">
                         <ChartContainer
                             config={{ value: { label: "Days", color: "#5746AF" } }}
-                            className="h-56 w-full"
+                            className="w-full h-full"
                         >
-                            <AreaChart data={weeklyData} margin={{ left: 12, right: 12 }}>
+                            <AreaChart data={weeklyData} margin={{ left: 8, right: 8, top: 8, bottom: 4 }}>
                                 <CartesianGrid vertical={false} stroke="#f0f0f0" />
-                                <XAxis
-                                    dataKey="day"
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickMargin={8}
-                                    tick={{ fontSize: 12 }}
-                                />
-                                <ChartTooltip
-                                    cursor={false}
-                                    content={<ChartTooltipContent indicator="line" />}
-                                />
-                                <Area
-                                    dataKey="value"
-                                    type="natural"
-                                    fill="#5746AF"
-                                    fillOpacity={0.15}
-                                    stroke="#5746AF"
-                                    strokeWidth={2.5}
-                                />
+                                <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={6} tick={{ fontSize: 10 }} />
+                                <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
+                                <Area dataKey="value" type="natural" fill="#5746AF" fillOpacity={0.15} stroke="#5746AF" strokeWidth={2} />
                             </AreaChart>
                         </ChartContainer>
                     </CardContent>
-                    <CardFooter className="pt-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <TrendingUp size={14} className="text-purple-500" />
-                            Leave distribution across the week
-                        </div>
-                    </CardFooter>
                 </Card>
 
-                {/* ── Donut — Remaining by type ── */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base">Remaining by Type</CardTitle>
-                        <CardDescription>How many days are left per leave type</CardDescription>
+                {/* Remaining by Type */}
+                <Card className="bg-gray-50 shadow-none flex flex-col min-h-0">
+                    <CardHeader className="pb-1 pt-3 px-4 flex-shrink-0">
+                        <CardTitle className="text-sm">Remaining by Type</CardTitle>
+                        <CardDescription className="text-xs">Days left per leave type</CardDescription>
                     </CardHeader>
-                    <CardContent className="flex justify-center pb-0">
-                        <ChartContainer config={pieConfig} className="h-56 w-full">
+                    <CardContent className="flex-1 min-h-0 pb-3 px-3">
+                        <ChartContainer config={pieConfig} className="w-full h-full">
                             <PieChart>
                                 <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
                                 <Pie
                                     data={chartDatarem}
                                     dataKey="value" nameKey="name"
                                     cx="50%" cy="50%"
-                                    outerRadius={90} innerRadius={50}
+                                    outerRadius="72%" innerRadius="42%"
                                     strokeWidth={2} stroke="white"
                                 >
                                     <Label
                                         content={({ viewBox }) => {
                                             if (viewBox && "cx" in viewBox && "cy" in viewBox) return (
                                                 <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                                                    <tspan x={viewBox.cx} y={viewBox.cy} style={{ fontSize: 22, fontWeight: 700, fill: "#1f2937" }}>{totalRemaining}</tspan>
+                                                    <tspan x={viewBox.cx} y={viewBox.cy} style={{ fontSize: 20, fontWeight: 700, fill: "#1f2937" }}>{totalRemaining}</tspan>
                                                     <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 18} style={{ fontSize: 10, fill: "#9ca3af" }}>remaining</tspan>
                                                 </text>
                                             );
@@ -204,33 +196,29 @@ const LeaveBalance: React.FC = () => {
                         </ChartContainer>
                     </CardContent>
                 </Card>
-            </div>
 
-            {/* Charts row 2 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                {/* ── Donut — Used by type ── */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base">Used by Type</CardTitle>
-                        <CardDescription>Days consumed per leave type</CardDescription>
+                {/* Used by Type */}
+                <Card className="bg-gray-50 shadow-none flex flex-col min-h-0">
+                    <CardHeader className="pb-1 pt-3 px-4 flex-shrink-0">
+                        <CardTitle className="text-sm">Used by Type</CardTitle>
+                        <CardDescription className="text-xs">Days consumed per leave type</CardDescription>
                     </CardHeader>
-                    <CardContent className="flex justify-center pb-0">
-                        <ChartContainer config={pieConfig} className="h-56 w-full">
+                    <CardContent className="flex-1 min-h-0 pb-3 px-3">
+                        <ChartContainer config={pieConfig} className="w-full h-full">
                             <PieChart>
                                 <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
                                 <Pie
                                     data={chartDataused}
                                     dataKey="value" nameKey="name"
                                     cx="50%" cy="50%"
-                                    outerRadius={90} innerRadius={50}
+                                    outerRadius="72%" innerRadius="42%"
                                     strokeWidth={2} stroke="white"
                                 >
                                     <Label
                                         content={({ viewBox }) => {
                                             if (viewBox && "cx" in viewBox && "cy" in viewBox) return (
                                                 <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                                                    <tspan x={viewBox.cx} y={viewBox.cy} style={{ fontSize: 22, fontWeight: 700, fill: "#1f2937" }}>{totalUsed}</tspan>
+                                                    <tspan x={viewBox.cx} y={viewBox.cy} style={{ fontSize: 20, fontWeight: 700, fill: "#1f2937" }}>{totalUsed}</tspan>
                                                     <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 18} style={{ fontSize: 10, fill: "#9ca3af" }}>used</tspan>
                                                 </text>
                                             );
@@ -239,51 +227,6 @@ const LeaveBalance: React.FC = () => {
                                 </Pie>
                             </PieChart>
                         </ChartContainer>
-                    </CardContent>
-                </Card>
-
-                {/* ── Summary table ── */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base">Summary</CardTitle>
-                        <CardDescription>Full breakdown of your leave entitlements</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-gray-100">
-                                    {columns.map(col => (
-                                        <th key={col.key} className="text-left py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                                            {col.label}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {leaveBalances.map((item, i) => {
-                                    const balance = Number(item.total_allocated) - Number(item.used);
-                                    const color   = PALETTE[i % PALETTE.length];
-                                    const light   = LIGHT_PALETTE[i % LIGHT_PALETTE.length];
-                                    return (
-                                        <tr key={i} className="hover:bg-gray-50 transition-colors">
-                                            {columns.map(col => (
-                                                <td key={col.key} className="py-2.5">
-                                                    {col.key === "type" ? (
-                                                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: light, color }}>
-                                                            {item.type}
-                                                        </span>
-                                                    ) : col.key === "balance" ? (
-                                                        <span className="font-semibold" style={{ color }}>{balance}</span>
-                                                    ) : (
-                                                        <span className="text-gray-700">{item[col.key as keyof LeaveBalanceType]}</span>
-                                                    )}
-                                                </td>
-                                            ))}
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
                     </CardContent>
                 </Card>
             </div>

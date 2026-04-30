@@ -212,25 +212,29 @@ const LeaveHistory: React.FC = () => {
 
 
     return (
-        <div>
-            <PageHeader title="Leave History" subtitle="View all your past leave requests" />
-
-            {/* View toggle */}
-            <div className="flex gap-2 mb-4">
-                {VIEWS.map((v) => (
-                    <button
-                        key={v}
-                        onClick={() => setView(v)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition capitalize
-                            ${view === v ? 'bg-[#5746AF] text-white' : 'bg-white text-gray-600 border'}`}
-                    >
-                        {v}
-                    </button>
-                ))}
-            </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <PageHeader
+                title="Leave History"
+                subtitle="View all your past leave requests"
+                divider
+                action={
+                    <div className="flex gap-2">
+                        {VIEWS.map((v) => (
+                            <button
+                                key={v}
+                                onClick={() => setView(v)}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition capitalize
+                                    ${view === v ? 'bg-[#5746AF] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                            >
+                                {v}
+                            </button>
+                        ))}
+                    </div>
+                }
+            />
 
             {view === 'table' && (
-                <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap gap-4 items-center">
+                <div className="flex flex-wrap gap-4 items-center pb-4 mb-4 border-b border-gray-100">
                     <select
                         value={filters.leaveType}
                         onChange={(e) => handleFilterChange('leaveType', e.target.value)}
@@ -270,7 +274,7 @@ const LeaveHistory: React.FC = () => {
 
             {/* Calendar view */}
             {view === 'calendar' && (
-                <div className="bg-white p-4 rounded-lg shadow-sm relative">
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 relative">
                     {loading && (
                         <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10 rounded-lg">
                             <Loader />
@@ -350,7 +354,7 @@ const LeaveHistory: React.FC = () => {
 
             {/* Table view */}
             {view === 'table' && (
-                <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                <div className="bg-gray-50 rounded-xl border border-gray-100 overflow-hidden">
                     {loading ? (
                         <div className="text-center py-8"><Loader /></div>
                     ) : leaveHistory.length === 0 ? (

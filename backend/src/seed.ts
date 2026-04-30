@@ -8,12 +8,12 @@ const seed = async () => {
     console.log("Resetting database...");
 
     await pool.query(`
-      DROP TABLE IF EXISTS otps               CASCADE;
       DROP TABLE IF EXISTS notifications      CASCADE;
       DROP TABLE IF EXISTS leaves             CASCADE;
       DROP TABLE IF EXISTS leave_balances     CASCADE;
       DROP TABLE IF EXISTS leave_policy_rules CASCADE;
       DROP TABLE IF EXISTS invitations        CASCADE;
+      DROP TABLE IF EXISTS otps               CASCADE;
       DROP TABLE IF EXISTS leave_types        CASCADE;
       DROP TABLE IF EXISTS leave_policies     CASCADE;
       DROP TABLE IF EXISTS holidays           CASCADE;
@@ -40,7 +40,13 @@ const seed = async () => {
         department     VARCHAR(100),
         policy_id      INT,
         email_verified BOOLEAN       DEFAULT true,
-        created_at     TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+        created_at     TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+        invite_token   VARCHAR(255) UNIQUE,
+        invite_expires TIMESTAMP,
+        phone          VARCHAR(20),
+        gender         VARCHAR(20),
+        date_of_birth  DATE,
+        location       VARCHAR(150)
       );
 
       CREATE TABLE leave_types (
@@ -74,20 +80,7 @@ const seed = async () => {
         UNIQUE(user_id, leave_type_id)
       );
 
-      CREATE TABLE invitations (
-        id           SERIAL PRIMARY KEY,
-        name         VARCHAR(100),
-        email        VARCHAR(150) NOT NULL,
-        role         user_role    DEFAULT 'employee',
-        department   VARCHAR(100),
-        manager_id   INT REFERENCES users(id) ON DELETE SET NULL,
-        policy_id    INT REFERENCES leave_policies(id) ON DELETE SET NULL,
-        token        VARCHAR(255) UNIQUE NOT NULL,
-        status       VARCHAR(20)  DEFAULT 'pending',
-        expires_at   TIMESTAMP    NOT NULL,
-        created_at   TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
-      );
-
+      
       CREATE TABLE leaves (
         id               SERIAL PRIMARY KEY,
         user_id          INT REFERENCES users(id) ON DELETE CASCADE,
@@ -119,13 +112,21 @@ const seed = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE otps (
-        id         SERIAL PRIMARY KEY,
-        user_id    INT REFERENCES users(id) ON DELETE CASCADE,
-        code       VARCHAR(6) NOT NULL,
-        expires_at TIMESTAMP  NOT NULL,
-        used       BOOLEAN    DEFAULT false,
-        created_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP
+      CREATE TABLE invitations (
+        id                SERIAL PRIMARY KEY,
+        name              VARCHAR(100),
+        email             VARCHAR(150)  NOT NULL,
+        role              user_role     DEFAULT 'employee',
+        department        VARCHAR(100),
+        manager_id        INT           REFERENCES users(id) ON DELETE SET NULL,
+        policy_id         INT           REFERENCES leave_policies(id) ON DELETE SET NULL,
+        token             VARCHAR(255)  UNIQUE NOT NULL,
+        status            VARCHAR(20)   DEFAULT 'pending',
+        expires_at        TIMESTAMP     NOT NULL,
+        invited_by        INT           REFERENCES users(id) ON DELETE SET NULL,
+        created_at        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+        accepted_at       TIMESTAMP,
+        leave_allocations JSONB
       );
     `);
 
@@ -173,15 +174,15 @@ const seed = async () => {
     // Inserted without manager_id/policy_id first (self-referencing FK), then updated
     console.log("Seeding users...");
     await pool.query(`
-      INSERT INTO users (id, name, email, password, role, department, email_verified) VALUES
-      (3, 'Navajit', 'navajit@gmail.com', '${HASH}', 'admin',    NULL,       true),
-      (8, 'Nava',    'nava@gmail.com',    '${HASH}', 'manager',  'Products', true),
-      (2, 'Manager', 'manager@gmail.com', '${HASH}', 'manager',  'Products', true),
-      (4, 'Alice',   'alice@gmail.com',   '${HASH}', 'employee', 'Products', true),
-      (5, 'Bob',     'bob@gmail.com',     '${HASH}', 'employee', 'Products', true),
-      (6, 'Charlie', 'charlie@gmail.com', '${HASH}', 'employee', 'Products', true),
-      (7, 'Dragon',  'dragon@gmail.com',  '${HASH}', 'employee', 'Products', true),
-      (9, 'Sundar',  'sundar@gmail.com',  '${HASH}', 'employee', 'Products', true);
+      INSERT INTO users (id, name, email, password, role, department, email_verified, phone, gender, date_of_birth, location) VALUES
+      (3, 'Navajit', 'navajit@gmail.com', '${HASH}', 'admin',    NULL,       true, '+91-9800001111', 'Male',   '1988-06-10', 'Chennai, TN'),
+      (8, 'Nava',    'nava@gmail.com',    '${HASH}', 'manager',  'Products', true, '+91-9800002222', 'Male',   '1990-02-14', 'Bangalore, KA'),
+      (2, 'Manager', 'manager@gmail.com', '${HASH}', 'manager',  'Products', true, '+91-9800003333', 'Male',   '1992-08-30', 'Hyderabad, TS'),
+      (4, 'Alice',   'alice@gmail.com',   '${HASH}', 'employee', 'Products', true, '+91-9800004444', 'Female', '1998-03-15', 'Chennai, TN'),
+      (5, 'Bob',     'bob@gmail.com',     '${HASH}', 'employee', 'Products', true, '+91-9800005555', 'Male',   '1995-07-22', 'Bangalore, KA'),
+      (6, 'Charlie', 'charlie@gmail.com', '${HASH}', 'employee', 'Products', true, '+91-9800006666', 'Male',   '1997-11-05', 'Mumbai, MH'),
+      (7, 'Dragon',  'dragon@gmail.com',  '${HASH}', 'employee', 'Products', true, '+91-9800007777', 'Male',   '1999-01-28', 'Pune, MH'),
+      (9, 'Sundar',  'sundar@gmail.com',  '${HASH}', 'employee', 'Products', true, '+91-9800008888', 'Male',   '1996-09-12', 'Coimbatore, TN');
     `);
 
     await pool.query(`
@@ -299,6 +300,7 @@ const seed = async () => {
       SELECT setval('leaves_id_seq',             (SELECT MAX(id) FROM leaves));
       SELECT setval('holidays_id_seq',           (SELECT MAX(id) FROM holidays));
       SELECT setval('notifications_id_seq',      (SELECT MAX(id) FROM notifications));
+      SELECT setval('invitations_id_seq',        1);
     `);
 
     console.log(`

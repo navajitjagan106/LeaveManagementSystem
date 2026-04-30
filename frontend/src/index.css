@@ -4,6 +4,43 @@
 
 .fc-day-today { background-color: transparent !important; }
 
+/* ===== FullCalendar polish ===== */
+.fc { font-family: inherit; }
+
+/* remove outer scrollgrid borders */
+.fc-scrollgrid,
+.fc-scrollgrid-section > td,
+.fc-scrollgrid-section > th { border: none !important; }
+
+/* day-header strip */
+.fc-col-header { background: #f5f3ff; }
+.fc-col-header-cell { border: none !important; padding: 10px 0 !important; }
+.fc-col-header-cell-cushion {
+  color: #6d5fd3;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-decoration: none !important;
+}
+
+/* day cells */
+.fc-daygrid-day { border-color: #f3f4f6 !important; }
+.fc-daygrid-day-number {
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none !important;
+  padding: 6px 8px !important;
+}
+.fc-day-other .fc-daygrid-day-number { color: #d1d5db !important; }
+
+/* events */
+.fc-event { border-radius: 6px !important; border: none !important; }
+.fc-event-main { padding: 1px 0 !important; }
+.fc-daygrid-event-harness { margin-top: 2px !important; }
+.fc-event:hover { filter: brightness(0.93); cursor: pointer; }
+
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 99px; }

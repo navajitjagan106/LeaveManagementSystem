@@ -12,6 +12,7 @@ export interface LeaveBalance {
     total_allocated: number;
     used: number;
     remaining: number;
+    is_unlimited?: boolean;
 }
 
 export type LeaveStatus = "pending" | "approved" | "rejected";

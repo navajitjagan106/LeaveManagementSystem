@@ -10,7 +10,7 @@ type StatCardProps = {
 };
 
 const StatCard: React.FC<StatCardProps> = ({ label, value, icon: Icon, accent = "#5746AF", bg = "#ede9fe" }) => (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+    <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100 hover:bg-white transition-colors">
         <div className="flex items-center gap-3 mb-4">
             {Icon && (
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: bg }}>

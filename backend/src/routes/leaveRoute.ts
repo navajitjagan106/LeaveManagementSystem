@@ -5,6 +5,7 @@ import {
     getLeaveInitData, getLeaveTypes, getManagerLeaves, getTeamOnLeave,
     getNotifications, getTeamLeaves, getuserdetails, markNotificationsRead,
     getTeamMembers, getTeamMemberBalance, getTeamBalanceSummary, getLeaveTrendByType,
+    getTeamMemberMonthly, updateUserProfile,
 } from "../controllers/leaveController";
 import { authorizeRoles } from "../middleware/roleMiddleware";
 
@@ -20,6 +21,7 @@ router.get("/team", getTeamLeaves)
 router.get("/teamonleave", getTeamOnLeave);
 router.get("/dashboard", getDashboardData)
 router.get("/getuserdata", getuserdetails)
+router.patch("/getuserdata", updateUserProfile)
 router.post("/calculatedays", calculateDays)
 router.get("/getinitdata", getLeaveInitData)
 router.get("/notifications", getNotifications);
@@ -29,5 +31,6 @@ router.get("/team-members", authorizeRoles("manager", "admin"), getTeamMembers);
 router.get("/team-member-balance/:id", authorizeRoles("manager", "admin"), getTeamMemberBalance);
 router.get("/team-balance-summary", authorizeRoles("manager", "admin"), getTeamBalanceSummary);
 router.get("/leave-trend", authorizeRoles("manager", "admin"), getLeaveTrendByType);
+router.get("/team-member-monthly/:id", authorizeRoles("manager", "admin"), getTeamMemberMonthly);
 
 export default router;

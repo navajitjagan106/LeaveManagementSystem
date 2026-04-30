@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getInvitationByToken, acceptInvitation } from "../../api/authApi";
-import { setCookie } from "../../utils/cookies";
 
 const PASSWORD_RULES = [
     { label: "At least 8 characters",       test: (p: string) => p.length >= 8 },
@@ -37,9 +36,7 @@ const AcceptInvitation: React.FC = () => {
         }
         try {
             setLoading(true);
-            const res = await acceptInvitation(token!, { password: form.password });
-            setCookie("token", res.data.token);
-            setCookie("user", JSON.stringify(res.data.user));
+            await acceptInvitation(token!, { password: form.password });
             navigate("/dashboard");
         } catch (err: any) {
             setError(err?.response?.data?.error || "Failed to set up account");

@@ -1,13 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import FullCalendar from "@fullcalendar/react"
 import dayGridPlugin from "@fullcalendar/daygrid"
 import { getTeamLeaves } from "../../api/leaveApi"
 import { useOutletContext } from "react-router-dom"
 import PageHeader from "../common/PageHeader"
 import Loader from "../common/Loader"
-import { CalendarDays, Palmtree, Users, X } from "lucide-react"
+import { CalendarDays, Palmtree, Users, X, CalendarX2, Sunrise, PartyPopper, ChevronLeft, ChevronRight } from "lucide-react"
 import { useToast } from "../common/ToastContext"
 import { getCookie } from "../../utils/cookies"
+import { Card, CardContent } from "../ui/card"
 
 type RawLeave = {
     id: number
@@ -30,6 +31,15 @@ type CalendarEvent = {
     extendedProps?: RawLeave
 }
 
+const AVATAR_COLORS = [
+    { bg: "#ede9fe", text: "#5746AF" },
+    { bg: "#dbeafe", text: "#2563eb" },
+    { bg: "#d1fae5", text: "#059669" },
+    { bg: "#fef3c7", text: "#d97706" },
+    { bg: "#fce7f3", text: "#db2777" },
+    { bg: "#e0f2fe", text: "#0284c7" },
+]
+
 const toYMD = (date: Date) => {
     const y = date.getFullYear()
     const m = String(date.getMonth() + 1).padStart(2, "0")
@@ -40,19 +50,7 @@ const toYMD = (date: Date) => {
 const toDisplay = (iso: string) =>
     new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
 
-
-const StatCard: React.FC<{ label: string; value: number; unit: string; color: string; border: string }> = ({
-    label, value, unit, color, border
-}) => (
-    <div className={`bg-white p-4 rounded-xl shadow-sm border-l-4 ${border}`}>
-        <p className="text-sm text-gray-500">{label}</p>
-        <p className={`text-2xl font-semibold ${color}`}>{value}</p>
-        <p className="text-xs text-gray-400 mt-1">{unit}</p>
-    </div>
-)
-
 const DRAWER_FIELDS: { label: string; render: (l: RawLeave) => string }[] = [
-    { label: "Employee", render: (l) => l.name },
     { label: "Leave Type", render: (l) => l.leave_type },
     { label: "Duration", render: (l) => l.duration_type === "half" ? "Half Day" : "Full Day" },
     { label: "From", render: (l) => toDisplay(l.from_date) },
@@ -61,39 +59,57 @@ const DRAWER_FIELDS: { label: string; render: (l: RawLeave) => string }[] = [
 
 const LeaveDetailDrawer: React.FC<{ leave: RawLeave; isManager: boolean; onClose: () => void }> = ({
     leave, isManager, onClose
-}) => (
-    < >
-        <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
-        <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-50 flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b">
-                <h2 className="text-lg font-semibold text-gray-800">Leave Details</h2>
-                <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-500">
-                    <X size={20} />
-                </button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
-                {DRAWER_FIELDS.map(({ label, render }) => (
-                    <div key={label} className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">{label}</span>
-                        <span className="font-medium text-gray-800">{render(leave)}</span>
+}) => {
+    const initials = leave.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
+    return (
+        <>
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" onClick={onClose} />
+            <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-50 flex flex-col">
+                {/* Drawer header with gradient */}
+                <div className="bg-gradient-to-br from-[#5746AF] to-[#302178] px-6 py-6 relative">
+                    <button
+                        onClick={onClose}
+                        className="absolute top-4 right-4 p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
+                    >
+                        <X size={16} />
+                    </button>
+                    <div className="flex items-center gap-4 mt-2">
+                        <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white text-lg font-bold">
+                            {initials}
+                        </div>
+                        <div>
+                            <h2 className="text-white font-semibold text-lg leading-tight">{leave.name}</h2>
+                            <span className="inline-flex items-center mt-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/20 text-white">
+                                {leave.duration_type === "half" ? "Half Day Leave" : "Full Day Leave"}
+                            </span>
+                        </div>
                     </div>
-                ))}
-                {isManager && (
-                    <div className="border-t pt-4">
-                        <p className="text-sm text-gray-500 mb-2">Reason</p>
-                        <p className="text-gray-800 text-sm leading-relaxed">{leave.reason || "—"}</p>
-                    </div>
-                )}
-            </div>
-        </div>
-    </>
-)
+                </div>
 
+                <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+                    {DRAWER_FIELDS.map(({ label, render }) => (
+                        <div key={label} className="flex items-center justify-between py-3 border-b border-gray-50">
+                            <span className="text-sm text-gray-400 font-medium">{label}</span>
+                            <span className="text-sm font-semibold text-gray-800">{render(leave)}</span>
+                        </div>
+                    ))}
+
+                    {isManager && leave.reason && (
+                        <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-100">
+                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Reason</p>
+                            <p className="text-sm text-gray-700 leading-relaxed">{leave.reason}</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </>
+    )
+}
 
 const LEGEND = [
-    { label: "Full Day Leave", color: "bg-indigo-500" },
-    { label: "Half Day Leave", color: "bg-indigo-300" },
-    { label: "Holiday", color: "bg-yellow-400" },
+    { label: "Full Day Leave", color: "#6366f1" },
+    { label: "Half Day Leave", color: "#a5b4fc" },
+    { label: "Holiday", color: "#f59e0b" },
 ]
 
 const TeamView: React.FC = () => {
@@ -107,6 +123,8 @@ const TeamView: React.FC = () => {
     })
     const [selectedLeave, setSelectedLeave] = useState<RawLeave | null>(null)
     const [loading, setLoading] = useState(true)
+    const [calTitle, setCalTitle] = useState("")
+    const calRef = useRef<FullCalendar>(null)
 
     const isManagerOrAdmin = role === "manager" || role === "admin"
 
@@ -203,102 +221,213 @@ const TeamView: React.FC = () => {
         [leaveCalEvents, thisMonth, thisYear]
     )
 
-    const onLeaveToday = leaveCalEvents.filter((e) => e.start === todayStr).length
-
+    const onLeaveToday = leaveCalEvents.filter((e) => e.start === todayStr)
     const holidaysThisMonth = holidays.filter((h: any) => {
         const d = new Date(h.date)
         return d.getMonth() === thisMonth && d.getFullYear() === thisYear
     }).length
 
-
     const STATS = [
-        { label: "Holidays This Month", value: holidaysThisMonth, unit: "holidays", color: "text-purple-600", border: "border-purple-600" },
-        { label: "Employees On Leave This Month", value: employeesThisMonth, unit: "employees", color: "text-blue-600", border: "border-blue-600" },
-        { label: "On Leave Today", value: onLeaveToday, unit: "employees today", color: "text-green-600", border: "border-green-600" },
+        {
+            label: "Holidays This Month",
+            value: holidaysThisMonth,
+            unit: "public holidays",
+            icon: PartyPopper,
+            gradient: "from-violet-500 to-purple-600",
+            lightBg: "bg-purple-50",
+            textColor: "text-purple-600",
+        },
+        {
+            label: "Employees On Leave",
+            value: employeesThisMonth,
+            unit: "this month",
+            icon: CalendarX2,
+            gradient: "from-blue-500 to-indigo-600",
+            lightBg: "bg-blue-50",
+            textColor: "text-blue-600",
+        },
+        {
+            label: "On Leave Today",
+            value: onLeaveToday.length,
+            unit: "employees",
+            icon: Sunrise,
+            gradient: "from-emerald-500 to-teal-600",
+            lightBg: "bg-emerald-50",
+            textColor: "text-emerald-600",
+        },
     ]
 
-    if (loading) return <div className="text-center py-8"><Loader /></div>
+    if (loading) return <div className="flex justify-center items-center h-64"><Loader /></div>
 
     return (
-        <div className="space-y-6">
-            <PageHeader title="Team View" subtitle="View your team members on leave" />
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-5">
+            <PageHeader title="Team View" subtitle="View your team members on leave" divider />
 
+            {/* Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {STATS.map((s) => <StatCard key={s.label} {...s} />)}
+                {STATS.map((s) => {
+                    const Icon = s.icon
+                    return (
+                        <Card key={s.label} className="border-gray-100 overflow-hidden">
+                            <CardContent className="p-0">
+                                <div className="flex items-stretch">
+                                    <div className={`bg-gradient-to-b ${s.gradient} w-1.5 flex-shrink-0`} />
+                                    <div className="flex items-center gap-4 p-5 flex-1">
+                                        <div className={`w-11 h-11 rounded-xl ${s.lightBg} flex items-center justify-center flex-shrink-0`}>
+                                            <Icon size={20} className={s.textColor} />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{s.label}</p>
+                                            <p className="text-3xl font-bold text-gray-900 leading-tight">{s.value}</p>
+                                            <p className="text-xs text-gray-400 mt-0.5">{s.unit}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )
+                })}
             </div>
 
+            {/* Who's out today strip */}
+            {onLeaveToday.length > 0 && (
+                <Card className="border-indigo-100 bg-indigo-50/50">
+                    <CardContent className="px-5 py-4">
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <span className="text-xs font-semibold text-indigo-500 uppercase tracking-wide flex-shrink-0">
+                                Out today
+                            </span>
+                            {onLeaveToday.map((e, i) => {
+                                const av = AVATAR_COLORS[i % AVATAR_COLORS.length]
+                                const name = e.extendedProps?.name ?? e.title
+                                const initials = name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()
+                                return (
+                                    <div key={i} className="flex items-center gap-2 bg-white rounded-full px-3 py-1.5 shadow-sm border border-indigo-100">
+                                        <div
+                                            className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                                            style={{ background: av.bg, color: av.text }}
+                                        >
+                                            {initials}
+                                        </div>
+                                        <span className="text-xs font-medium text-gray-700">{name}</span>
+                                        {e.extendedProps?.duration_type === "half" && (
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-medium">Half</span>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Empty state */}
             {leaveCalEvents.length === 0 && (
-                <div className="bg-white p-6 rounded-xl shadow-sm flex flex-col items-center gap-2 text-gray-400">
-                    <Users size={32} strokeWidth={1.5} />
-                    <p className="text-sm">No team leaves scheduled</p>
-                </div>
+                <Card className="border-gray-100">
+                    <CardContent className="flex flex-col items-center gap-3 py-12 text-gray-400">
+                        <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center">
+                            <Users size={28} strokeWidth={1.5} />
+                        </div>
+                        <p className="text-sm font-medium">No team leaves scheduled</p>
+                    </CardContent>
+                </Card>
             )}
 
             {/* Calendar */}
-            <div className="bg-white p-4 rounded-xl shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2 text-gray-500 text-sm">
-                        <CalendarDays size={16} />
-                        {isManagerOrAdmin && <span>Click a leave event to see details</span>}
+            <Card className="border-gray-100 overflow-hidden">
+                {/* Custom toolbar */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
+                            <CalendarDays size={15} className="text-purple-500" />
+                        </div>
+                        <div>
+                            <h3 className="text-base font-bold text-gray-800 leading-none">{calTitle}</h3>
+                            {isManagerOrAdmin && (
+                                <p className="text-[11px] text-gray-400 mt-0.5">Click an event to see details</p>
+                            )}
+                        </div>
                     </div>
-                    <div className="flex gap-4">
-                        {LEGEND.map((item) => (
-                            <div key={item.label} className="flex items-center gap-1.5 text-xs text-gray-600">
-                                <span className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
-                                {item.label}
-                            </div>
-                        ))}
+                    <div className="flex items-center gap-3">
+                        {/* Legend */}
+                        <div className="hidden sm:flex items-center gap-3 mr-2">
+                            {LEGEND.map((item) => (
+                                <div key={item.label} className="flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: item.color }} />
+                                    <span className="text-[11px] text-gray-400">{item.label}</span>
+                                </div>
+                            ))}
+                        </div>
+                        {/* Nav buttons */}
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => calRef.current?.getApi().prev()}
+                                className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                            >
+                                <ChevronLeft size={15} />
+                            </button>
+                            <button
+                                onClick={() => calRef.current?.getApi().today()}
+                                className="px-3 h-8 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                            >
+                                Today
+                            </button>
+                            <button
+                                onClick={() => calRef.current?.getApi().next()}
+                                className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                            >
+                                <ChevronRight size={15} />
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <FullCalendar
-                    plugins={[dayGridPlugin]}
-                    initialView="dayGridMonth"
-                    height="auto"
-                    events={calEvents}
-                    eventClick={isManagerOrAdmin ? (info) => {
-                        const leave = info.event.extendedProps as RawLeave
-                        if (leave?.id) setSelectedLeave(leave)
-                    } : undefined}
-                    eventContent={(arg) => {
-                        const isHoliday = arg.event.classNames.includes("holiday-event")
-                        return (
-                            <div className="flex items-center gap-1 px-1">
-                                {isHoliday && <Palmtree size={14} color="#92400e" />}
-                                <span
-                                    style={{ color: isHoliday ? "#92400e" : "white" }}
-                                    className="text-xs font-medium truncate"
-                                >
-                                    {arg.event.title}
+                <CardContent className="p-4 pt-3">
+                    <FullCalendar
+                        ref={calRef}
+                        plugins={[dayGridPlugin]}
+                        initialView="dayGridMonth"
+                        headerToolbar={false}
+                        height="auto"
+                        events={calEvents}
+                        datesSet={(info) => setCalTitle(info.view.title)}
+                        eventClick={isManagerOrAdmin ? (info) => {
+                            const leave = info.event.extendedProps as RawLeave
+                            if (leave?.id) setSelectedLeave(leave)
+                        } : undefined}
+                        eventContent={(arg) => {
+                            const isHoliday = arg.event.classNames.includes("holiday-event")
+                            return (
+                                <div className="flex items-center gap-1 px-1.5 py-0.5">
+                                    {isHoliday && <Palmtree size={11} color="#92400e" />}
+                                    <span
+                                        style={{ color: isHoliday ? "#92400e" : "white" }}
+                                        className="text-[11px] font-medium truncate"
+                                    >
+                                        {arg.event.title}
+                                    </span>
+                                </div>
+                            )
+                        }}
+                        dayCellClassNames={(arg) => {
+                            const day = arg.date.getDay()
+                            const inMonth = arg.date.getMonth() === arg.view.currentStart.getMonth()
+                            return (day === 0 || day === 6) && inMonth ? ["bg-amber-50/40"] : []
+                        }}
+                        dayCellContent={(arg) => (
+                            <div className="flex justify-end pr-1 pt-1">
+                                <span className={
+                                    arg.isToday
+                                        ? "bg-[#5746AF] text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold shadow-sm"
+                                        : "text-sm text-gray-500"
+                                }>
+                                    {arg.dayNumberText}
                                 </span>
                             </div>
-                        )
-                    }}
-                    dayCellClassNames={(arg) => {
-                        const day = arg.date.getDay()
-                        const inMonth = arg.date.getMonth() === arg.view.currentStart.getMonth()
-                        return (day === 0 || day === 6) && inMonth ? ["bg-[#fef3c7]"] : []
-                    }}
-                    dayCellContent={(arg) => (
-                        <div className="flex flex-col items-end pr-1">
-                            <span className={
-                                arg.isToday
-                                    ? "bg-[#5746AF] text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold"
-                                    : "text-sm text-gray-600"
-                            }>
-                                {arg.dayNumberText}
-                            </span>
-                        </div>
-                    )}
-                    headerToolbar={{
-                        left: "dayGridMonth",
-                        center: "title",
-                        right: "prev,next today",
-                    }}
-                />
-            </div>
-
-
+                        )}
+                    />
+                </CardContent>
+            </Card>
 
             {selectedLeave && (
                 <LeaveDetailDrawer

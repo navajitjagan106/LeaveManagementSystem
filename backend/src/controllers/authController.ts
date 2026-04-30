@@ -5,6 +5,28 @@ import jwt from "jsonwebtoken";
 import { validatePassword } from "../utils/passwordValidator";
 import { sendOTPEmail } from "../utils/emailService";
 import crypto from "crypto";
+import redis from "../config/redis";
+
+const OTP_TTL = 600; // 10 minutes in seconds
+const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+const isProduction = process.env.NODE_ENV === "production";
+
+const setAuthCookies = (res: Response, token: string, user: object) => {
+    res.cookie("token", token, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: "strict",
+        maxAge: COOKIE_MAX_AGE,
+        path: "/",
+    });
+    res.cookie("user", JSON.stringify(user), {
+        httpOnly: false,
+        secure: isProduction,
+        sameSite: "strict",
+        maxAge: COOKIE_MAX_AGE,
+        path: "/",
+    });
+};
 
 export const register = async (req: Request, res: Response) => {
     try {
@@ -40,15 +62,9 @@ export const login = async (req: Request, res: Response) => {
         if (!dbUser.email_verified)
             return res.status(403).json({ error: "You have a pending invitation. Please accept it via the email link before logging in." });
 
-        await pool.query("UPDATE otps SET used = true WHERE user_id = $1 AND used = false", [dbUser.id]);
-
         const code = crypto.randomInt(100000, 999999).toString();
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
-
-        await pool.query(
-            "INSERT INTO otps (user_id, code, expires_at) VALUES ($1, $2, $3)",
-            [dbUser.id, code, expiresAt]
-        );
+        // Overwrites any existing OTP for this user; expires automatically after 10 min
+        await redis.setex(`otp:${dbUser.id}`, OTP_TTL, code);
 
         await sendOTPEmail({ email: dbUser.email, name: dbUser.name, code });
 
@@ -70,15 +86,11 @@ export const verifyOtp = async (req: Request, res: Response) => {
 
         const dbUser = userResult.rows[0];
 
-        const otpResult = await pool.query(
-            "SELECT * FROM otps WHERE user_id = $1 AND code = $2 AND used = false AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1",
-            [dbUser.id, code]
-        );
-
-        if (otpResult.rows.length === 0)
+        const storedCode = await redis.get(`otp:${dbUser.id}`);
+        if (!storedCode || storedCode !== code)
             return res.status(400).json({ error: "Invalid or expired OTP" });
 
-        await pool.query("UPDATE otps SET used = true WHERE id = $1", [otpResult.rows[0].id]);
+        await redis.del(`otp:${dbUser.id}`);
 
         const token = jwt.sign(
             { id: dbUser.id, role: dbUser.role, name: dbUser.name, email: dbUser.email },
@@ -86,15 +98,21 @@ export const verifyOtp = async (req: Request, res: Response) => {
             { expiresIn: process.env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] }
         );
 
-        res.json({
-            token,
-            user: {
-                id: dbUser.id, name: dbUser.name, email: dbUser.email,
-                role: dbUser.role, manager_id: dbUser.manager_id, department: dbUser.department,
-            },
-        });
+        const user = {
+            id: dbUser.id, name: dbUser.name, email: dbUser.email,
+            role: dbUser.role, manager_id: dbUser.manager_id, department: dbUser.department,
+        };
+
+        setAuthCookies(res, token, user);
+        res.json({ success: true });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "OTP verification failed" });
     }
+};
+
+export const logout = (req: Request, res: Response) => {
+    res.clearCookie("token", { path: "/", httpOnly: true, sameSite: "strict" });
+    res.clearCookie("user", { path: "/", sameSite: "strict" });
+    res.json({ success: true });
 };
