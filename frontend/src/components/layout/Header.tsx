@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getUserLocal } from "../../utils/getUser";
+import { useUser } from "../../context/UserContext";
 import { Bell } from "lucide-react";
 import { getNotifications, markNotificationsRead } from "../../api/leaveApi";
 import { logoutApi } from "../../api/authApi";
@@ -13,7 +13,7 @@ type Notification = {
 };
 
 const Header: React.FC = () => {
-    const user = getUserLocal();
+    const { user } = useUser();
     const navigate = useNavigate();
 
     const [showNotif, setShowNotif] = useState(false);

@@ -74,5 +74,7 @@
     --chart-3: 37 91% 55%;
     --chart-4: 0 84% 60%;
     --chart-5: 212 95% 68%;
+    --heatmap-zero: rgb(221, 221, 221);
   }
+  .dark { --heatmap-zero: rgb(51, 51, 51); }
 }

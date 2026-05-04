@@ -1,67 +1,97 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getTeamMembers, getTeamBalanceSummary } from '../../api/leaveApi';
+import { getEmployees } from '../../api/adminApi';
 import PageHeader from '../common/PageHeader';
 import Loader from '../common/Loader';
-import { Search, ChevronRight, Phone, MapPin } from 'lucide-react';
+import { Search, ChevronRight, Phone, MapPin, MoreHorizontal } from 'lucide-react';
 import { getUserLocal } from '../../utils/getUser';
 import { Card, CardContent, CardTitle, CardDescription } from '../ui/card';
 import { Input } from '../ui/input';
+import { Button } from '../ui/button';
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "../ui/chart";
+import EmployeeDetailsModal from '../admin/modal/EmployeeDetailModal';
+import InviteEmployeeModal from '../admin/modal/InviteEmployeeModal';
 
 const PALETTE = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899", "#14b8a6", "#f97316"];
-
 const ROLE_STYLE: Record<string, { bg: string; text: string }> = {
-    admin: { bg: '#fee2e2', text: '#ef4444' },
-    manager: { bg: '#ede9fe', text: '#5746AF' },
+    admin:    { bg: '#fee2e2', text: '#ef4444' },
+    manager:  { bg: '#ede9fe', text: '#5746AF' },
     employee: { bg: '#dbeafe', text: '#3b82f6' },
 };
 
 type Employee = {
     id: number; name: string; email: string;
     role: string; department: string | null; manager_name: string | null;
-    phone: string | null; location: string | null;
-    gender: string | null; date_of_birth: string | null;
+    phone?: string | null; location?: string | null;
+    gender?: string | null; date_of_birth?: string | null;
+    manager_id?: number | null;
+    policy_id?: number | null;
+    policy_name?: string | null;
+    created_at?: string | null;
 };
 type SummaryItem = { id: number; name: string; total_allocated: number; used: number; remaining: number };
 type FilterKey = 'all' | 'manager' | 'employee' | 'admin';
 
-function avatarColor(name: string) { return PALETTE[name.charCodeAt(0) % PALETTE.length]; }
+const avatarColor = (name: string) => PALETTE[name.charCodeAt(0) % PALETTE.length];
 
 const chartConfig = {
-    used: { label: "Used Days", color: "#f59e0b" },
+    used:      { label: "Used Days",      color: "#f59e0b" },
     remaining: { label: "Remaining Days", color: "#5746AF" },
 };
 
-const EmployeeCard: React.FC<{ emp: Employee; onClick: () => void }> = ({ emp, onClick }) => {
+const FILTERS: { key: FilterKey; label: string }[] = [
+    { key: 'all',      label: 'All Staff'  },
+    { key: 'manager',  label: 'Managers'   },
+    { key: 'employee', label: 'Employees'  },
+    { key: 'admin',    label: 'Admins'     },
+];
+
+/* ── Employee card ── */
+const EmployeeCard: React.FC<{
+    emp: Employee;
+    onClick: () => void;
+    onEdit?: () => void;
+}> = ({ emp, onClick, onEdit }) => {
     const roleStyle = ROLE_STYLE[emp.role] ?? ROLE_STYLE.employee;
     const color = avatarColor(emp.name);
 
     return (
-        <div
-            role="button"
-            onClick={onClick}
-            className="bg-white border border-gray-100 rounded-xl p-4 flex flex-col gap-3
-                    hover:border-purple-200 hover:shadow-md cursor-pointer transition-all group"
-        >
+        <div className="bg-white border border-gray-100 rounded-xl p-4 flex flex-col gap-3 hover:border-purple-200 hover:shadow-md transition-all group">
             <div className="flex items-center gap-3">
                 <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                    role="button"
+                    onClick={onClick}
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 cursor-pointer"
                     style={{ background: color }}
                 >
                     {emp.name.charAt(0).toUpperCase()}
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 cursor-pointer" onClick={onClick}>
                     <p className="text-sm font-semibold text-gray-800 group-hover:text-[#5746AF] transition-colors truncate">
                         {emp.name}
                     </p>
                     <p className="text-xs text-gray-400 truncate">{emp.email}</p>
                 </div>
-                <ChevronRight size={14} className="text-gray-300 group-hover:text-[#5746AF] flex-shrink-0 transition-colors" />
+                {onEdit ? (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                        className="text-gray-300 hover:text-purple-600 hover:bg-purple-50 p-1.5 rounded-lg transition flex-shrink-0"
+                        title="Edit employee"
+                    >
+                        <MoreHorizontal size={16} />
+                    </button>
+                ) : (
+                    <ChevronRight
+                        size={14}
+                        onClick={onClick}
+                        className="text-gray-300 group-hover:text-[#5746AF] flex-shrink-0 transition-colors cursor-pointer"
+                    />
+                )}
             </div>
 
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2" onClick={onClick} role="button">
                 <span
                     className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full capitalize"
                     style={{ background: roleStyle.bg, color: roleStyle.text }}
@@ -74,7 +104,7 @@ const EmployeeCard: React.FC<{ emp: Employee; onClick: () => void }> = ({ emp, o
             </div>
 
             {emp.manager_name && (
-                <p className="text-[11px] text-gray-400">
+                <p className="text-[11px] text-gray-400 cursor-pointer" onClick={onClick}>
                     Reports to <span className="font-medium text-gray-600">{emp.manager_name}</span>
                 </p>
             )}
@@ -99,41 +129,51 @@ const EmployeeCard: React.FC<{ emp: Employee; onClick: () => void }> = ({ emp, o
     );
 };
 
-const FILTERS: { key: FilterKey; label: string }[] = [
-    { key: 'all', label: 'All Staff' },
-    { key: 'manager', label: 'Managers' },
-    { key: 'employee', label: 'Employees' },
-    { key: 'admin', label: 'Admins' },
-];
-
 /* ── Page ── */
 const EmployeeDirectory: React.FC = () => {
     const navigate = useNavigate();
-    const [employees, setEmployees] = useState<Employee[]>([]);
-    const [summary, setSummary] = useState<SummaryItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState('');
-    const [roleFilter, setRoleFilter] = useState<FilterKey>('all');
     const user = getUserLocal();
+    const isAdmin = user?.role === 'admin';
+    const canEdit = isAdmin || user?.permissions?.['admin_employees']?.can_edit === true;
+    const canDelete = isAdmin || user?.permissions?.['admin_employees']?.can_delete === true;
+
+    const [employees, setEmployees]     = useState<Employee[]>([]);
+    const [summary, setSummary]         = useState<SummaryItem[]>([]);
+    const [loading, setLoading]         = useState(true);
+    const [search, setSearch]           = useState('');
+    const [roleFilter, setRoleFilter]   = useState<FilterKey>('all');
+    const [editTarget, setEditTarget]   = useState<Employee | null>(null);
+    const [showInvite, setShowInvite]   = useState(false);
+
+    const fetchEmployees = async () => {
+        if (isAdmin) {
+            const res = await getEmployees();
+            setEmployees(res.data.data || []);
+        } else {
+            const res = await getTeamMembers();
+            setEmployees(res.data.data || []);
+        }
+    };
 
     useEffect(() => {
         Promise.all([
-            getTeamMembers().then(r => setEmployees(r.data.data || [])),
+            fetchEmployees(),
             getTeamBalanceSummary().then(r => setSummary(r.data.data || [])),
         ])
             .catch(console.error)
             .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const counts = useMemo(() => ({
-        all: employees.length,
-        manager: employees.filter(e => e.role === 'manager').length,
+        all:      employees.length,
+        manager:  employees.filter(e => e.role === 'manager').length,
         employee: employees.filter(e => e.role === 'employee').length,
-        admin: employees.filter(e => e.role === 'admin').length,
+        admin:    employees.filter(e => e.role === 'admin').length,
     }), [employees]);
 
     const totals = useMemo(() => ({
-        used: summary.reduce((s, e) => s + e.used, 0),
+        used:      summary.reduce((s, e) => s + e.used, 0),
         remaining: summary.reduce((s, e) => s + e.remaining, 0),
     }), [summary]);
 
@@ -153,13 +193,26 @@ const EmployeeDirectory: React.FC = () => {
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-4">
-            <PageHeader
-                title="Employee Directory"
-                subtitle={user?.role === 'admin' ? 'All employees in your organisation' : 'Your team members'}
-                divider
-            />
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+                <PageHeader
+                    title="Employee Directory"
+                    subtitle={isAdmin ? 'All employees in your organisation' : 'Your team members'}
+                    divider={false}
+                />
+                {isAdmin && (
+                    <Button
+                        onClick={() => setShowInvite(true)}
+                        variant="outline"
+                        size="sm"
+                        className="border-purple-300 text-purple-700 hover:bg-purple-50 shrink-0 mt-1"
+                    >
+                        + Invite Employee
+                    </Button>
+                )}
+            </div>
+            <div className="border-t border-gray-100" />
 
-            {/* ── Team Leave Overview Chart ── */}
+            {/* ── Team Leave Overview ── */}
             <Card className="overflow-hidden p-0 bg-gray-50 shadow-none">
                 <div className="flex flex-col sm:flex-row items-stretch border-b border-gray-100">
                     <div className="flex-1 px-6 py-4">
@@ -177,12 +230,9 @@ const EmployeeDirectory: React.FC = () => {
                         </div>
                     </div>
                 </div>
-
                 <CardContent className="px-2 pt-3 pb-3 sm:px-4">
                     {summary.length === 0 ? (
-                        <div className="h-32 flex items-center justify-center text-sm text-gray-400">
-                            No data available
-                        </div>
+                        <div className="h-32 flex items-center justify-center text-sm text-gray-400">No data available</div>
                     ) : (
                         <ChartContainer config={chartConfig} className="h-32 w-full">
                             <BarChart data={summary} margin={{ left: 8, right: 8 }}>
@@ -207,12 +257,11 @@ const EmployeeDirectory: React.FC = () => {
 
             {/* ── Directory ── */}
             <Card className="overflow-hidden p-0 bg-gray-50 shadow-none">
-                {/* Filter tabs */}
                 <div className="flex flex-col sm:flex-row items-stretch border-b border-gray-100">
                     <div className="flex-1 px-6 py-4">
                         <CardTitle className="text-sm">Directory</CardTitle>
                         <CardDescription className="text-xs mt-0.5">
-                            Click any card to view full profile
+                            {canEdit ? 'Click ··· to edit, or the card to view profile' : 'Click any card to view full profile'}
                         </CardDescription>
                     </div>
                     <div className="flex divide-x divide-gray-100 border-t sm:border-t-0 sm:border-l border-gray-100">
@@ -221,14 +270,10 @@ const EmployeeDirectory: React.FC = () => {
                                 key={f.key}
                                 onClick={() => setRoleFilter(f.key)}
                                 data-active={roleFilter === f.key}
-                                className="flex flex-col justify-center px-5 py-3 text-left transition-colors
-                                           hover:bg-gray-50 data-[active=true]:bg-purple-50/60"
+                                className="flex flex-col justify-center px-5 py-3 text-left transition-colors hover:bg-gray-50 data-[active=true]:bg-purple-50/60"
                             >
                                 <span className="text-[10px] text-gray-400 whitespace-nowrap">{f.label}</span>
-                                <span
-                                    className="text-xl font-bold mt-0.5"
-                                    style={{ color: roleFilter === f.key ? '#5746AF' : '#9ca3af' }}
-                                >
+                                <span className="text-xl font-bold mt-0.5" style={{ color: roleFilter === f.key ? '#5746AF' : '#9ca3af' }}>
                                     {counts[f.key]}
                                 </span>
                             </button>
@@ -236,7 +281,6 @@ const EmployeeDirectory: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Search */}
                 <div className="px-6 py-3 border-b border-gray-100 flex items-center gap-4">
                     <div className="relative w-72">
                         <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -252,7 +296,6 @@ const EmployeeDirectory: React.FC = () => {
                     </span>
                 </div>
 
-                {/* Cards grid */}
                 <CardContent className="p-4">
                     {filtered.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-12 text-gray-300">
@@ -266,12 +309,30 @@ const EmployeeDirectory: React.FC = () => {
                                     key={emp.id}
                                     emp={emp}
                                     onClick={() => navigate(`/employees/${emp.id}`, { state: { employee: emp } })}
+                                    onEdit={canEdit ? () => setEditTarget(emp) : undefined}
                                 />
                             ))}
                         </div>
                     )}
                 </CardContent>
             </Card>
+
+            {editTarget && (
+                <EmployeeDetailsModal
+                    user={editTarget}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
+                    onClose={() => setEditTarget(null)}
+                    onSuccess={() => { fetchEmployees(); setEditTarget(null); }}
+                />
+            )}
+
+            {showInvite && (
+                <InviteEmployeeModal
+                    onClose={() => setShowInvite(false)}
+                    onSuccess={() => { fetchEmployees(); setShowInvite(false); }}
+                />
+            )}
         </div>
     );
 };

@@ -8,9 +8,13 @@ import { Button } from "../../ui/button";
 import { Field, FieldGroup } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
+import { getUserLocal } from "../../../utils/getUser";
 
 const LeaveSection = () => {
     const toast = useToast();
+    const user = getUserLocal();
+    const isAdmin = user?.role === 'admin';
+    const canEdit = isAdmin || user?.permissions?.['admin_leave_types']?.can_edit === true;
     const [types, setTypes] = useState<any[]>([]);
     const [name, setName] = useState("");
     const [desc, setDesc] = useState("");
@@ -45,47 +49,49 @@ const LeaveSection = () => {
                     <h2 className="text-xl font-semibold">Leave Types</h2>
                     <p className="text-sm text-gray-500">Categories used across all policies</p>
                 </div>
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <button className="flex items-center gap-1.5 bg-purple-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-purple-700 transition">
-                            <Plus size={14} /> Add Type
-                        </button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>New Leave Type</DialogTitle>
-                            <DialogDescription>Add a new category used across all policies.</DialogDescription>
-                        </DialogHeader>
-                        <FieldGroup>
-                            <Field>
-                                <Label htmlFor="lt-name">Name</Label>
-                                <Input
-                                    id="lt-name"
-                                    placeholder="e.g. Paternity Leave"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                />
-                            </Field>
-                            <Field>
-                                <Label htmlFor="lt-desc">Description (optional)</Label>
-                                <Input
-                                    id="lt-desc"
-                                    placeholder="Short description"
-                                    value={desc}
-                                    onChange={(e) => setDesc(e.target.value)}
-                                />
-                            </Field>
-                        </FieldGroup>
-                        <DialogFooter>
-                            <DialogClose asChild>
-                                <Button variant="outline">Cancel</Button>
-                            </DialogClose>
-                            <Button onClick={handleAdd} disabled={loading}>
-                                {loading ? "Saving..." : "Save"}
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                {canEdit && (
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <button className="flex items-center gap-1.5 bg-purple-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-purple-700 transition">
+                                <Plus size={14} /> Add Type
+                            </button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>New Leave Type</DialogTitle>
+                                <DialogDescription>Add a new category used across all policies.</DialogDescription>
+                            </DialogHeader>
+                            <FieldGroup>
+                                <Field>
+                                    <Label htmlFor="lt-name">Name</Label>
+                                    <Input
+                                        id="lt-name"
+                                        placeholder="e.g. Paternity Leave"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                    />
+                                </Field>
+                                <Field>
+                                    <Label htmlFor="lt-desc">Description (optional)</Label>
+                                    <Input
+                                        id="lt-desc"
+                                        placeholder="Short description"
+                                        value={desc}
+                                        onChange={(e) => setDesc(e.target.value)}
+                                    />
+                                </Field>
+                            </FieldGroup>
+                            <DialogFooter>
+                                <DialogClose asChild>
+                                    <Button variant="outline">Cancel</Button>
+                                </DialogClose>
+                                <Button onClick={handleAdd} disabled={loading}>
+                                    {loading ? "Saving..." : "Save"}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                )}
             </div>
 
             <div className="grid gap-3">

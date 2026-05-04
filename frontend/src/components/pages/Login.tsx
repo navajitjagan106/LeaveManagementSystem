@@ -29,8 +29,14 @@ const Login: React.FC = () => {
     const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     useEffect(() => {
-        const user = getCookie("user");
-        if (user) navigate("/dashboard");
+        const raw = getCookie("user");
+        if (!raw) return;
+        try {
+            const user = JSON.parse(raw);
+            navigate(user.role === "admin" ? "/admin" : "/dashboard");
+        } catch {
+            navigate("/dashboard");
+        }
     }, [navigate]);
 
     useEffect(() => {
@@ -66,8 +72,13 @@ const Login: React.FC = () => {
         setError("");
         setLoading(true);
         try {
-            await verifyOtp({ email, code: otp });
-            navigate("/dashboard");
+            const res = await verifyOtp({ email, code: otp });
+            // Full page reload so the browser fully commits Set-Cookie headers
+            // before any authenticated API calls fire from the new page.
+            const role = res.data.user?.role;
+            setTimeout(() => {
+                window.location.href = role === "admin" ? "/admin" : "/dashboard";
+            }, 100);
         } catch (err: any) {
             setError(err?.response?.data?.error || "Invalid or expired OTP");
             setOtp("");

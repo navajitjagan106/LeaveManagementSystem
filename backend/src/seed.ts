@@ -8,18 +8,20 @@ const seed = async () => {
     console.log("Resetting database...");
 
     await pool.query(`
-      DROP TABLE IF EXISTS notifications      CASCADE;
-      DROP TABLE IF EXISTS leaves             CASCADE;
-      DROP TABLE IF EXISTS leave_balances     CASCADE;
-      DROP TABLE IF EXISTS leave_policy_rules CASCADE;
-      DROP TABLE IF EXISTS invitations        CASCADE;
-      DROP TABLE IF EXISTS otps               CASCADE;
-      DROP TABLE IF EXISTS leave_types        CASCADE;
-      DROP TABLE IF EXISTS leave_policies     CASCADE;
-      DROP TABLE IF EXISTS holidays           CASCADE;
-      DROP TABLE IF EXISTS users              CASCADE;
-      DROP TYPE  IF EXISTS leave_status       CASCADE;
-      DROP TYPE  IF EXISTS user_role          CASCADE;
+      DROP TABLE IF EXISTS user_page_permissions CASCADE;
+      DROP TABLE IF EXISTS page_definitions      CASCADE;
+      DROP TABLE IF EXISTS notifications         CASCADE;
+      DROP TABLE IF EXISTS leaves                CASCADE;
+      DROP TABLE IF EXISTS leave_balances        CASCADE;
+      DROP TABLE IF EXISTS leave_policy_rules    CASCADE;
+      DROP TABLE IF EXISTS invitations           CASCADE;
+      DROP TABLE IF EXISTS otps                  CASCADE;
+      DROP TABLE IF EXISTS leave_types           CASCADE;
+      DROP TABLE IF EXISTS leave_policies        CASCADE;
+      DROP TABLE IF EXISTS holidays              CASCADE;
+      DROP TABLE IF EXISTS users                 CASCADE;
+      DROP TYPE  IF EXISTS leave_status          CASCADE;
+      DROP TYPE  IF EXISTS user_role             CASCADE;
     `);
 
     console.log("Creating schema...");
@@ -127,6 +129,23 @@ const seed = async () => {
         created_at        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
         accepted_at       TIMESTAMP,
         leave_allocations JSONB
+      );
+
+      CREATE TABLE page_definitions (
+        id          SERIAL PRIMARY KEY,
+        key         VARCHAR(50)  NOT NULL UNIQUE,
+        label       VARCHAR(100) NOT NULL,
+        description TEXT
+      );
+
+      CREATE TABLE user_page_permissions (
+        id         SERIAL PRIMARY KEY,
+        user_id    INT         REFERENCES users(id) ON DELETE CASCADE,
+        page_key   VARCHAR(50) NOT NULL,
+        can_view   BOOLEAN     DEFAULT false,
+        can_edit   BOOLEAN     DEFAULT false,
+        can_delete BOOLEAN     DEFAULT false,
+        UNIQUE(user_id, page_key)
       );
     `);
 
@@ -269,6 +288,19 @@ const seed = async () => {
       ('2026-11-01', 'Kannada Rajyotsava'),
       ('2026-11-08', 'Diwali'),
       ('2026-12-25', 'Christmas Day');
+    `);
+
+    // ── Page Definitions ─────────────────────────────────────────────────────
+    console.log("Seeding page definitions...");
+    await pool.query(`
+      INSERT INTO page_definitions (key, label, description) VALUES
+      ('approvals',          'Leave Approvals',    'View and approve/reject leave requests'),
+      ('employee_directory', 'Employee Directory', 'View the full employee list and profiles'),
+      ('admin_employees',    'Manage Employees',   'Edit and delete employee records'),
+      ('admin_invitations',  'Manage Invitations', 'Send and manage user invitations'),
+      ('admin_leave_types',  'Manage Leave Types', 'Create and edit leave type definitions'),
+      ('admin_holidays',     'Manage Holidays',    'Add and remove company holidays'),
+      ('admin_policies',     'Manage Policies',    'Create and configure leave policies');
     `);
 
     // ── Notifications ─────────────────────────────────────────────────────────

@@ -5,10 +5,11 @@ import { getTeamLeaves } from "../../api/leaveApi"
 import { useOutletContext } from "react-router-dom"
 import PageHeader from "../common/PageHeader"
 import Loader from "../common/Loader"
-import { CalendarDays, Palmtree, Users, X, CalendarX2, Sunrise, PartyPopper, ChevronLeft, ChevronRight } from "lucide-react"
+import { CalendarDays, Palmtree, Users, CalendarX2, Sunrise, PartyPopper, ChevronLeft, ChevronRight } from "lucide-react"
 import { useToast } from "../common/ToastContext"
 import { getCookie } from "../../utils/cookies"
 import { Card, CardContent } from "../ui/card"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "../ui/sheet"
 
 type RawLeave = {
     id: number
@@ -57,54 +58,6 @@ const DRAWER_FIELDS: { label: string; render: (l: RawLeave) => string }[] = [
     { label: "To", render: (l) => toDisplay(l.to_date) },
 ]
 
-const LeaveDetailDrawer: React.FC<{ leave: RawLeave; isManager: boolean; onClose: () => void }> = ({
-    leave, isManager, onClose
-}) => {
-    const initials = leave.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
-    return (
-        <>
-            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" onClick={onClose} />
-            <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-50 flex flex-col">
-                {/* Drawer header with gradient */}
-                <div className="bg-gradient-to-br from-[#5746AF] to-[#302178] px-6 py-6 relative">
-                    <button
-                        onClick={onClose}
-                        className="absolute top-4 right-4 p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
-                    >
-                        <X size={16} />
-                    </button>
-                    <div className="flex items-center gap-4 mt-2">
-                        <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white text-lg font-bold">
-                            {initials}
-                        </div>
-                        <div>
-                            <h2 className="text-white font-semibold text-lg leading-tight">{leave.name}</h2>
-                            <span className="inline-flex items-center mt-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/20 text-white">
-                                {leave.duration_type === "half" ? "Half Day Leave" : "Full Day Leave"}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
-                    {DRAWER_FIELDS.map(({ label, render }) => (
-                        <div key={label} className="flex items-center justify-between py-3 border-b border-gray-50">
-                            <span className="text-sm text-gray-400 font-medium">{label}</span>
-                            <span className="text-sm font-semibold text-gray-800">{render(leave)}</span>
-                        </div>
-                    ))}
-
-                    {isManager && leave.reason && (
-                        <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-100">
-                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Reason</p>
-                            <p className="text-sm text-gray-700 leading-relaxed">{leave.reason}</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </>
-    )
-}
 
 const LEGEND = [
     { label: "Full Day Leave", color: "#6366f1" },
@@ -429,13 +382,46 @@ const TeamView: React.FC = () => {
                 </CardContent>
             </Card>
 
-            {selectedLeave && (
-                <LeaveDetailDrawer
-                    leave={selectedLeave}
-                    isManager={isManagerOrAdmin}
-                    onClose={() => setSelectedLeave(null)}
-                />
-            )}
+            <Sheet open={!!selectedLeave} onOpenChange={(open) => { if (!open) setSelectedLeave(null); }}>
+                <SheetContent className="overflow-y-auto">
+                    {selectedLeave && (() => {
+                        const initials = selectedLeave.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
+                        return (
+                            <>
+                                <SheetHeader>
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#5746AF] to-[#302178] flex items-center justify-center text-white text-base font-bold flex-shrink-0">
+                                            {initials}
+                                        </div>
+                                        <div>
+                                            <SheetTitle>{selectedLeave.name}</SheetTitle>
+                                            <SheetDescription>
+                                                {selectedLeave.duration_type === "half" ? "Half Day Leave" : "Full Day Leave"} · {selectedLeave.leave_type}
+                                            </SheetDescription>
+                                        </div>
+                                    </div>
+                                </SheetHeader>
+
+                                <div className="px-6 py-5 space-y-1">
+                                    {DRAWER_FIELDS.map(({ label, render }) => (
+                                        <div key={label} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
+                                            <span className="text-sm text-gray-400">{label}</span>
+                                            <span className="text-sm font-semibold text-gray-800">{render(selectedLeave)}</span>
+                                        </div>
+                                    ))}
+
+                                    {isManagerOrAdmin && selectedLeave.reason && (
+                                        <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-100">
+                                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Reason</p>
+                                            <p className="text-sm text-gray-700 leading-relaxed">{selectedLeave.reason}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )
+                    })()}
+                </SheetContent>
+            </Sheet>
         </div>
     )
 }

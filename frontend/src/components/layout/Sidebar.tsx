@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, FileText, History, Users, CheckCircle, Scale, ShieldCheck, LogOut, UsersRound } from "lucide-react";
-import { getUserLocal } from "../../utils/getUser";
-import { User } from "../../types";
+import {
+    LayoutDashboard, FileText, History, Users, CheckCircle,
+    Scale, ShieldCheck, LogOut, UsersRound, Mail, CalendarDays,
+    Umbrella, BookOpen, UserCog,
+} from "lucide-react";
+import { useUser } from "../../context/UserContext";
 
 const Sidebar: React.FC = () => {
     const location = useLocation();
-    const [user, setUser] = useState<User | null>(null);
-
-    useEffect(() => { setUser(getUserLocal()); }, []);
+    const { user } = useUser();
 
     const handleLogout = () => {
         document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict";
@@ -16,15 +17,25 @@ const Sidebar: React.FC = () => {
         window.location.href = "/login";
     };
 
+    const isAdmin = user?.role === "admin";
+    const hasPage = (key: string) => isAdmin || user?.permissions?.[key]?.can_view === true;
+
     const menuItems = [
-        { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-        { path: "/apply-leave", label: "Apply Leave", icon: FileText },
-        { path: "/leave-history", label: "History", icon: History },
-        { path: "/team-view", label: "Team View", icon: Users },
-        { path: "/approvals", label: "Approvals", icon: CheckCircle, roles: ["manager"] },
-        { path: "/employees", label: "Employees", icon: UsersRound, roles: ["manager", "admin"] },
-        { path: "/leave-balance", label: "Balance", icon: Scale },
-        { path: "/admin/employees", label: "Admin", icon: ShieldCheck, roles: ["admin"] },
+        { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard, show: !isAdmin },
+
+        { path: "/admin", label: "Overview", icon: LayoutDashboard, show: isAdmin },
+        { path: "/approvals", label: "Approvals", icon: CheckCircle, show: user?.role === "manager" || hasPage("approvals") },
+        { path: "/admin/employees", label: "Employees", icon: UsersRound, show: isAdmin || hasPage("admin_employees") },
+        { path: "/admin/invitations", label: "Invites", icon: Mail, show: isAdmin || hasPage("admin_invitations") },
+        { path: "/admin/leave-types", label: "Leave Types", icon: CalendarDays, show: isAdmin || hasPage("admin_leave_types") },
+        { path: "/admin/holidays", label: "Holidays", icon: Umbrella, show: isAdmin || hasPage("admin_holidays") },
+        { path: "/admin/policies", label: "Policies", icon: BookOpen, show: isAdmin || hasPage("admin_policies") },
+        { path: "/admin/permissions", label: "Perms", icon: ShieldCheck, show: isAdmin },
+        { path: "/apply-leave", label: "Apply Leave", icon: FileText, show: !isAdmin },
+        { path: "/leave-history", label: "History", icon: History, show: !isAdmin },
+        { path: "/team-view", label: "Team View", icon: Users, show: true },
+        { path: "/employees", label: "Employees", icon: UserCog, show: user?.role === "manager" || hasPage("employee_directory") },
+        { path: "/leave-balance", label: "Balance", icon: Scale, show: !isAdmin },
     ];
 
     return (
@@ -36,7 +47,7 @@ const Sidebar: React.FC = () => {
 
                 <nav className="flex flex-col gap-1 w-full items-center pt-2">
                     {menuItems
-                        .filter((item) => !item.roles || (user && item.roles.includes(user.role)))
+                        .filter((item) => item.show)
                         .map((item) => {
                             const Icon = item.icon;
                             const isActive = location.pathname === item.path;

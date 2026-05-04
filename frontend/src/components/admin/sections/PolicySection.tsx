@@ -8,9 +8,14 @@ import { Button } from "../../ui/button";
 import { Field, FieldGroup } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
+import { getUserLocal } from "../../../utils/getUser";
 
 const PoliciesSection = () => {
     const toast = useToast();
+    const user = getUserLocal();
+    const isAdmin = user?.role === 'admin';
+    const canEdit = isAdmin || user?.permissions?.['admin_policies']?.can_edit === true;
+    const canDelete = isAdmin || user?.permissions?.['admin_policies']?.can_delete === true;
     const [policies, setPolicies] = useState<any[]>([]);
     const [leaveTypes, setLeaveTypes] = useState<any[]>([]);
     const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -97,45 +102,47 @@ const PoliciesSection = () => {
                     <h2 className="text-xl font-semibold">Employment Policies</h2>
                     <p className="text-sm text-gray-500">Define leave entitlements per employment level</p>
                 </div>
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <button className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 transition">
-                            <Plus size={15} /> New Policy
-                        </button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>New Policy</DialogTitle>
-                            <DialogDescription>Create a leave entitlement policy for an employment level.</DialogDescription>
-                        </DialogHeader>
-                        <FieldGroup>
-                            <Field>
-                                <Label htmlFor="p-name">Policy name</Label>
-                                <Input
-                                    id="p-name"
-                                    placeholder="e.g. Senior Developer"
-                                    value={newPolicy.name}
-                                    onChange={(e) => setNewPolicy({ ...newPolicy, name: e.target.value })}
-                                />
-                            </Field>
-                            <Field>
-                                <Label htmlFor="p-desc">Description (optional)</Label>
-                                <Input
-                                    id="p-desc"
-                                    placeholder="Short description"
-                                    value={newPolicy.description}
-                                    onChange={(e) => setNewPolicy({ ...newPolicy, description: e.target.value })}
-                                />
-                            </Field>
-                        </FieldGroup>
-                        <DialogFooter>
-                            <DialogClose asChild>
-                                <Button variant="outline">Cancel</Button>
-                            </DialogClose>
-                            <Button onClick={handleAdd}>Create</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                {canEdit && (
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <button className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 transition">
+                                <Plus size={15} /> New Policy
+                            </button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>New Policy</DialogTitle>
+                                <DialogDescription>Create a leave entitlement policy for an employment level.</DialogDescription>
+                            </DialogHeader>
+                            <FieldGroup>
+                                <Field>
+                                    <Label htmlFor="p-name">Policy name</Label>
+                                    <Input
+                                        id="p-name"
+                                        placeholder="e.g. Senior Developer"
+                                        value={newPolicy.name}
+                                        onChange={(e) => setNewPolicy({ ...newPolicy, name: e.target.value })}
+                                    />
+                                </Field>
+                                <Field>
+                                    <Label htmlFor="p-desc">Description (optional)</Label>
+                                    <Input
+                                        id="p-desc"
+                                        placeholder="Short description"
+                                        value={newPolicy.description}
+                                        onChange={(e) => setNewPolicy({ ...newPolicy, description: e.target.value })}
+                                    />
+                                </Field>
+                            </FieldGroup>
+                            <DialogFooter>
+                                <DialogClose asChild>
+                                    <Button variant="outline">Cancel</Button>
+                                </DialogClose>
+                                <Button onClick={handleAdd}>Create</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                )}
             </div>
 
             {policies.length === 0 ? (
@@ -155,12 +162,14 @@ const PoliciesSection = () => {
                                     <p className="text-xs text-gray-400 mt-0.5">{policy.rule_count} leave type{policy.rule_count !== 1 ? "s" : ""}</p>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => handleDelete(policy.id)}
-                                        className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition"
-                                    >
-                                        <Trash2 size={15} />
-                                    </button>
+                                    {canDelete && (
+                                        <button
+                                            onClick={() => handleDelete(policy.id)}
+                                            className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition"
+                                        >
+                                            <Trash2 size={15} />
+                                        </button>
+                                    )}
                                     <button
                                         onClick={() => handleExpand(policy.id)}
                                         className="p-1.5 text-gray-400 hover:bg-gray-50 rounded-lg transition"
@@ -186,7 +195,8 @@ const PoliciesSection = () => {
                                                             min={0}
                                                             value={getRuleAllocated(policy.id, lt.id)}
                                                             onChange={(e) => setRuleValue(policy.id, lt.id, Number(e.target.value))}
-                                                            className="w-16 border border-gray-200 p-1.5 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-purple-300"
+                                                            disabled={!canEdit}
+                                                            className="w-16 border border-gray-200 p-1.5 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-purple-300 disabled:opacity-50 disabled:cursor-not-allowed"
                                                         />
                                                         <span className="text-xs text-gray-400">days</span>
                                                     </div>
@@ -195,14 +205,16 @@ const PoliciesSection = () => {
                                         </div>
                                     )}
                                     <p className="text-xs text-gray-400">Set to 0 to exclude a leave type from this policy</p>
-                                    <button
-                                        onClick={() => handleSaveRules(policy.id)}
-                                        disabled={saving}
-                                        className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50"
-                                    >
-                                        <Save size={14} />
-                                        {saving ? "Saving..." : "Save Rules"}
-                                    </button>
+                                    {canEdit && (
+                                        <button
+                                            onClick={() => handleSaveRules(policy.id)}
+                                            disabled={saving}
+                                            className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50"
+                                        >
+                                            <Save size={14} />
+                                            {saving ? "Saving..." : "Save Rules"}
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>

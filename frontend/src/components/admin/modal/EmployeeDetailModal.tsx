@@ -4,10 +4,14 @@ import {
     reassignPolicy, resetLeaveBalance, updateManager
 } from "../../../api/adminApi";
 import { useToast } from "../../common/ToastContext";
+import { ManagerCombobox } from "../../common/ManagerCombobox";
+import {
+    Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+} from "../../ui/sheet";
 
 const roleColors: Record<string, string> = {
-    admin: "bg-purple-100 text-purple-700",
-    manager: "bg-blue-100 text-blue-700",
+    admin:    "bg-purple-100 text-purple-700",
+    manager:  "bg-blue-100 text-blue-700",
     employee: "bg-gray-100 text-gray-600",
 };
 
@@ -26,24 +30,24 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
     <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">{children}</p>
 );
 
-const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
+const EmployeeDetailsModal = ({ user, canEdit = true, canDelete = true, onClose, onSuccess }: any) => {
     const toast = useToast();
 
-    const [balances, setBalances] = useState<any[]>([]);
+    const [balances, setBalances]             = useState<any[]>([]);
     const [balancesLoading, setBalancesLoading] = useState(true);
-    const [managers, setManagers] = useState<any[]>([]);
-    const [policies, setPolicies] = useState<any[]>([]);
+    const [managers, setManagers]             = useState<any[]>([]);
+    const [policies, setPolicies]             = useState<any[]>([]);
 
-    const [selectedPolicy, setSelectedPolicy] = useState<number | "">(user.policy_id || "");
+    const [selectedPolicy, setSelectedPolicy]   = useState<number | "">(user.policy_id || "");
     const [selectedManager, setSelectedManager] = useState<number | "">(user.manager_id || "");
 
-    const [savingPolicy, setSavingPolicy] = useState(false);
+    const [savingPolicy, setSavingPolicy]   = useState(false);
     const [savingManager, setSavingManager] = useState(false);
-    const [resetting, setResetting] = useState(false);
+    const [resetting, setResetting]         = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
-    const [deleting, setDeleting] = useState(false);
+    const [deleting, setDeleting]           = useState(false);
 
-    const policyChanged = selectedPolicy !== (user.policy_id || "");
+    const policyChanged  = selectedPolicy  !== (user.policy_id  || "");
     const managerChanged = selectedManager !== (user.manager_id || "");
 
     const fetchManagers = useCallback(async () => {
@@ -69,8 +73,8 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
             setBalances((res.data.data || []).map((b: any) => ({
                 ...b,
                 total_allocated: Number(b.total_allocated),
-                used: Number(b.used),
-                remaining: Number(b.remaining),
+                used:            Number(b.used),
+                remaining:       Number(b.remaining),
             })));
         } catch { } finally {
             setBalancesLoading(false);
@@ -137,30 +141,25 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/40 flex justify-end z-50" onClick={(e) => e.target === e.currentTarget && onClose()}>
-            <div className="w-[460px] h-full bg-white shadow-2xl overflow-y-auto flex flex-col animate-slide-in-right">
-
+        <Sheet open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+            <SheetContent className="overflow-y-auto">
                 {/* ── Header ── */}
-                <div className="px-6 pt-6 pb-5 flex items-start gap-4 border-b border-gray-100">
-                    <div className="w-12 h-12 rounded-2xl bg-purple-600 flex items-center justify-center text-white font-bold text-base flex-shrink-0">
-                        {initials(user.name)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <h2 className="text-base font-semibold text-gray-900 truncate">{user.name}</h2>
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${roleColors[user.role] || roleColors.employee}`}>
-                                {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                            </span>
+                <SheetHeader>
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-purple-600 flex items-center justify-center text-white font-bold text-base flex-shrink-0">
+                            {initials(user.name)}
                         </div>
-                        <p className="text-sm text-gray-400 truncate mt-0.5">{user.email}</p>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <SheetTitle className="text-base">{user.name}</SheetTitle>
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${roleColors[user.role] || roleColors.employee}`}>
+                                    {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                                </span>
+                            </div>
+                            <SheetDescription>{user.email}</SheetDescription>
+                        </div>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-300 hover:text-gray-500 hover:bg-gray-100 rounded-lg w-8 h-8 flex items-center justify-center transition-colors flex-shrink-0"
-                    >
-                        ✕
-                    </button>
-                </div>
+                </SheetHeader>
 
                 <div className="flex flex-col gap-6 px-6 py-5 flex-1">
 
@@ -195,25 +194,28 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                                 Currently: <span className="font-medium text-gray-700">{user.manager_name}</span>
                             </p>
                         )}
-                        <div className="flex gap-2">
-                            <select
-                                value={selectedManager}
-                                onChange={(e) => setSelectedManager(e.target.value === "" ? "" : Number(e.target.value))}
-                                className={`flex-1 border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 transition-colors ${managerChanged ? "border-purple-300 bg-purple-50" : "border-gray-200"}`}
-                            >
-                                <option value="">No manager</option>
-                                {managers.map((m) => (
-                                    <option key={m.id} value={m.id}>{m.name} — {m.department || m.role}</option>
-                                ))}
-                            </select>
-                            <button
-                                onClick={handleSaveManager}
-                                disabled={savingManager || !managerChanged}
-                                className="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-purple-700 transition-colors"
-                            >
-                                {savingManager ? "Saving…" : "Update"}
-                            </button>
-                        </div>
+                        {canEdit ? (
+                            <div className="flex gap-2">
+                                <ManagerCombobox
+                                    value={selectedManager}
+                                    onChange={setSelectedManager}
+                                    managers={managers}
+                                    changed={managerChanged}
+                                    className="flex-1"
+                                />
+                                <button
+                                    onClick={handleSaveManager}
+                                    disabled={savingManager || !managerChanged}
+                                    className="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-purple-700 transition-colors"
+                                >
+                                    {savingManager ? "Saving…" : "Update"}
+                                </button>
+                            </div>
+                        ) : (
+                            !user.manager_name && (
+                                <p className="text-xs text-gray-400">No manager assigned</p>
+                            )
+                        )}
                     </div>
 
                     <Divider />
@@ -226,29 +228,37 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                                 Currently: <span className="font-medium text-gray-700">{user.policy_name}</span>
                             </p>
                         )}
-                        <div className="flex gap-2">
-                            <select
-                                value={selectedPolicy}
-                                onChange={(e) => setSelectedPolicy(e.target.value === "" ? "" : Number(e.target.value))}
-                                className={`flex-1 border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 transition-colors ${policyChanged ? "border-purple-300 bg-purple-50" : "border-gray-200"}`}
-                            >
-                                <option value="">No policy</option>
-                                {policies.map((p) => (
-                                    <option key={p.id} value={p.id}>{p.name}</option>
-                                ))}
-                            </select>
-                            <button
-                                onClick={handleSavePolicy}
-                                disabled={savingPolicy || !policyChanged}
-                                className="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-purple-700 transition-colors"
-                            >
-                                {savingPolicy ? "Saving…" : "Update"}
-                            </button>
-                        </div>
-                        {policyChanged && (
-                            <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-                                <span>⚠</span> Updating will reset all leave balances to the new policy
-                            </p>
+                        {canEdit ? (
+                            <>
+                                <div className="flex gap-2">
+                                    <select
+                                        value={selectedPolicy}
+                                        onChange={(e) => setSelectedPolicy(e.target.value === "" ? "" : Number(e.target.value))}
+                                        className={`flex-1 border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 transition-colors ${policyChanged ? "border-purple-300 bg-purple-50" : "border-gray-200"}`}
+                                    >
+                                        <option value="">No policy</option>
+                                        {policies.map((p) => (
+                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        onClick={handleSavePolicy}
+                                        disabled={savingPolicy || !policyChanged}
+                                        className="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-purple-700 transition-colors"
+                                    >
+                                        {savingPolicy ? "Saving…" : "Update"}
+                                    </button>
+                                </div>
+                                {policyChanged && (
+                                    <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                                        <span>⚠</span> Updating will reset all leave balances to the new policy
+                                    </p>
+                                )}
+                            </>
+                        ) : (
+                            !user.policy_name && (
+                                <p className="text-xs text-gray-400">No policy assigned</p>
+                            )
                         )}
                     </div>
 
@@ -258,13 +268,15 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                     <div>
                         <div className="flex items-center justify-between mb-3">
                             <SectionLabel>Leave Balances</SectionLabel>
-                            <button
-                                onClick={handleResetBalance}
-                                disabled={resetting || balancesLoading || balances.length === 0}
-                                className="text-xs text-orange-600 border border-orange-200 bg-orange-50 px-3 py-1 rounded-lg hover:bg-orange-100 disabled:opacity-40 transition-colors font-medium"
-                            >
-                                {resetting ? "Resetting…" : "Reset Used to 0"}
-                            </button>
+                            {canEdit && (
+                                <button
+                                    onClick={handleResetBalance}
+                                    disabled={resetting || balancesLoading || balances.length === 0}
+                                    className="text-xs text-orange-600 border border-orange-200 bg-orange-50 px-3 py-1 rounded-lg hover:bg-orange-100 disabled:opacity-40 transition-colors font-medium"
+                                >
+                                    {resetting ? "Resetting…" : "Reset Used to 0"}
+                                </button>
+                            )}
                         </div>
 
                         {balancesLoading ? (
@@ -310,41 +322,43 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                     <Divider />
 
                     {/* ── Danger Zone ── */}
-                    <div className="pb-2">
-                        <SectionLabel>Danger Zone</SectionLabel>
-                        {!confirmDelete ? (
-                            <button
-                                onClick={() => setConfirmDelete(true)}
-                                className="w-full py-2.5 rounded-xl bg-red-50 text-red-600 text-sm font-medium border border-red-100 hover:bg-red-100 transition-colors"
-                            >
-                                Delete Employee
-                            </button>
-                        ) : (
-                            <div className="border border-red-200 bg-red-50 rounded-xl p-4 space-y-3">
-                                <p className="text-sm text-red-700 font-medium">Delete {user.name}?</p>
-                                <p className="text-xs text-red-500">This will permanently remove the employee and all their data. This cannot be undone.</p>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={handleDelete}
-                                        disabled={deleting}
-                                        className="flex-1 py-2 rounded-lg bg-red-600 text-white text-sm font-medium disabled:opacity-60 hover:bg-red-700 transition-colors"
-                                    >
-                                        {deleting ? "Deleting…" : "Yes, Delete"}
-                                    </button>
-                                    <button
-                                        onClick={() => setConfirmDelete(false)}
-                                        className="flex-1 py-2 rounded-lg bg-white border border-gray-200 text-gray-600 text-sm hover:bg-gray-50 transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
+                    {canDelete && (
+                        <div className="pb-2">
+                            <SectionLabel>Danger Zone</SectionLabel>
+                            {!confirmDelete ? (
+                                <button
+                                    onClick={() => setConfirmDelete(true)}
+                                    className="w-full py-2.5 rounded-xl bg-red-50 text-red-600 text-sm font-medium border border-red-100 hover:bg-red-100 transition-colors"
+                                >
+                                    Delete Employee
+                                </button>
+                            ) : (
+                                <div className="border border-red-200 bg-red-50 rounded-xl p-4 space-y-3">
+                                    <p className="text-sm text-red-700 font-medium">Delete {user.name}?</p>
+                                    <p className="text-xs text-red-500">This will permanently remove the employee and all their data. This cannot be undone.</p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={handleDelete}
+                                            disabled={deleting}
+                                            className="flex-1 py-2 rounded-lg bg-red-600 text-white text-sm font-medium disabled:opacity-60 hover:bg-red-700 transition-colors"
+                                        >
+                                            {deleting ? "Deleting…" : "Yes, Delete"}
+                                        </button>
+                                        <button
+                                            onClick={() => setConfirmDelete(false)}
+                                            className="flex-1 py-2 rounded-lg bg-white border border-gray-200 text-gray-600 text-sm hover:bg-gray-50 transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
-                    </div>
+                            )}
+                        </div>
+                    )}
 
                 </div>
-            </div>
-        </div>
+            </SheetContent>
+        </Sheet>
     );
 };
 

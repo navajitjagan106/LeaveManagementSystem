@@ -449,61 +449,64 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
 
 export const getManagerLeaves = async (req: Request, res: Response) => {
     try {
-        if (!req.user) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
+        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
-        if (req.user.role !== "manager") {
-            return res.status(403).json({ error: "Forbidden" });
-        }
-
-        const manager_id = req.user.id;
+        const fullAccess: boolean = (req as any).fullApprovalAccess === true;
+        const caller_id = req.user.id;
         const { status, search, page = 1, limit = 10 } = req.query;
+
+        const values: any[] = [];
+        let index = 1;
+
+        let baseWhere: string;
+        if (fullAccess) {
+            baseWhere = `WHERE 1=1`;
+        } else {
+            baseWhere = `WHERE l.applied_to = $${index}`;
+            values.push(caller_id);
+            index++;
+        }
 
         let query = `
         SELECT
-        l.id, u.name as employee_name, u.department,
-        lt.name as leave_type, l.from_date, l.to_date,
-        l.total_days, l.reason, l.status,l.rejection_reason, l.approved_at
+            l.id, u.name AS employee_name, u.department,
+            lt.name AS leave_type, l.from_date, l.to_date,
+            l.total_days, l.reason, l.status, l.rejection_reason, l.approved_at,
+            l.created_at AS applied_at
         FROM leaves l
-        JOIN users u ON l.user_id = u.id
+        JOIN users u  ON l.user_id      = u.id
         JOIN leave_types lt ON l.leave_type_id = lt.id
-        WHERE l.applied_to = $1
-        `;
+        ${baseWhere}`;
 
         let countQuery = `
         SELECT COUNT(*) FROM leaves l
         JOIN users u ON l.user_id = u.id
-        WHERE l.applied_to = $1
-        `;
-
-        const values: any[] = [manager_id];
-        let index = 2;
+        ${baseWhere}`;
 
         if (status) {
-            query += ` AND l.status = $${index}`;
+            query      += ` AND l.status = $${index}`;
             countQuery += ` AND l.status = $${index}`;
             values.push(status);
             index++;
         }
         if (search) {
-            query += ` AND u.name ILIKE $${index}`;
+            query      += ` AND u.name ILIKE $${index}`;
             countQuery += ` AND u.name ILIKE $${index}`;
             values.push(`%${search}%`);
             index++;
         }
 
         const offset = (Number(page) - 1) * Number(limit);
-        query += ` ORDER BY 
-        CASE WHEN l.status = 'pending' THEN 0 ELSE 1 END,
-        CASE WHEN l.status = 'pending' THEN l.created_at END ASC,
-        CASE WHEN l.status!='pending' THEN l.created_at END DESC
+        query += `
+        ORDER BY
+            CASE WHEN l.status = 'pending' THEN 0 ELSE 1 END ASC,
+            l.created_at ASC
         LIMIT $${index} OFFSET $${index + 1}`;
         values.push(limit, offset);
 
         const [dataResult, countResult] = await Promise.all([
             pool.query(query, values),
-            pool.query(countQuery, values.slice(0, index - 1))
+            pool.query(countQuery, values.slice(0, index - 1)),
         ]);
 
         res.json({
@@ -511,9 +514,8 @@ export const getManagerLeaves = async (req: Request, res: Response) => {
             data: dataResult.rows,
             total: Number(countResult.rows[0].count),
             page: Number(page),
-            totalPages: Math.ceil(countResult.rows[0].count / Number(limit))
+            totalPages: Math.ceil(countResult.rows[0].count / Number(limit)),
         });
-
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Failed to fetch pending leaves" });
@@ -528,10 +530,7 @@ export const approveLeave = async (req: Request, res: Response) => {
             return res.status(401).json({ error: "Unauthorized" });
         }
 
-        if (req.user.role !== "manager") {
-            return res.status(403).json({ error: "Only managers can approve" });
-        }
-
+        const fullAccess: boolean = (req as any).fullApprovalAccess === true;
         const leaveId = req.params.id;
         const { status, rejection_reason: rejectionReason } = req.body;
         const manager_id = req.user.id;
@@ -559,7 +558,7 @@ export const approveLeave = async (req: Request, res: Response) => {
 
         const leaveData = leave.rows[0];
 
-        if (leaveData.applied_to !== manager_id) {
+        if (!fullAccess && leaveData.applied_to !== manager_id) {
             const err: any = new Error("Not authorized");
             err.statusCode = 403;
             throw err;
@@ -770,9 +769,21 @@ export const getuserdetails = async (req: Request, res: Response) => {
             return res.status(404).json({ error: "User not found" });
         }
 
+        const userDetails = result.rows[0];
+
+        const permResult = await pool.query(
+            `SELECT page_key, can_view, can_edit, can_delete
+             FROM user_page_permissions WHERE user_id = $1`,
+            [user_id]
+        );
+        const permissions: Record<string, { can_view: boolean; can_edit: boolean; can_delete: boolean }> = {};
+        permResult.rows.forEach((p) => {
+            permissions[p.page_key] = { can_view: p.can_view, can_edit: p.can_edit, can_delete: p.can_delete };
+        });
+
         res.json({
             success: true,
-            data: result.rows[0]
+            data: { ...userDetails, permissions }
         });
 
     }
@@ -783,7 +794,7 @@ export const getuserdetails = async (req: Request, res: Response) => {
 
 export const getHolidays = async (req: Request, res: Response) => {
     try {
-        const result = await pool.query("Select date,name from holidays order by date")
+        const result = await pool.query("SELECT id, date, name FROM holidays ORDER BY date")
         res.json(result.rows)
 
     }

@@ -10,4 +10,5 @@ export type ApprovalRequest = {
     status: "pending" | "approved" | "rejected";
     approved_at?: string;
     rejection_reason?: string;
+    applied_at?: string;
 };

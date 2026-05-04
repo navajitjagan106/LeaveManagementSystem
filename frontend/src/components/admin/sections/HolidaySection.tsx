@@ -8,9 +8,14 @@ import { Button } from "../../ui/button";
 import { Field, FieldGroup } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
+import { getUserLocal } from "../../../utils/getUser";
 
 const HolidaySection = () => {
   const toast = useToast();
+  const user = getUserLocal();
+  const isAdmin = user?.role === 'admin';
+  const canEdit = isAdmin || user?.permissions?.['admin_holidays']?.can_edit === true;
+  const canDelete = isAdmin || user?.permissions?.['admin_holidays']?.can_delete === true;
   const [holidays, setHolidays] = useState<any[]>([]);
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
@@ -60,12 +65,14 @@ const HolidaySection = () => {
           <p className="text-xs text-gray-400">{fmt(h.date)}</p>
         </div>
       </div>
-      <button
-        onClick={() => handleDelete(h.id)}
-        className="text-gray-300 group-hover:text-red-400 transition p-1.5 rounded-lg hover:bg-red-50"
-      >
-        <Trash2 size={14} />
-      </button>
+      {canDelete && (
+        <button
+          onClick={() => handleDelete(h.id)}
+          className="text-gray-300 group-hover:text-red-400 transition p-1.5 rounded-lg hover:bg-red-50"
+        >
+          <Trash2 size={14} />
+        </button>
+      )}
     </div>
   );
 
@@ -76,47 +83,49 @@ const HolidaySection = () => {
           <h2 className="text-lg font-semibold text-gray-900">Holidays</h2>
           <p className="text-sm text-gray-400">{upcoming.length} upcoming this year</p>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <button className="flex items-center gap-1.5 bg-purple-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-purple-700 transition">
-              <Plus size={14} /> Add Holiday
-            </button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>New Holiday</DialogTitle>
-              <DialogDescription>Add a public holiday to the calendar.</DialogDescription>
-            </DialogHeader>
-            <FieldGroup>
-              <Field>
-                <Label htmlFor="h-name">Holiday name</Label>
-                <Input
-                  id="h-name"
-                  placeholder="e.g. Republic Day"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </Field>
-              <Field>
-                <Label htmlFor="h-date">Date</Label>
-                <Input
-                  id="h-date"
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                />
-              </Field>
-            </FieldGroup>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
-              </DialogClose>
-              <Button onClick={handleAdd} disabled={loading}>
-                {loading ? "Adding..." : "Confirm"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {canEdit && (
+          <Dialog>
+            <DialogTrigger asChild>
+              <button className="flex items-center gap-1.5 bg-purple-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-purple-700 transition">
+                <Plus size={14} /> Add Holiday
+              </button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>New Holiday</DialogTitle>
+                <DialogDescription>Add a public holiday to the calendar.</DialogDescription>
+              </DialogHeader>
+              <FieldGroup>
+                <Field>
+                  <Label htmlFor="h-name">Holiday name</Label>
+                  <Input
+                    id="h-name"
+                    placeholder="e.g. Republic Day"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </Field>
+                <Field>
+                  <Label htmlFor="h-date">Date</Label>
+                  <Input
+                    id="h-date"
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                  />
+                </Field>
+              </FieldGroup>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button onClick={handleAdd} disabled={loading}>
+                  {loading ? "Adding..." : "Confirm"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {upcoming.length > 0 && (

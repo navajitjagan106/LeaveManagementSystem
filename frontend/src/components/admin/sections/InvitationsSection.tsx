@@ -3,6 +3,7 @@ import { getInvitations, resendInvitation, cancelInvitation } from "../../../api
 import InviteEmployeeModal from "../modal/InviteEmployeeModal";
 import { useToast } from "../../common/ToastContext";
 import { Mail, RefreshCw, X } from "lucide-react";
+import { getUserLocal } from "../../../utils/getUser";
 
 const STATUS_STYLES: Record<string, string> = {
     pending: "bg-amber-100 text-amber-600",
@@ -21,6 +22,10 @@ const FILTERS = ["all", "pending", "accepted", "expired", "cancelled"];
 
 const InvitationsSection = () => {
     const toast = useToast();
+    const user = getUserLocal();
+    const isAdmin = user?.role === 'admin';
+    const canEdit = isAdmin || user?.permissions?.['admin_invitations']?.can_edit === true;
+    const canDelete = isAdmin || user?.permissions?.['admin_invitations']?.can_delete === true;
     const [invitations, setInvitations] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -65,13 +70,15 @@ const InvitationsSection = () => {
                     <h2 className="text-xl font-semibold">Invitations</h2>
                     <p className="text-sm text-gray-500">Manage pending and sent invitations</p>
                 </div>
-                <button
-                    onClick={() => setShowModal(true)}
-                    className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 transition"
-                >
-                    <Mail size={15} />
-                    Invite Employee
-                </button>
+                {canEdit && (
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 transition"
+                    >
+                        <Mail size={15} />
+                        Invite Employee
+                    </button>
+                )}
             </div>
 
             <div className="flex gap-2 flex-wrap">
@@ -122,16 +129,20 @@ const InvitationsSection = () => {
                                         day: "2-digit", month: "short", year: "numeric",
                                     })}
                                 </span>
-                                {inv.status === "pending" && (
+                                {inv.status === "pending" && (canEdit || canDelete) && (
                                     <div className="flex gap-1">
-                                        <button onClick={() => handleResend(inv.id)} title="Resend"
-                                            className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition">
-                                            <RefreshCw size={14} />
-                                        </button>
-                                        <button onClick={() => handleCancel(inv.id)} title="Cancel"
-                                            className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition">
-                                            <X size={14} />
-                                        </button>
+                                        {canEdit && (
+                                            <button onClick={() => handleResend(inv.id)} title="Resend"
+                                                className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition">
+                                                <RefreshCw size={14} />
+                                            </button>
+                                        )}
+                                        {canDelete && (
+                                            <button onClick={() => handleCancel(inv.id)} title="Cancel"
+                                                className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition">
+                                                <X size={14} />
+                                            </button>
+                                        )}
                                     </div>
                                 )}
                             </div>

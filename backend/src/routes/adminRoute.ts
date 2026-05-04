@@ -1,5 +1,7 @@
 import express from "express";
+import { authenticate } from "../middleware/authMiddleware";
 import { authorizeRoles } from "../middleware/roleMiddleware";
+import { requirePageAccess } from "../middleware/pageAccessMiddleware";
 import {
     getAllEmployees, updateEmployee, deleteEmployee,
     updateManager, createLeaveType, updateLeaveType, addHoliday,
@@ -7,36 +9,48 @@ import {
 } from "../controllers/adminController";
 import { sendInvitation, getInvitations, resendInvitation, cancelInvitation } from "../controllers/invitationController";
 import { getPolicies, createPolicy, deletePolicy, getPolicyRules, setPolicyRules, reassignPolicy, resetLeaveBalance } from "../controllers/leavePolicyController";
+import { getPageDefinitions, getUserPermissions, setUserPermissions } from "../controllers/permissionController";
 
 const router = express.Router();
-router.use(authorizeRoles("admin"));
 
-router.post("/invitations", sendInvitation);
-router.get("/invitations", getInvitations);
-router.post("/invitations/:id/resend", resendInvitation);
-router.delete("/invitations/:id", cancelInvitation);
+// ── Permissions management (admin only) 
+router.get("/pages", authorizeRoles("admin"), getPageDefinitions);
+router.get("/users/:id/permissions", authorizeRoles("admin"), getUserPermissions);
+router.put("/users/:id/permissions", authorizeRoles("admin"), setUserPermissions);
 
-router.get("/users", getAllEmployees);
-router.patch("/users/:id", updateEmployee);
-router.delete("/users/:id", deleteEmployee);
-router.patch("/users/:id/manager", updateManager);
-router.patch("/users/:id/policy", reassignPolicy);
-router.post("/users/:id/reset-balance", resetLeaveBalance);
+// ── Invitations 
+router.post("/invitations", requirePageAccess("admin_invitations", "edit"), sendInvitation);
+router.get("/invitations", requirePageAccess("admin_invitations", "view"), getInvitations);
+router.post("/invitations/:id/resend", requirePageAccess("admin_invitations", "edit"), resendInvitation);
+router.delete("/invitations/:id", requirePageAccess("admin_invitations", "delete"), cancelInvitation);
 
-router.post("/leave-types", createLeaveType);
-router.patch("/leave-types/:id", updateLeaveType);
+// ── Employees 
+router.get("/users", requirePageAccess("admin_employees", "view"), getAllEmployees);
+router.patch("/users/:id", requirePageAccess("admin_employees", "edit"), updateEmployee);
+router.delete("/users/:id", requirePageAccess("admin_employees", "delete"), deleteEmployee);
+router.patch("/users/:id/manager", requirePageAccess("admin_employees", "edit"), updateManager);
+router.patch("/users/:id/policy", requirePageAccess("admin_employees", "edit"), reassignPolicy);
+router.post("/users/:id/reset-balance", requirePageAccess("admin_employees", "edit"), resetLeaveBalance);
 
-router.get("/policies", getPolicies);
-router.post("/policies", createPolicy);
-router.delete("/policies/:id", deletePolicy);
-router.get("/policies/:id/rules", getPolicyRules);
-router.put("/policies/:id/rules", setPolicyRules);
+// ── Leave types 
+router.post("/leave-types", requirePageAccess("admin_leave_types", "edit"), createLeaveType);
+router.patch("/leave-types/:id", requirePageAccess("admin_leave_types", "edit"), updateLeaveType);
 
-router.post("/holidays", addHoliday);
-router.delete("/holidays/:id", deleteHoliday);
-router.get("/leaves", getAllLeaves);
-router.get("/user-balance/:id", getUserLeaveBalance);
-router.patch("/user-balance", updateLeaveBalance);
-router.get("/export", exportLeaves);
+// ── Policies 
+router.get("/policies", requirePageAccess("admin_policies", "view"), getPolicies);
+router.post("/policies", requirePageAccess("admin_policies", "edit"), createPolicy);
+router.delete("/policies/:id", requirePageAccess("admin_policies", "delete"), deletePolicy);
+router.get("/policies/:id/rules", requirePageAccess("admin_policies", "view"), getPolicyRules);
+router.put("/policies/:id/rules", requirePageAccess("admin_policies", "edit"), setPolicyRules);
+
+// ── Holidays 
+router.post("/holidays", requirePageAccess("admin_holidays", "edit"), addHoliday);
+router.delete("/holidays/:id", requirePageAccess("admin_holidays", "delete"), deleteHoliday);
+
+// ── Leaves / balance / export (admin-only, no delegation needed) 
+router.get("/leaves", authorizeRoles("admin"), getAllLeaves);
+router.get("/user-balance/:id", authorizeRoles("admin"), getUserLeaveBalance);
+router.patch("/user-balance", authorizeRoles("admin"), updateLeaveBalance);
+router.get("/export", authorizeRoles("admin"), exportLeaves);
 
 export default router;
