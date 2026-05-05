@@ -2,11 +2,14 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 dotenv.config();
 
+
 const transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.sendgrid.net",
+    port: 587,
+    secure: false, // SendGrid uses STARTTLS on 587
     auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        user: "apikey", // This is always "apikey" for SendGrid
+        pass: process.env.SENDGRID_API_KEY || process.env.SMTP_PASS,
     },
 });
 
@@ -43,7 +46,7 @@ function emailWrapper(content: string) {
 async function sendMail(options: { to: string; subject: string; html: string; otpCode?: string }) {
     try {
         await transporter.sendMail({
-            from: `"LeaveMS" <${process.env.SMTP_USER}>`,
+            from: `"LeaveMS" <${process.env.SENDER_EMAIL || process.env.SMTP_USER}>`,
             to: options.to,
             subject: options.subject,
             html: options.html,
