@@ -8,9 +8,6 @@ const transporter = nodemailer.createTransport({
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
     },
-    // Adding higher timeouts for production reliability
-    connectionTimeout: 10000, 
-    greetingTimeout: 10000,
 });
 
 function formatDate(date: Date | string): string {
