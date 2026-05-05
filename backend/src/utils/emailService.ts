@@ -1,17 +1,5 @@
-import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 dotenv.config();
-
-
-const transporter = nodemailer.createTransport({
-    host: "smtp.sendgrid.net",
-    port: 587,
-    secure: false, // SendGrid uses STARTTLS on 587
-    auth: {
-        user: "apikey", // This is always "apikey" for SendGrid
-        pass: process.env.SENDGRID_API_KEY || process.env.SMTP_PASS,
-    },
-});
 
 function formatDate(date: Date | string): string {
     return new Date(date).toLocaleDateString("en-GB", {
@@ -42,28 +30,51 @@ function emailWrapper(content: string) {
     `;
 }
 
-// ── Shared Mail Sending Helper with Local Fallback ──────────────────────────
+// ── SendGrid HTTP API Helper using Native Fetch ────────────────────────────
 async function sendMail(options: { to: string; subject: string; html: string; otpCode?: string }) {
-    try {
-        await transporter.sendMail({
-            from: `"LeaveMS" <${process.env.SENDER_EMAIL || process.env.SMTP_USER}>`,
-            to: options.to,
-            subject: options.subject,
-            html: options.html,
-        });
-        console.log(`Email sent successfully to ${options.to}`);
-    } catch (error) {
-        console.error(`Email delivery failed to ${options.to}:`, error);
-        
-        // IMPORTANT: Local Development Fallback
+    const apiKey = process.env.SENDGRID_API_KEY;
+    const sender = process.env.SENDER_EMAIL;
+
+    if (!apiKey || !sender) {
+        console.warn("⚠️ Email Configuration Missing (SENDGRID_API_KEY or SENDER_EMAIL)");
         if (process.env.NODE_ENV === "development" && options.otpCode) {
             console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             console.log(`  LOCAL DEV OTP FOR ${options.to}: ${options.otpCode}`);
             console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-        } else if (process.env.NODE_ENV === "development") {
-            console.log(`Local dev: Email content for ${options.to} would have been sent.`);
-        } else {
-            // In production, we re-throw to trigger the 500 error so we know it failed
+        }
+        return;
+    }
+
+    try {
+        const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                personalizations: [{ to: [{ email: options.to }] }],
+                from: { email: sender, name: "LeaveMS" },
+                subject: options.subject,
+                content: [{ type: "text/html", value: options.html }],
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(JSON.stringify(errorData));
+        }
+
+        console.log(`Email sent successfully via Fetch API to ${options.to}`);
+    } catch (error: any) {
+        console.error(`Email API delivery failed to ${options.to}:`, error.message);
+        
+        // Local Fallback for OTP
+        if (process.env.NODE_ENV === "development" && options.otpCode) {
+            console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            console.log(`  LOCAL DEV OTP FOR ${options.to}: ${options.otpCode}`);
+            console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+        } else if (process.env.NODE_ENV !== "development") {
             throw error;
         }
     }
