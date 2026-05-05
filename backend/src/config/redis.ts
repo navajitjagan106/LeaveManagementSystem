@@ -16,64 +16,48 @@ class RedisMock {
 const redisUrl = process.env.REDIS_URL;
 let instance: any;
 let isMock = false;
+const fallbackStore = new RedisMock();
 
 if (redisUrl) {
-    const options: any = {};
+    const options: any = {
+        // Stop retrying if we hit a fatal error like allowlist
+        retryStrategy: (times: number) => {
+            if (isMock) return null; // stop retrying
+            return Math.min(times * 50, 2000);
+        }
+    };
     if (redisUrl.startsWith("rediss://")) {
         options.tls = { rejectUnauthorized: false };
     }
 
     instance = new Redis(redisUrl, options);
+    
     instance.on("connect", () => {
-        console.log("Redis connected");
+        // Only log connection, don't disable mock yet until we know auth works
+        console.log("Redis socket connected");
+    });
+
+    instance.on("ready", () => {
+        console.log("Redis ready and authenticated");
         isMock = false;
     });
+
     instance.on("error", (err: any) => {
         console.error("Redis error:", err);
-        if (err.code === "ECONNREFUSED" || err.code === "ENOTFOUND" || err.message.includes("allowlist")) {
+        if (err.code === "ECONNREFUSED" || err.code === "ENOTFOUND" || err.message.includes("allowlist") || err.message.includes("permission")) {
             if (!isMock) {
-                console.warn("Falling back to in-memory store due to Redis connection failure.");
+                console.warn("Fatal Redis error. Switching to STICKY in-memory store.");
                 isMock = true;
+                // Disconnect the broken instance to stop the noise
+                instance.disconnect();
             }
         }
     });
 } else {
     console.log("No REDIS_URL found. Using in-memory store for OTPs.");
-    instance = new RedisMock();
     isMock = true;
 }
 
-// Export a proxy that routes calls to either the real Redis instance or the Mock
-const redisProxy = {
-    get: async (key: string) => {
-        if (isMock) return new RedisMock().get(key); // Simplified: always use a fresh mock or persistent one
-        try {
-            return await instance.get(key);
-        } catch {
-            return new RedisMock().get(key);
-        }
-    },
-    setex: async (key: string, ttl: number, value: string) => {
-        if (isMock) return new RedisMock().setex(key, ttl, value);
-        try {
-            return await instance.setex(key, ttl, value);
-        } catch {
-            return new RedisMock().setex(key, ttl, value);
-        }
-    },
-    del: async (key: string) => {
-        if (isMock) return new RedisMock().del(key);
-        try {
-            return await instance.del(key);
-        } catch {
-            return new RedisMock().del(key);
-        }
-    },
-    on: (event: string, callback: any) => instance.on(event, callback)
-};
-
-// To make the mock truly persistent if we fallback
-const fallbackStore = new RedisMock();
 const persistentProxy = {
     get: async (key: string) => {
         if (isMock) return fallbackStore.get(key);
@@ -102,7 +86,9 @@ const persistentProxy = {
             return fallbackStore.del(key);
         }
     },
-    on: (event: string, callback: any) => instance.on(event, callback)
+    on: (event: string, callback: any) => {
+        if (instance) instance.on(event, callback);
+    }
 };
 
 export default persistentProxy;
