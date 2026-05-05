@@ -59,8 +59,13 @@ export const verifyOtp = async (req: Request, res: Response) => {
         const dbUser = userResult.rows[0];
 
         const storedCode = await redis.get(`otp:${dbUser.id}`);
-        if (!storedCode || storedCode !== code)
+        
+        console.log(`VERIFYING OTP: user=${dbUser.email}, provided=${code}, stored=${storedCode}`);
+
+        if (!storedCode || storedCode.toString().trim() !== code.toString().trim()) {
+            console.warn(`OTP VERIFICATION FAILED: user=${dbUser.email}`);
             return res.status(400).json({ error: "Invalid or expired OTP" });
+        }
 
         await redis.del(`otp:${dbUser.id}`);
 
