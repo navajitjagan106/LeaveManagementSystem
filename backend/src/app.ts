@@ -1,12 +1,12 @@
-import express from "express";
 import dotenv from "dotenv";
+dotenv.config();
+import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import leaveRoutes from "./routes/leaveRoute"
 import authRoutes from "./routes/authRoute";
 import { authenticate } from "./middleware/authMiddleware";
 import adminRoute from "./routes/adminRoute";
-dotenv.config();
 
 const app = express();
 
