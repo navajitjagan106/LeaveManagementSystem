@@ -84,7 +84,9 @@ export const verifyOtp = async (req: Request, res: Response) => {
         };
 
         setAuthCookies(res, token, user);
-        res.json({ success: true, user });
+        // We also return the token in the body as a fallback for cross-domain environments (Netlify -> Render)
+        // where cookies might be blocked by the browser.
+        res.json({ success: true, user, token });
     } catch (err) {
         console.error("OTP VERIFY ERROR:", err);
         res.status(500).json({ error: "OTP verification failed", details: err instanceof Error ? err.message : String(err) });

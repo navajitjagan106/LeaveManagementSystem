@@ -16,6 +16,8 @@ const Sidebar: React.FC = () => {
     const handleLogout = () => {
         document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict";
         document.cookie = "user=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict";
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
         window.location.href = "/login";
     };
 

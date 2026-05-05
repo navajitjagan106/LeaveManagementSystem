@@ -29,7 +29,7 @@ const Login: React.FC = () => {
     const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     useEffect(() => {
-        const raw = getCookie("user");
+        const raw = getCookie("user") || localStorage.getItem("user");
         if (!raw) return;
         try {
             const user = JSON.parse(raw);
@@ -73,9 +73,14 @@ const Login: React.FC = () => {
         setLoading(true);
         try {
             const res = await verifyOtp({ email, code: otp });
-            const role = res.data.user?.role;
+            const { user, token } = res.data;
+            
+            // Critical for cross-domain login persistence
+            if (token) localStorage.setItem("token", token);
+            if (user) localStorage.setItem("user", JSON.stringify(user));
+
             setTimeout(() => {
-                window.location.href = role === "admin" ? "/admin" : "/dashboard";
+                window.location.href = user?.role === "admin" ? "/admin" : "/dashboard";
             }, 100);
         } catch (err: any) {
             setError(err?.response?.data?.error || "Invalid or expired OTP");

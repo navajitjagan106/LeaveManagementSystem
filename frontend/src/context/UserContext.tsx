@@ -18,9 +18,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Start with whatever the cookie has (instant render, avoids flash)
+        // Start with whatever the cookie or localStorage has
         try {
-            const raw = getCookie("user");
+            const raw = getCookie("user") || localStorage.getItem("user");
             if (raw) setUser(JSON.parse(raw));
         } catch {}
 
@@ -30,8 +30,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
                 if (res.data?.data) {
                     const freshUser = res.data.data;
 
-                    // Merge: keep cookie fields not returned by the endpoint
-                    const existingRaw = getCookie("user");
+                    // Merge: keep cached fields not returned by the endpoint
+                    const existingRaw = getCookie("user") || localStorage.getItem("user");
                     let merged = freshUser;
                     if (existingRaw) {
                         try {
@@ -39,8 +39,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
                         } catch {}
                     }
 
-                    // Update cookie for other consumers
-                    document.cookie = `user=${encodeURIComponent(JSON.stringify(merged))}; path=/; max-age=604800; SameSite=Lax`;
+                    // Update storage for other consumers
+                    localStorage.setItem("user", JSON.stringify(merged));
                     setUser(merged);
                 }
             })
