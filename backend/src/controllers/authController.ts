@@ -18,14 +18,18 @@ export const login = async (req: Request, res: Response) => {
         const { email, password } = req.body;
 
         const result = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
-        if (result.rows.length === 0)
+        if (result.rows.length === 0) {
+            console.warn(`LOGIN ATTEMPT FAILED: User not found - ${email}`);
             return res.status(400).json({ error: "Invalid credentials" });
+        }
 
         const dbUser = result.rows[0];
 
         const isMatch = await bcrypt.compare(password, dbUser.password);
-        if (!isMatch)
+        if (!isMatch) {
+            console.warn(`LOGIN ATTEMPT FAILED: Password mismatch - ${email}`);
             return res.status(400).json({ error: "Invalid credentials" });
+        }
 
         if (!dbUser.email_verified)
             return res.status(403).json({ error: "You have a pending invitation. Please accept it via the email link before logging in." });
