@@ -31,7 +31,6 @@ const App: React.FC = () => {
     <ToastProvider>
       <Router>
         <Routes>
-          <Route path="*" element={<RedirectHandler />} />
           <Route path="/login" element={<Login />} />
           <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
 
@@ -128,6 +127,7 @@ const App: React.FC = () => {
               }
             />
           </Route>
+          <Route path="*" element={<RedirectHandler />} />
         </Routes>
       </Router>
     </ToastProvider>

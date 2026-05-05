@@ -1,6 +1,6 @@
 import Redis from "ioredis";
 import dotenv from "dotenv";
-dotenv.config();
+// Redundant dotenv.config() removed (handled in app.ts)
 
 // In-memory fallback if Redis connection fails or for local dev
 class RedisMock {

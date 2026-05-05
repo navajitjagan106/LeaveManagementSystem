@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-dotenv.config();
+// Redundant dotenv.config() removed (handled in app.ts)
 
 function formatDate(date: Date | string): string {
     return new Date(date).toLocaleDateString("en-GB", {
@@ -30,7 +30,7 @@ function emailWrapper(content: string) {
     `;
 }
 
-// ── SendGrid HTTP API Helper using Native Fetch ────────────────────────────
+// ── SendGrid HTTP API Helper using Native Fetch 
 async function sendMail(options: { to: string; subject: string; html: string; otpCode?: string }) {
     const apiKey = process.env.SENDGRID_API_KEY;
     const sender = process.env.SENDER_EMAIL;
@@ -129,7 +129,8 @@ export async function sendOTPEmail(params: { email: string; name: string; code: 
 export async function sendInvitationEmail(params: {
     email: string; name: string; token: string; role: string; department?: string; inviterName?: string;
 }) {
-    const acceptUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/accept-invitation/${params.token}`;
+    const baseUrl = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/+$/, "");
+    const acceptUrl = `${baseUrl}/accept-invitation/${params.token}`;
     const html = emailWrapper(`
         <h2 style="margin-top: 0; font-size: 20px; color: ${BRAND_COLOR};">Welcome to LeaveMS!</h2>
         <p>Hello <strong>${params.name}</strong>,</p>
