@@ -3,15 +3,15 @@ import nodemailer from "nodemailer";
 const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 587,
-    secure: false, // false for 587 (STARTTLS)
+    secure: false, 
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
     },
-    family: 4, // Force IPv4 to avoid ENETUNREACH issues with IPv6
-    connectionTimeout: 10000, // 10 seconds
+    family: 4, 
+    connectionTimeout: 10000, 
     greetingTimeout: 10000,
-});
+} as any);
 
 function formatDate(date: Date | string): string {
     return new Date(date).toLocaleDateString("en-GB", {
