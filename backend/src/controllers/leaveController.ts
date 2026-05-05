@@ -3,6 +3,7 @@ import { pool } from "../config/db";
 import { calculateWorkingDays } from "../utils/calculateWorkingDays";
 import { getHolidaysinRange } from "../utils/getHolidaysinRange";
 import { sendLeaveApplicationEmail, sendLeaveApprovedEmail, sendLeaveRejectedEmail } from "../utils/emailService";
+import { fetchUserPermissions } from "../utils/permissionUtils";
 
 export const getDashboardData = async (req: Request, res: Response) => {
     try {
@@ -771,15 +772,7 @@ export const getuserdetails = async (req: Request, res: Response) => {
 
         const userDetails = result.rows[0];
 
-        const permResult = await pool.query(
-            `SELECT page_key, can_view, can_edit, can_delete
-             FROM user_page_permissions WHERE user_id = $1`,
-            [user_id]
-        );
-        const permissions: Record<string, { can_view: boolean; can_edit: boolean; can_delete: boolean }> = {};
-        permResult.rows.forEach((p) => {
-            permissions[p.page_key] = { can_view: p.can_view, can_edit: p.can_edit, can_delete: p.can_delete };
-        });
+        const permissions = await fetchUserPermissions(user_id);
 
         res.json({
             success: true,

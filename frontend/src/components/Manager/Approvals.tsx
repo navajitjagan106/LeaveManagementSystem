@@ -7,7 +7,6 @@ import { useToast } from '../common/ToastContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
-import { Separator } from '../ui/separator';
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../ui/select';
@@ -15,7 +14,7 @@ import {
     Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from '../ui/sheet';
 import {
-    Calendar, Clock, FileText, CheckCircle2, XCircle, ChevronLeft, ChevronRight, AlertCircle,
+    Calendar, Clock,  ChevronLeft, ChevronRight, AlertCircle,
 } from 'lucide-react';
 
 const STATUS_CONFIG = {
@@ -248,174 +247,127 @@ const Approvals: React.FC = () => {
                 </div>
             )}
 
-            {/* Detail Sheet */}
             <Sheet open={sheetOpen} onOpenChange={(o) => { if (!o) closeSheet(); }}>
-                <SheetContent className="overflow-y-auto">
+                <SheetContent className="overflow-y-auto sm:max-w-[540px] w-full p-0 flex flex-col border-l-0 shadow-2xl bg-white">
                     {selected && (
                         <>
-                            <SheetHeader>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-100 to-blue-100 flex items-center justify-center text-xl font-bold text-indigo-600 shrink-0">
-                                        {selected.employee_name.charAt(0).toUpperCase()}
+                            <div className="px-6 py-8 border-b border-gray-100 bg-white sticky top-0 z-10">
+                                <SheetHeader className="text-left">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-600 flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-indigo-100 shrink-0">
+                                            {selected.employee_name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <SheetTitle className="text-xl font-bold text-gray-900">{selected.employee_name}</SheetTitle>
+                                                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${STATUS_CONFIG[selected.status].badge}`}>
+                                                    {STATUS_CONFIG[selected.status].label}
+                                                </span>
+                                            </div>
+                                            <SheetDescription className="text-sm font-medium text-gray-500 mt-0.5">
+                                                {selected.department} · {selected.leave_type}
+                                            </SheetDescription>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <SheetTitle>{selected.employee_name}</SheetTitle>
-                                        <SheetDescription>{selected.department}</SheetDescription>
-                                    </div>
-                                </div>
-                            </SheetHeader>
+                                </SheetHeader>
+                            </div>
 
-                            <div className="flex-1 px-6 py-5 space-y-5">
-                                {/* Status */}
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-500">Status</span>
-                                    <span className={`text-xs font-medium px-3 py-1 rounded-full border ${STATUS_CONFIG[selected.status].badge}`}>
-                                        {STATUS_CONFIG[selected.status].label}
-                                    </span>
-                                </div>
-
-                                <Separator />
-
-                                {/* Leave type */}
-                                <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                                        <FileText size={16} className="text-blue-500" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-400">Leave Type</p>
-                                        <p className="text-sm font-medium text-gray-800">{selected.leave_type}</p>
-                                    </div>
-                                </div>
-
-                                {/* Duration */}
-                                <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
-                                        <Calendar size={16} className="text-purple-500" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-400">Duration</p>
-                                        <p className="text-sm font-medium text-gray-800">
+                            <div className="flex-1 px-8 py-8 space-y-6 overflow-y-auto">
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div className="bg-gray-50 rounded-2xl px-5 py-4 flex flex-col gap-1 border border-gray-100/50">
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Duration</span>
+                                        <span className="text-sm font-semibold text-gray-800">
                                             {fmtDate(selected.from_date)} – {fmtDate(selected.to_date)}
-                                        </p>
-                                        <p className="text-xs text-gray-400 mt-0.5">
-                                            {selected.total_days} day{selected.total_days !== 1 ? 's' : ''}
-                                        </p>
+                                        </span>
+                                        <span className="text-xs text-gray-400 mt-0.5">
+                                            {selected.total_days} day{selected.total_days !== 1 ? 's' : ''} requested
+                                        </span>
                                     </div>
+
+                                    {selected.applied_at && (
+                                        <div className="bg-gray-50 rounded-2xl px-5 py-4 flex flex-col gap-1 border border-gray-100/50">
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Applied on</span>
+                                            <span className="text-sm font-semibold text-gray-800">{fmtDateTime(selected.applied_at)}</span>
+                                        </div>
+                                    )}
                                 </div>
 
-                                {/* Applied on */}
-                                {selected.applied_at && (
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
-                                            <Clock size={16} className="text-gray-400" />
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-400">Applied on</p>
-                                            <p className="text-sm font-medium text-gray-800">{fmtDateTime(selected.applied_at)}</p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <Separator />
-
-                                {/* Reason */}
-                                <div>
-                                    <p className="text-xs text-gray-400 mb-2">Reason</p>
-                                    <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 rounded-lg px-3 py-2.5">
-                                        {selected.reason}
-                                    </p>
+                                <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100/50">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Reason for Leave</p>
+                                    <p className="text-sm text-gray-700 leading-relaxed font-medium italic">"{selected.reason}"</p>
                                 </div>
 
-                                {/* Processed info for non-pending */}
                                 {selected.approved_at && selected.status !== "pending" && (
-                                    <>
-                                        <Separator />
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${selected.status === "approved" ? "bg-green-50" : "bg-red-50"}`}>
-                                                {selected.status === "approved"
-                                                    ? <CheckCircle2 size={16} className="text-green-500" />
-                                                    : <XCircle size={16} className="text-red-500" />
-                                                }
-                                            </div>
-                                            <div>
-                                                <p className="text-xs text-gray-400">
-                                                    {selected.status === "approved" ? "Approved on" : "Rejected on"}
-                                                </p>
-                                                <p className="text-sm font-medium text-gray-800">{fmtDateTime(selected.approved_at)}</p>
-                                            </div>
-                                        </div>
-
+                                    <div className={`p-6 rounded-2xl border ${selected.status === "approved" ? "bg-green-50 border-green-100/50" : "bg-red-50 border-red-100/50"}`}>
+                                        <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${selected.status === "approved" ? "text-green-500" : "text-red-500"}`}>
+                                            {selected.status === "approved" ? "Approval Details" : "Rejection Details"}
+                                        </p>
+                                        <p className="text-sm font-semibold text-gray-800">Processed on {fmtDateTime(selected.approved_at)}</p>
                                         {selected.status === "rejected" && selected.rejection_reason && (
-                                            <div className="bg-red-50 border border-red-100 rounded-lg px-4 py-3">
-                                                <p className="text-xs text-red-400 mb-1">Rejection Reason</p>
-                                                <p className="text-sm text-red-700 leading-relaxed">{selected.rejection_reason}</p>
-                                            </div>
+                                            <p className="text-sm text-red-700 mt-2 italic font-medium">"{selected.rejection_reason}"</p>
                                         )}
-                                    </>
+                                    </div>
                                 )}
 
-                                {/* Reject textarea */}
                                 {showRejectInput && selected.status === "pending" && (
-                                    <>
-                                        <Separator />
-                                        <div>
-                                            <p className="text-xs text-gray-500 mb-2">Rejection reason <span className="text-red-400">*</span></p>
-                                            <Textarea
-                                                value={rejectReason}
-                                                onChange={e => setRejectReason(e.target.value)}
-                                                placeholder="e.g. Insufficient leave balance, team availability..."
-                                                rows={3}
-                                                className="text-sm resize-none"
-                                            />
-                                        </div>
-                                    </>
+                                    <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
+                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-1">Rejection Reason <span className="text-red-400">*</span></label>
+                                        <Textarea
+                                            value={rejectReason}
+                                            onChange={e => setRejectReason(e.target.value)}
+                                            placeholder="Please provide a reason for rejection..."
+                                            rows={3}
+                                            className="text-sm resize-none rounded-2xl border-gray-200 focus:ring-red-400 focus:border-red-400"
+                                        />
+                                    </div>
                                 )}
                             </div>
 
-                            {/* Footer actions — only for pending */}
                             {selected.status === "pending" && (
-                                <SheetFooter>
-                                    {showRejectInput ? (
-                                        <>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="flex-1"
-                                                onClick={() => { setShowRejectInput(false); setRejectReason(''); }}
-                                            >
-                                                Cancel
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                disabled={!rejectReason.trim() || isProcessing}
-                                                onClick={() => handleReject(selected.id)}
-                                                className="flex-1 bg-red-500 hover:bg-red-600 text-white"
-                                            >
-                                                {isProcessing ? "Rejecting..." : "Confirm Reject"}
-                                            </Button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                disabled={isProcessing}
-                                                onClick={() => setShowRejectInput(true)}
-                                                className="flex-1 border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600"
-                                            >
-                                                Reject
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                disabled={isProcessing}
-                                                onClick={() => handleApprove(selected.id)}
-                                                className="flex-1 bg-green-500 hover:bg-green-600 text-white"
-                                            >
-                                                {isProcessing ? "Approving..." : "Approve"}
-                                            </Button>
-                                        </>
-                                    )}
-                                </SheetFooter>
+                                <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50">
+                                    <SheetFooter className="flex-row sm:justify-end gap-3">
+                                        {showRejectInput ? (
+                                            <>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="lg"
+                                                    className="flex-1 rounded-xl text-gray-500"
+                                                    onClick={() => { setShowRejectInput(false); setRejectReason(''); }}
+                                                >
+                                                    Cancel
+                                                </Button>
+                                                <Button
+                                                    size="lg"
+                                                    disabled={!rejectReason.trim() || isProcessing}
+                                                    onClick={() => handleReject(selected.id)}
+                                                    className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-lg shadow-red-100"
+                                                >
+                                                    {isProcessing ? "Rejecting..." : "Confirm Reject"}
+                                                </Button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Button
+                                                    variant="outline"
+                                                    size="lg"
+                                                    disabled={isProcessing}
+                                                    onClick={() => setShowRejectInput(true)}
+                                                    className="flex-1 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-xl"
+                                                >
+                                                    Reject
+                                                </Button>
+                                                <Button
+                                                    size="lg"
+                                                    disabled={isProcessing}
+                                                    onClick={() => handleApprove(selected.id)}
+                                                    className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-lg shadow-green-100"
+                                                >
+                                                    {isProcessing ? "Approving..." : "Approve"}
+                                                </Button>
+                                            </>
+                                        )}
+                                    </SheetFooter>
+                                </div>
                             )}
                         </>
                     )}

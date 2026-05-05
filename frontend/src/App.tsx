@@ -14,6 +14,7 @@ import EmployeeDirectory from "./components/pages/EmployeeDirectory";
 import EmployeeProfile from "./components/pages/EmployeeProfile";
 import RedirectHandler from "./components/common/ReDirectHandler";
 import AcceptInvitation from "./components/pages/AcceptInvitation";
+import HolidaysPage from "./components/pages/HolidaysPage";
 import { ToastProvider } from "./components/common/ToastContext";
 
 // Admin pages
@@ -48,6 +49,7 @@ const App: React.FC = () => {
             <Route path="profile" element={<Profile />} />
             <Route path="leave-balance" element={<LeaveBalance />} />
             <Route path="team-view" element={<TeamView />} />
+            <Route path="holidays" element={<HolidaysPage />} />
 
             <Route
               path="approvals"
@@ -58,6 +60,7 @@ const App: React.FC = () => {
               }
             />
             <Route
+            
               path="employees"
               element={
                 <ProtectedRoute allowedRoles={["manager", "admin"]} requiredPage="employee_directory">
@@ -74,7 +77,7 @@ const App: React.FC = () => {
               }
             />
 
-            {/* ── Admin pages ──────────────────────────────────────── */}
+            {/* ── Admin pages  */}
             <Route
               path="admin"
               element={

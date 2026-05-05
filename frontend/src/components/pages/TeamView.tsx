@@ -383,37 +383,42 @@ const TeamView: React.FC = () => {
             </Card>
 
             <Sheet open={!!selectedLeave} onOpenChange={(open) => { if (!open) setSelectedLeave(null); }}>
-                <SheetContent className="overflow-y-auto">
+                <SheetContent className="overflow-y-auto sm:max-w-[540px] w-full p-0 flex flex-col border-l-0 shadow-2xl bg-white">
                     {selectedLeave && (() => {
-                        const initials = selectedLeave.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
+                        const name = selectedLeave.name;
+                        const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
                         return (
                             <>
-                                <SheetHeader>
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#5746AF] to-[#302178] flex items-center justify-center text-white text-base font-bold flex-shrink-0">
-                                            {initials}
+                                <div className="px-6 py-8 border-b border-gray-100 bg-white sticky top-0 z-10">
+                                    <SheetHeader className="text-left">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-indigo-100 flex-shrink-0">
+                                                {initials}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <SheetTitle className="text-xl font-bold text-gray-900">{name}</SheetTitle>
+                                                <SheetDescription className="text-sm font-medium text-gray-500 mt-0.5">
+                                                    {selectedLeave.duration_type === "half" ? "Half Day Leave" : "Full Day Leave"} · {selectedLeave.leave_type}
+                                                </SheetDescription>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <SheetTitle>{selectedLeave.name}</SheetTitle>
-                                            <SheetDescription>
-                                                {selectedLeave.duration_type === "half" ? "Half Day Leave" : "Full Day Leave"} · {selectedLeave.leave_type}
-                                            </SheetDescription>
-                                        </div>
-                                    </div>
-                                </SheetHeader>
+                                    </SheetHeader>
+                                </div>
 
-                                <div className="px-6 py-5 space-y-1">
-                                    {DRAWER_FIELDS.map(({ label, render }) => (
-                                        <div key={label} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
-                                            <span className="text-sm text-gray-400">{label}</span>
-                                            <span className="text-sm font-semibold text-gray-800">{render(selectedLeave)}</span>
-                                        </div>
-                                    ))}
+                                <div className="px-8 py-8 space-y-6 flex-1 overflow-y-auto">
+                                    <div className="grid grid-cols-1 gap-4">
+                                        {DRAWER_FIELDS.map(({ label, render }) => (
+                                            <div key={label} className="bg-gray-50 rounded-2xl px-5 py-4 flex flex-col gap-1 transition-colors hover:bg-gray-100/70 border border-gray-100/50">
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{label}</span>
+                                                <span className="text-sm font-semibold text-gray-800">{render(selectedLeave)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
 
                                     {isManagerOrAdmin && selectedLeave.reason && (
-                                        <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-100">
-                                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Reason</p>
-                                            <p className="text-sm text-gray-700 leading-relaxed">{selectedLeave.reason}</p>
+                                        <div className="p-6 rounded-2xl bg-indigo-50/40 border border-indigo-100/50">
+                                            <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-3">Reason for Leave</p>
+                                            <p className="text-sm text-gray-700 leading-relaxed font-medium italic">"{selectedLeave.reason}"</p>
                                         </div>
                                     )}
                                 </div>

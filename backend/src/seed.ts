@@ -194,14 +194,13 @@ const seed = async () => {
     console.log("Seeding users...");
     await pool.query(`
       INSERT INTO users (id, name, email, password, role, department, email_verified, phone, gender, date_of_birth, location) VALUES
-      (3, 'Navajit', 'navajit@gmail.com', '${HASH}', 'admin',    NULL,       true, '+91-9800001111', 'Male',   '1988-06-10', 'Chennai, TN'),
-      (8, 'Nava',    'nava@gmail.com',    '${HASH}', 'manager',  'Products', true, '+91-9800002222', 'Male',   '1990-02-14', 'Bangalore, KA'),
-      (2, 'Manager', 'manager@gmail.com', '${HASH}', 'manager',  'Products', true, '+91-9800003333', 'Male',   '1992-08-30', 'Hyderabad, TS'),
-      (4, 'Alice',   'alice@gmail.com',   '${HASH}', 'employee', 'Products', true, '+91-9800004444', 'Female', '1998-03-15', 'Chennai, TN'),
-      (5, 'Bob',     'bob@gmail.com',     '${HASH}', 'employee', 'Products', true, '+91-9800005555', 'Male',   '1995-07-22', 'Bangalore, KA'),
-      (6, 'Charlie', 'charlie@gmail.com', '${HASH}', 'employee', 'Products', true, '+91-9800006666', 'Male',   '1997-11-05', 'Mumbai, MH'),
-      (7, 'Dragon',  'dragon@gmail.com',  '${HASH}', 'employee', 'Products', true, '+91-9800007777', 'Male',   '1999-01-28', 'Pune, MH'),
-      (9, 'Sundar',  'sundar@gmail.com',  '${HASH}', 'employee', 'Products', true, '+91-9800008888', 'Male',   '1996-09-12', 'Coimbatore, TN');
+      (3, 'Navajit', 'navajitjagan@gmail.com', '${HASH}', 'admin',    NULL,       true, '+91-9800001111', 'Male',   '1988-06-10', 'Chennai, TN'),
+      (8, 'Nava',    'vayoje4984@inreur.com', '${HASH}', 'manager',  'Products', true, '+91-9800002222', 'Male',   '1990-02-14', 'Bangalore, KA'),
+      (2, 'Manager', 'rerofas236@inreur.com', '${HASH}', 'manager',  'Products', true, '+91-9800003333', 'Male',   '1992-08-30', 'Hyderabad, TS'),
+      (4, 'Alice',   'wefij92281@inreur.com', '${HASH}', 'employee', 'Products', true, '+91-9800004444', 'Female', '1998-03-15', 'Chennai, TN'),
+      (5, 'Bob',     'pemaf44154@kynninc.com', '${HASH}', 'employee', 'Products', true, '+91-9800005555', 'Male',   '1995-07-22', 'Bangalore, KA'),
+      (6, 'Charlie', 'lapay83151@gixpos.com', '${HASH}', 'employee', 'Products', true, '+91-9800006666', 'Male',   '1997-11-05', 'Mumbai, MH'),
+      (7, 'Dragon',  'vowodo6135@justnapa.com', '${HASH}', 'employee', 'Products', true, '+91-9800007777', 'Male',   '1999-01-28', 'Pune, MH');
     `);
 
     await pool.query(`
@@ -211,7 +210,6 @@ const seed = async () => {
       UPDATE users SET manager_id = 2, policy_id = 1 WHERE id = 5;
       UPDATE users SET manager_id = 2, policy_id = 1 WHERE id = 6;
       UPDATE users SET manager_id = 2, policy_id = 1 WHERE id = 7;
-      UPDATE users SET manager_id = 8, policy_id = 1 WHERE id = 9;
     `);
 
     // ── Leave Balances (from policy rules) 
@@ -245,9 +243,7 @@ const seed = async () => {
       -- Alice → Manager (id=2): Sick Leave pending
       (4, 2, '2026-04-29', '2026-04-29', 1, 'Dental procedure recovery',                   'pending',  2, NULL, NULL,               NULL,                              'full', '2026-04-21 08:30:00'),
       -- Bob → Manager (id=2): Floater Leave approved
-      (5, 4, '2026-04-14', '2026-04-14', 1, 'Tamil New Year celebration',                  'approved', 2, 2, '2026-04-12 10:00:00', NULL,                              'full', '2026-04-11 09:00:00'),
-      -- Sundar → Nava (id=8): Casual Leave approved
-      (9, 1, '2026-04-02', '2026-04-02', 1, 'Personal work',                               'approved', 8, 8, '2026-04-01 10:00:00', NULL,                              'full', '2026-03-31 15:00:00');
+      (5, 4, '2026-04-14', '2026-04-14', 1, 'Tamil New Year celebration',                  'approved', 2, 2, '2026-04-12 10:00:00', NULL,                              'full', '2026-04-11 09:00:00');
     `);
 
     // ── Update used counts from approved leaves 
@@ -313,12 +309,10 @@ const seed = async () => {
       (2, 'Dragon has applied for Casual Leave on Apr 28.',     false, '2026-04-20 10:05:00'),
       (8, 'Manager has applied for Earned Leave on May 5–9.',   true,  '2026-04-25 11:05:00'),
       (2, 'Alice has applied for Sick Leave on Apr 29.',        false, '2026-04-21 08:35:00'),
-      (8, 'Sundar has applied for Casual Leave on Apr 2.',      true,  '2026-03-31 15:05:00'),
       (5, 'Your Sick Leave for Mar 10–11 has been approved.',   true,  '2026-03-09 10:20:00'),
       (4, 'Your Casual Leave for Mar 24 has been approved.',    true,  '2026-03-23 11:35:00'),
       (6, 'Your Earned Leave for Apr 7–9 has been rejected.',   true,  '2026-04-04 09:05:00'),
-      (2, 'Your Earned Leave for May 5–9 has been approved.',   true,  '2026-04-28 09:35:00'),
-      (9, 'Your Casual Leave for Apr 2 has been approved.',     true,  '2026-04-01 10:05:00');
+      (2, 'Your Earned Leave for May 5–9 has been approved.',   true,  '2026-04-28 09:35:00');
     `);
 
     // ── Fix sequences ─────────────────────────────────────────────────────────
@@ -342,18 +336,17 @@ const seed = async () => {
   All accounts use password: Pass_1234
 
   ADMIN
-    navajit@gmail.com   (admin)
+    navajitjagan@gmail.com   (admin)
 
   MANAGERS
-    nava@gmail.com      (Products — reports to Navajit)
-    manager@gmail.com   (Products — reports to Nava)
+    vayoje4984@inreur.com    (Products — reports to Navajit)
+    rerofas236@inreur.com    (Products — reports to Nava)
 
   EMPLOYEES
-    alice@gmail.com     (Products — reports to Manager)
-    bob@gmail.com       (Products — reports to Manager)
-    charlie@gmail.com   (Products — reports to Manager)
-    dragon@gmail.com    (Products — reports to Manager)
-    sundar@gmail.com    (Products — reports to Nava)
+    wefij92281@inreur.com    (Products — reports to Manager)
+    pemaf44154@kynninc.com    (Products — reports to Manager)
+    lapay83151@gixpos.com    (Products — reports to Manager)
+    vowodo6135@justnapa.com    (Products — reports to Manager)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     `);
 

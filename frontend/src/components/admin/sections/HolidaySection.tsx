@@ -3,9 +3,17 @@ import { getHolidays } from "../../../api/leaveApi";
 import { addHoliday, deleteHoliday } from "../../../api/adminApi";
 import { Trash2, Plus, CalendarCheck } from "lucide-react";
 import { useToast } from "../../common/ToastContext";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "../../ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+  SheetClose,
+  SheetTrigger,
+} from "../../ui/sheet";
 import { Button } from "../../ui/button";
-import { Field, FieldGroup } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
 import { getUserLocal } from "../../../utils/getUser";
@@ -84,47 +92,64 @@ const HolidaySection = () => {
           <p className="text-sm text-gray-400">{upcoming.length} upcoming this year</p>
         </div>
         {canEdit && (
-          <Dialog>
-            <DialogTrigger asChild>
-              <button className="flex items-center gap-1.5 bg-purple-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-purple-700 transition">
+          <Sheet>
+            <SheetTrigger asChild>
+              <button className="flex items-center gap-1.5 bg-purple-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-purple-700 transition shadow-lg shadow-purple-100">
                 <Plus size={14} /> Add Holiday
               </button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>New Holiday</DialogTitle>
-                <DialogDescription>Add a public holiday to the calendar.</DialogDescription>
-              </DialogHeader>
-              <FieldGroup>
-                <Field>
-                  <Label htmlFor="h-name">Holiday name</Label>
-                  <Input
-                    id="h-name"
-                    placeholder="e.g. Republic Day"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </Field>
-                <Field>
-                  <Label htmlFor="h-date">Date</Label>
-                  <Input
-                    id="h-date"
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                  />
-                </Field>
-              </FieldGroup>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline">Cancel</Button>
-                </DialogClose>
-                <Button onClick={handleAdd} disabled={loading}>
-                  {loading ? "Adding..." : "Confirm"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            </SheetTrigger>
+            <SheetContent className="overflow-y-auto sm:max-w-[540px] w-full p-0 flex flex-col border-l-0 shadow-2xl bg-white">
+              <div className="px-6 py-8 border-b border-gray-100 bg-white sticky top-0 z-10">
+                <SheetHeader className="text-left">
+                  <SheetTitle className="text-xl font-bold text-gray-900">New Holiday</SheetTitle>
+                  <SheetDescription className="text-sm font-medium text-gray-500 mt-1">
+                    Add a public holiday to the company calendar. This will be visible to all employees.
+                  </SheetDescription>
+                </SheetHeader>
+              </div>
+
+              <div className="px-8 py-8 flex-1 flex flex-col gap-8 overflow-y-auto">
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="h-name" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Holiday Name</Label>
+                    <Input
+                      id="h-name"
+                      placeholder="e.g. Republic Day"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="rounded-xl border-gray-200 h-11"
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <Label htmlFor="h-date" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Date</Label>
+                    <Input
+                      id="h-date"
+                      type="date"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      className="rounded-xl border-gray-200 h-11"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50">
+                <SheetFooter className="flex-row sm:justify-end gap-3">
+                  <SheetClose asChild>
+                    <Button variant="ghost" size="lg" className="flex-1 rounded-xl text-gray-500 font-medium">Cancel</Button>
+                  </SheetClose>
+                  <Button 
+                    onClick={handleAdd} 
+                    disabled={loading}
+                    size="lg"
+                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-lg shadow-purple-100 font-bold"
+                  >
+                    {loading ? "Adding..." : "Add Holiday"}
+                  </Button>
+                </SheetFooter>
+              </div>
+            </SheetContent>
+          </Sheet>
         )}
       </div>
 

@@ -2,6 +2,9 @@ import { Request, Response } from "express";
 import { pool } from "../config/db";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { setAuthCookies } from "../utils/authUtils";
+import { fetchUserPermissions } from "../utils/permissionUtils";
 import { sendInvitationEmail } from "../utils/emailService";
 
 const MIN_EXPIRY_HOURS = 1;
@@ -178,7 +181,6 @@ export const acceptInvitation = async (req: Request, res: Response) => {
         const invitation = inv.rows[0];
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // CREATE USER (MAIN CHANGE)
         const user = await pool.query(
             `INSERT INTO users 
             (name, email, password, role, department, manager_id, policy_id, email_verified)
@@ -224,7 +226,25 @@ export const acceptInvitation = async (req: Request, res: Response) => {
             [invitation.id]
         );
 
-        res.json({ success: true });
+        // Auto-login the user
+        const dbUser = user.rows[0];
+        const tokenForUser = jwt.sign(
+            { id: dbUser.id, role: dbUser.role, name: dbUser.name, email: dbUser.email },
+            process.env.JWT_SECRET as string,
+            { expiresIn: process.env.JWT_EXPIRES_IN as any }
+        );
+
+        const permissions = await fetchUserPermissions(dbUser.id);
+
+        const userData = {
+            id: dbUser.id, name: dbUser.name, email: dbUser.email,
+            role: dbUser.role, manager_id: dbUser.manager_id, department: dbUser.department,
+            permissions,
+        };
+
+        setAuthCookies(res, tokenForUser, userData);
+
+        res.json({ success: true, user: userData });
 
     } catch (err) {
         console.error(err);

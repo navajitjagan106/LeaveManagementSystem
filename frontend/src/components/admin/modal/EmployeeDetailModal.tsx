@@ -3,6 +3,7 @@ import {
     deleteEmployee, getuserBalance, getEmployees, getPolicies,
     reassignPolicy, resetLeaveBalance, updateManager
 } from "../../../api/adminApi";
+import { useUser } from "../../../context/UserContext";
 import { useToast } from "../../common/ToastContext";
 import { ManagerCombobox } from "../../common/ManagerCombobox";
 import {
@@ -30,7 +31,11 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
     <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">{children}</p>
 );
 
-const EmployeeDetailsModal = ({ user, canEdit = true, canDelete = true, onClose, onSuccess }: any) => {
+const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
+    const { user: currentUser } = useUser();
+    const isAdmin = currentUser?.role === "admin";
+    const canEdit = isAdmin;
+    const canDelete = isAdmin;
     const toast = useToast();
 
     const [balances, setBalances]             = useState<any[]>([]);
@@ -142,26 +147,28 @@ const EmployeeDetailsModal = ({ user, canEdit = true, canDelete = true, onClose,
 
     return (
         <Sheet open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
-            <SheetContent className="overflow-y-auto">
+            <SheetContent className="overflow-y-auto sm:max-w-[540px] w-full p-0 flex flex-col border-l-0 shadow-2xl">
                 {/* ── Header ── */}
-                <SheetHeader>
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-purple-600 flex items-center justify-center text-white font-bold text-base flex-shrink-0">
-                            {initials(user.name)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <SheetTitle className="text-base">{user.name}</SheetTitle>
-                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${roleColors[user.role] || roleColors.employee}`}>
-                                    {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                                </span>
+                <div className="px-6 py-6 border-b border-gray-100 bg-white sticky top-0 z-10">
+                    <SheetHeader className="text-left">
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-purple-200 flex-shrink-0">
+                                {initials(user.name)}
                             </div>
-                            <SheetDescription>{user.email}</SheetDescription>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <SheetTitle className="text-lg font-bold text-gray-900">{user.name}</SheetTitle>
+                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${roleColors[user.role] || roleColors.employee}`}>
+                                        {user.role}
+                                    </span>
+                                </div>
+                                <SheetDescription className="text-sm text-gray-500 font-medium mt-0.5">{user.email}</SheetDescription>
+                            </div>
                         </div>
-                    </div>
-                </SheetHeader>
+                    </SheetHeader>
+                </div>
 
-                <div className="flex flex-col gap-6 px-6 py-5 flex-1">
+                <div className="flex flex-col gap-8 px-8 py-8 flex-1 bg-white">
 
                     {/* ── Profile ── */}
                     <div>

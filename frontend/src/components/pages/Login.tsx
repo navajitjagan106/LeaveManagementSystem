@@ -73,8 +73,6 @@ const Login: React.FC = () => {
         setLoading(true);
         try {
             const res = await verifyOtp({ email, code: otp });
-            // Full page reload so the browser fully commits Set-Cookie headers
-            // before any authenticated API calls fire from the new page.
             const role = res.data.user?.role;
             setTimeout(() => {
                 window.location.href = role === "admin" ? "/admin" : "/dashboard";

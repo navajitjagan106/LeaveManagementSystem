@@ -6,44 +6,12 @@ import { validatePassword } from "../utils/passwordValidator";
 import { sendOTPEmail } from "../utils/emailService";
 import crypto from "crypto";
 import redis from "../config/redis";
+import { setAuthCookies } from "../utils/authUtils";
+import { fetchUserPermissions } from "../utils/permissionUtils";
 
 const OTP_TTL = 600; // 10 minutes in seconds
-const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
-const isProduction = process.env.NODE_ENV === "production";
 
-const setAuthCookies = (res: Response, token: string, user: object) => {
-    res.cookie("token", token, {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: "lax",
-        maxAge: COOKIE_MAX_AGE,
-        path: "/",
-    });
-    res.cookie("user", JSON.stringify(user), {
-        httpOnly: false,
-        secure: isProduction,
-        sameSite: "lax",
-        maxAge: COOKIE_MAX_AGE,
-        path: "/",
-    });
-};
 
-export const register = async (req: Request, res: Response) => {
-    try {
-        const { name, email, password, role } = req.body;
-        const validation = validatePassword(password);
-        if (!validation.valid) return res.status(400).json({ error: validation.errors.join(", ") });
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const result = await pool.query(
-            `INSERT INTO users (name, email, password, role, email_verified) VALUES ($1, $2, $3, $4, true) RETURNING id, name, email, role`,
-            [name, email, hashedPassword, role || "employee"]
-        );
-        res.json(result.rows[0]);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Registration failed" });
-    }
-};
 
 export const login = async (req: Request, res: Response) => {
     try {
@@ -70,8 +38,8 @@ export const login = async (req: Request, res: Response) => {
 
         res.json({ step: "otp_required", email: dbUser.email });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Login failed" });
+        console.error("LOGIN ERROR:", err);
+        res.status(500).json({ error: "Login failed", details: err instanceof Error ? err.message : String(err) });
     }
 };
 
@@ -98,15 +66,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
             { expiresIn: process.env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] }
         );
 
-        const permResult = await pool.query(
-            `SELECT page_key, can_view, can_edit, can_delete
-             FROM user_page_permissions WHERE user_id = $1`,
-            [dbUser.id]
-        );
-        const permissions: Record<string, { can_view: boolean; can_edit: boolean; can_delete: boolean }> = {};
-        permResult.rows.forEach((p) => {
-            permissions[p.page_key] = { can_view: p.can_view, can_edit: p.can_edit, can_delete: p.can_delete };
-        });
+        const permissions = await fetchUserPermissions(dbUser.id);
 
         const user = {
             id: dbUser.id, name: dbUser.name, email: dbUser.email,
@@ -117,8 +77,8 @@ export const verifyOtp = async (req: Request, res: Response) => {
         setAuthCookies(res, token, user);
         res.json({ success: true, user });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "OTP verification failed" });
+        console.error("OTP VERIFY ERROR:", err);
+        res.status(500).json({ error: "OTP verification failed", details: err instanceof Error ? err.message : String(err) });
     }
 };
 

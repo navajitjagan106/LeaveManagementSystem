@@ -5,9 +5,12 @@ import PageHeader from '../common/PageHeader';
 import Loader from '../common/Loader';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
-import { MoreVertical, X, Palmtree } from 'lucide-react';
+import { MoreVertical,  Palmtree } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import { useToast } from '../common/ToastContext';
+import {
+    Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+} from "../ui/sheet";
 
 type Status = 'approved' | 'pending' | 'rejected';
 type DrawerField = {
@@ -432,82 +435,77 @@ const LeaveHistory: React.FC = () => {
                 </div>
             )}
 
-            {selectedLeave && (
-                <>
-                    <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setSelectedLeave(null)} />
-                    <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-50 flex flex-col">
+            <Sheet open={!!selectedLeave} onOpenChange={(open) => { if (!open) setSelectedLeave(null); }}>
+                <SheetContent className="overflow-y-auto sm:max-w-[540px] w-full p-0 flex flex-col border-l-0 shadow-2xl bg-white">
+                    {selectedLeave && (
+                        <>
+                            <div className="px-6 py-8 border-b border-gray-100 bg-white sticky top-0 z-10">
+                                <SheetHeader className="text-left">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#5746AF] to-indigo-700 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-indigo-100 flex-shrink-0">
+                                            {selectedLeave.user_name?.charAt(0).toUpperCase() || "Y"}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <SheetTitle className="text-xl font-bold text-gray-900">Leave Details</SheetTitle>
+                                                <StatusBadge status={selectedLeave.status as Status} />
+                                            </div>
+                                            <SheetDescription className="text-sm font-medium text-gray-500 mt-1">
+                                                {selectedLeave.leave_type} · Requested by {selectedLeave.user_name || "You"}
+                                            </SheetDescription>
+                                        </div>
+                                    </div>
+                                </SheetHeader>
+                            </div>
 
-                        {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-4 border-b">
-                            <h2 className="text-lg font-semibold text-gray-800">Leave Details</h2>
-                            <button
-                                onClick={() => setSelectedLeave(null)}
-                                className="p-1 rounded hover:bg-gray-100 text-gray-500"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Status</span>
-                                <div className="flex flex-col items-end gap-0.5">
-                                    <StatusBadge status={selectedLeave.status as Status} />
-                                    {selectedLeave.approved_by_name && selectedLeave.status !== 'pending' && (
-                                        <span className="text-xs text-gray-400">
-                                            by {selectedLeave.approved_by_name}
+                            <div className="px-8 py-8 space-y-8 flex-1 overflow-y-auto">
+                                <div className="grid grid-cols-1 gap-4">
+                                    {FIELDS.filter(({ key }) => selectedLeave[key as keyof Leave]).map(({ label, key, format }) => (
+                                        <div key={key} className="bg-gray-50 rounded-2xl px-5 py-4 flex flex-col gap-1 transition-colors hover:bg-gray-100/70 border border-gray-100/50">
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{label}</span>
+                                            <span className="text-sm font-semibold text-gray-800">
+                                                {format
+                                                    ? formatDate(selectedLeave[key as keyof Leave] as string)
+                                                    : selectedLeave[key as keyof Leave] as string}
+                                            </span>
+                                        </div>
+                                    ))}
+                                    <div className="bg-gray-50 rounded-2xl px-5 py-4 flex flex-col gap-1 border border-gray-100/50">
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Days</span>
+                                        <span className="text-sm font-semibold text-gray-800">
+                                            {selectedLeave.total_days} day{selectedLeave.total_days > 1 ? 's' : ''}
                                         </span>
-                                    )}
+                                    </div>
                                 </div>
+
+                                <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100/50">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Reason for Leave</p>
+                                    <p className="text-sm text-gray-700 leading-relaxed font-medium italic">"{selectedLeave.reason}"</p>
+                                </div>
+
+                                {selectedLeave.rejection_reason && (
+                                    <div className="p-6 rounded-2xl bg-red-50 border border-red-100/50">
+                                        <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-3">Manager's Note</p>
+                                        <p className="text-sm text-red-700 leading-relaxed font-medium italic">"{selectedLeave.rejection_reason}"</p>
+                                    </div>
+                                )}
                             </div>
 
-                            {FIELDS.filter(({ key }) => selectedLeave[key]).map(({ label, key, format }) => (
-                                <div key={key} className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-500">{label}</span>
-                                    <span className="font-medium text-gray-800">
-                                        {format
-                                            ? formatDate(selectedLeave[key] as string)
-                                            : selectedLeave[key]}
-                                    </span>
+                            {selectedLeave.status === 'pending' && (
+                                <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50">
+                                    <button
+                                        onClick={handleCancel}
+                                        disabled={cancelling}
+                                        className="w-full py-3.5 rounded-2xl bg-red-600 text-white text-sm font-bold shadow-lg shadow-red-100 hover:bg-red-700 transition-all disabled:opacity-50"
+                                    >
+                                        {cancelling ? 'Cancelling Request...' : 'Cancel Leave Request'}
+                                    </button>
                                 </div>
-                            ))}
-
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Total Days</span>
-                                <span className="font-medium text-gray-800">
-                                    {selectedLeave.total_days} day{selectedLeave.total_days > 1 ? 's' : ''}
-                                </span>
-                            </div>
-
-                            {[
-                                { label: 'Reason', value: selectedLeave.reason },
-                                ...(selectedLeave.rejection_reason
-                                    ? [{ label: "Manager's Note", value: selectedLeave.rejection_reason }]
-                                    : []),
-                            ].map(({ label, value }) => (
-                                <div key={label} className="border-t pt-4">
-                                    <p className="text-sm text-gray-500 mb-2">{label}</p>
-                                    <p className={`text-sm leading-relaxed ${label === "Manager's Note" ? 'text-red-600' : 'text-gray-800'}`}>
-                                        {value}
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-
-                        {selectedLeave.status === 'pending' && (
-                            <div className="px-6 py-4 border-t">
-                                <button
-                                    onClick={handleCancel}
-                                    disabled={cancelling}
-                                    className="w-full py-2.5 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-50 transition"
-                                >
-                                    {cancelling ? 'Cancelling...' : 'Cancel Leave Request'}
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </>
-            )}
+                            )}
+                        </>
+                    )}
+                </SheetContent>
+            </Sheet>
         </div>
     );
 };

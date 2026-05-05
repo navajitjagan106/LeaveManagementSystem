@@ -38,13 +38,13 @@ const DashBoard: React.FC = () => {
     if (loading || !data) return <div className="flex justify-center items-center h-48"><Loader /></div>;
 
     const stats = [
-        { label: "Available",      value: data.leave_balance.reduce((s, i) => s + ((i as any).is_unlimited ? 0 : Math.max(i.remaining, 0)), 0), icon: CalendarCheck, accent: "#10b981", bg: "#d1fae5" },
-        { label: "Used This Year", value: data.leave_balance.reduce((s, i) => s + i.used, 0),                                                   icon: CalendarMinus, accent: "#f59e0b", bg: "#fef3c7" },
-        { label: "Pending",        value: data.pending_requests,                                                                                  icon: Clock,         accent: "#3b82f6", bg: "#dbeafe" },
-        { label: "Total Entitled", value: data.leave_balance.reduce((s, i) => s + ((i as any).is_unlimited ? 0 : i.total_allocated), 0),         icon: BookOpen,      accent: "#5746AF", bg: "#ede9fe" },
+        { label: "Available", value: data.leave_balance.reduce((s, i) => s + ((i as any).is_unlimited ? 0 : Math.max(i.remaining, 0)), 0), icon: CalendarCheck, accent: "#10b981", bg: "#d1fae5" },
+        { label: "Used This Year", value: data.leave_balance.reduce((s, i) => s + i.used, 0), icon: CalendarMinus, accent: "#f59e0b", bg: "#fef3c7" },
+        { label: "Pending", value: data.pending_requests, icon: Clock, accent: "#3b82f6", bg: "#dbeafe" },
+        { label: "Total Entitled", value: data.leave_balance.reduce((s, i) => s + ((i as any).is_unlimited ? 0 : i.total_allocated), 0), icon: BookOpen, accent: "#5746AF", bg: "#ede9fe" },
     ];
 
-    const totalUsed  = data.leave_balance.reduce((s, i) => s + i.used, 0);
+    const totalUsed = data.leave_balance.reduce((s, i) => s + i.used, 0);
     const totalAlloc = data.leave_balance.reduce((s, i) => s + i.total_allocated, 0);
     const pieData = data.leave_balance
         .filter(lb => lb.used > 0)
@@ -56,12 +56,11 @@ const DashBoard: React.FC = () => {
         return acc;
     }, {} as Record<string, { label: string; color: string }>);
 
-    const hour     = today.getHours();
+    const hour = today.getHours();
     const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
-    // Donut grows with number of leave types (more bars = taller section = bigger donut looks right)
-    const leaveCount  = data.leave_balance.length;
-    const donutSize   = Math.min(220, Math.max(160, 130 + leaveCount * 12));
+    const leaveCount = data.leave_balance.length;
+    const donutSize = Math.min(220, Math.max(160, 130 + leaveCount * 12));
     const innerRadius = Math.round(donutSize * 0.30);
     const outerRadius = Math.round(donutSize * 0.46);
 
@@ -87,14 +86,12 @@ const DashBoard: React.FC = () => {
                 <CalendarCheck size={40} className="text-purple-300 opacity-40 hidden md:block" />
             </div>
 
-            {/* Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {stats.map((s) => (
                     <StatCard key={s.label} label={s.label} value={s.value} icon={s.icon} accent={s.accent} bg={s.bg} />
                 ))}
             </div>
 
-            {/* Leave Balance + Side column */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
 
                 {/* Leave Balance — 3 cols */}
@@ -211,7 +208,15 @@ const DashBoard: React.FC = () => {
 
                     {/* Upcoming Holidays */}
                     <div className="bg-gray-50 rounded-xl p-4 flex-1 border border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-800 mb-3">Upcoming Holidays</h3>
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-sm font-semibold text-gray-800">Upcoming Holidays</h3>
+                            <button
+                                onClick={() => navigate("/holidays")}
+                                className="text-xs text-purple-600 hover:text-purple-800 font-medium hover:underline"
+                            >
+                                View All →
+                            </button>
+                        </div>
                         {upcomingHolidays.length === 0
                             ? <p className="text-xs text-gray-400">No upcoming holidays</p>
                             : (

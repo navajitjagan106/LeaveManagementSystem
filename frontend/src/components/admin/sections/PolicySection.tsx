@@ -3,9 +3,17 @@ import { getPolicies, createPolicy, deletePolicy, getPolicyRules, setPolicyRules
 import { getLeaveTypes } from "../../../api/leaveApi";
 import { useToast } from "../../common/ToastContext";
 import { Plus, Trash2, ChevronDown, ChevronUp, Save } from "lucide-react";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "../../ui/dialog";
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetDescription,
+    SheetFooter,
+    SheetClose,
+    SheetTrigger,
+} from "../../ui/sheet";
 import { Button } from "../../ui/button";
-import { Field, FieldGroup } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
 import { getUserLocal } from "../../../utils/getUser";
@@ -99,49 +107,67 @@ const PoliciesSection = () => {
         <div className="space-y-5">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-xl font-semibold">Employment Policies</h2>
-                    <p className="text-sm text-gray-500">Define leave entitlements per employment level</p>
+                    <h2 className="text-xl font-semibold text-gray-900">Employment Policies</h2>
+                    <p className="text-sm text-gray-400">Define leave entitlements per employment level</p>
                 </div>
                 {canEdit && (
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <button className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 transition">
+                    <Sheet>
+                        <SheetTrigger asChild>
+                            <button className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-purple-700 transition shadow-lg shadow-purple-100">
                                 <Plus size={15} /> New Policy
                             </button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>New Policy</DialogTitle>
-                                <DialogDescription>Create a leave entitlement policy for an employment level.</DialogDescription>
-                            </DialogHeader>
-                            <FieldGroup>
-                                <Field>
-                                    <Label htmlFor="p-name">Policy name</Label>
-                                    <Input
-                                        id="p-name"
-                                        placeholder="e.g. Senior Developer"
-                                        value={newPolicy.name}
-                                        onChange={(e) => setNewPolicy({ ...newPolicy, name: e.target.value })}
-                                    />
-                                </Field>
-                                <Field>
-                                    <Label htmlFor="p-desc">Description (optional)</Label>
-                                    <Input
-                                        id="p-desc"
-                                        placeholder="Short description"
-                                        value={newPolicy.description}
-                                        onChange={(e) => setNewPolicy({ ...newPolicy, description: e.target.value })}
-                                    />
-                                </Field>
-                            </FieldGroup>
-                            <DialogFooter>
-                                <DialogClose asChild>
-                                    <Button variant="outline">Cancel</Button>
-                                </DialogClose>
-                                <Button onClick={handleAdd}>Create</Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
+                        </SheetTrigger>
+                        <SheetContent className="overflow-y-auto sm:max-w-[540px] w-full p-0 flex flex-col border-l-0 shadow-2xl bg-white">
+                            <div className="px-6 py-8 border-b border-gray-100 bg-white sticky top-0 z-10">
+                                <SheetHeader className="text-left">
+                                    <SheetTitle className="text-xl font-bold text-gray-900">New Policy</SheetTitle>
+                                    <SheetDescription className="text-sm font-medium text-gray-500 mt-1">
+                                        Create a leave entitlement policy for a specific employment level (e.g. Intern, Senior).
+                                    </SheetDescription>
+                                </SheetHeader>
+                            </div>
+
+                            <div className="px-8 py-8 flex-1 flex flex-col gap-8 overflow-y-auto">
+                                <div className="space-y-6">
+                                    <div className="space-y-3">
+                                        <Label htmlFor="p-name" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Policy Name</Label>
+                                        <Input
+                                            id="p-name"
+                                            placeholder="e.g. Senior Developer"
+                                            value={newPolicy.name}
+                                            onChange={(e) => setNewPolicy({ ...newPolicy, name: e.target.value })}
+                                            className="rounded-xl border-gray-200 h-11"
+                                        />
+                                    </div>
+                                    <div className="space-y-3">
+                                        <Label htmlFor="p-desc" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Description (Optional)</Label>
+                                        <Input
+                                            id="p-desc"
+                                            placeholder="Short description"
+                                            value={newPolicy.description}
+                                            onChange={(e) => setNewPolicy({ ...newPolicy, description: e.target.value })}
+                                            className="rounded-xl border-gray-200 h-11"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50">
+                                <SheetFooter className="flex-row sm:justify-end gap-3">
+                                    <SheetClose asChild>
+                                        <Button variant="ghost" size="lg" className="flex-1 rounded-xl text-gray-500 font-medium">Cancel</Button>
+                                    </SheetClose>
+                                    <Button 
+                                        onClick={handleAdd}
+                                        size="lg"
+                                        className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-lg shadow-purple-100 font-bold"
+                                    >
+                                        Create Policy
+                                    </Button>
+                                </SheetFooter>
+                            </div>
+                        </SheetContent>
+                    </Sheet>
                 )}
             </div>
 

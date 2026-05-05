@@ -134,8 +134,8 @@ const EmployeeDirectory: React.FC = () => {
     const navigate = useNavigate();
     const user = getUserLocal();
     const isAdmin = user?.role === 'admin';
-    const canEdit = isAdmin || user?.permissions?.['admin_employees']?.can_edit === true;
-    const canDelete = isAdmin || user?.permissions?.['admin_employees']?.can_delete === true;
+    const canEdit = isAdmin;
+    const canDelete = isAdmin;
 
     const [employees, setEmployees]     = useState<Employee[]>([]);
     const [summary, setSummary]         = useState<SummaryItem[]>([]);
