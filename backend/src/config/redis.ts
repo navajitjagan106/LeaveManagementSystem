@@ -20,7 +20,6 @@ const fallbackStore = new RedisMock();
 
 if (redisUrl) {
     const options: any = {
-        // Stop retrying if we hit a fatal error like allowlist
         retryStrategy: (times: number) => {
             if (isMock) return null; 
             return Math.min(times * 50, 2000);
@@ -42,46 +41,54 @@ if (redisUrl) {
     });
 
     instance.on("error", (err: any) => {
-        // Only log errors once to avoid spamming the console
         if (!isMock) {
             console.error("Redis connection error:", err.message);
-            if (err.code === "ECONNREFUSED" || err.message.includes("allowlist") || err.message.includes("permission")) {
-                console.warn("⚠️ Switching to in-memory store for OTPs (Local Development Fallback)");
+            // If it's an allowlist error, we MUST use mock locally
+            if (err.message.includes("allowlist")) {
+                console.warn("⚠️ Switching to in-memory store (Allowlist Error)");
                 isMock = true;
                 instance.disconnect();
             }
         }
     });
 } else {
-    console.log("No REDIS_URL found. Using in-memory store for OTPs.");
     isMock = true;
 }
 
-// Proxy object to route calls to either the real Redis or the fallback
+// Proxy object with detailed logging
 const persistentProxy = {
     get: async (key: string) => {
+        const storeType = isMock ? "MOCK" : "REAL";
+        console.log(`[REDIS ${storeType}] GET ${key}`);
         if (isMock) return fallbackStore.get(key);
         try {
             return await instance.get(key);
-        } catch {
+        } catch (err: any) {
+            console.error(`[REDIS REAL] GET FAILED, falling back: ${err.message}`);
             isMock = true;
             return fallbackStore.get(key);
         }
     },
     setex: async (key: string, ttl: number, value: string) => {
+        const storeType = isMock ? "MOCK" : "REAL";
+        console.log(`[REDIS ${storeType}] SETEX ${key} (ttl: ${ttl})`);
         if (isMock) return fallbackStore.setex(key, ttl, value);
         try {
             return await instance.setex(key, ttl, value);
-        } catch {
+        } catch (err: any) {
+            console.error(`[REDIS REAL] SETEX FAILED, falling back: ${err.message}`);
             isMock = true;
             return fallbackStore.setex(key, ttl, value);
         }
     },
     del: async (key: string) => {
+        const storeType = isMock ? "MOCK" : "REAL";
+        console.log(`[REDIS ${storeType}] DEL ${key}`);
         if (isMock) return fallbackStore.del(key);
         try {
             return await instance.del(key);
-        } catch {
+        } catch (err: any) {
+            console.error(`[REDIS REAL] DEL FAILED, falling back: ${err.message}`);
             isMock = true;
             return fallbackStore.del(key);
         }
