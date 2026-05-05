@@ -98,54 +98,71 @@ const InvitationsSection = () => {
             </div>
 
             {loading ? (
-                <div className="text-center py-8 text-gray-400 text-sm">Loading...</div>
+                <div className="text-center py-12 text-gray-400 text-sm">Loading invitations...</div>
             ) : invitations.length === 0 ? (
-                <div className="text-center py-12 text-gray-400">
-                    <Mail size={36} className="mx-auto mb-2 opacity-30" />
-                    <p className="text-sm">No invitations found</p>
+                <div className="text-center py-12 text-gray-400 bg-gray-50 rounded-2xl border border-dashed">
+                    <Mail size={36} className="mx-auto mb-3 opacity-20" />
+                    <p className="text-sm font-medium">No invitations found</p>
                 </div>
             ) : (
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {invitations.map((inv) => (
                         <div
                             key={inv.id}
-                            className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3"
+                            className="bg-white border border-gray-100 rounded-2xl p-4 flex flex-col gap-4 hover:border-purple-200 hover:shadow-sm transition-all group"
                         >
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-semibold shrink-0">
-                                    {inv.email[0].toUpperCase()}
+                            <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                                        {inv.email[0].toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-gray-800 truncate">{inv.name}</p>
+                                        <p className="text-[11px] text-gray-400 truncate">{inv.email}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-800">{inv.email}</p>
-                                    <p className="text-xs text-gray-400 capitalize">
-                                        {inv.role}{inv.department ? ` · ${inv.department}` : ""}
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
                                 <StatusBadge status={inv.status} />
-                                <span className="text-xs text-gray-400 hidden sm:block">
-                                    {new Date(inv.created_at).toLocaleDateString("en-IN", {
-                                        day: "2-digit", month: "short", year: "numeric",
-                                    })}
-                                </span>
-                                {inv.status === "pending" && (canEdit || canDelete) && (
-                                    <div className="flex gap-1">
-                                        {canEdit && (
-                                            <button onClick={() => handleResend(inv.id)} title="Resend"
-                                                className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition">
-                                                <RefreshCw size={14} />
-                                            </button>
-                                        )}
-                                        {canDelete && (
-                                            <button onClick={() => handleCancel(inv.id)} title="Cancel"
-                                                className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition">
-                                                <X size={14} />
-                                            </button>
-                                        )}
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Role</span>
+                                    <span className="text-xs font-medium text-gray-700 capitalize">{inv.role}</span>
+                                </div>
+                                {inv.department && (
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Dept</span>
+                                        <span className="text-xs font-medium text-gray-700">{inv.department}</span>
                                     </div>
                                 )}
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Sent On</span>
+                                    <span className="text-xs font-medium text-gray-500">
+                                        {new Date(inv.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                                    </span>
+                                </div>
                             </div>
+
+                            {inv.status === "pending" && (canEdit || canDelete) && (
+                                <div className="flex gap-2 mt-1">
+                                    {canEdit && (
+                                        <button
+                                            onClick={() => handleResend(inv.id)}
+                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-100 transition"
+                                        >
+                                            <RefreshCw size={12} /> Resend
+                                        </button>
+                                    )}
+                                    {canDelete && (
+                                        <button
+                                            onClick={() => handleCancel(inv.id)}
+                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition"
+                                        >
+                                            <X size={12} /> Cancel
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>

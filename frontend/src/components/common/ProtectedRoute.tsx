@@ -22,7 +22,7 @@ const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles, requiredPage 
 
     if (!user) {
         try {
-            user = JSON.parse(getCookie("user") || localStorage.getItem("user") || "null");
+            user = JSON.parse(getCookie("user") || "null");
         } catch {
             user = null;
         }

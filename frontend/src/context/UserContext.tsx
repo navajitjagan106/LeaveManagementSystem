@@ -18,9 +18,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Start with whatever the cookie or localStorage has
         try {
-            const raw = getCookie("user") || localStorage.getItem("user");
+            const raw = getCookie("user");
             if (raw) setUser(JSON.parse(raw));
         } catch {}
 
@@ -31,7 +30,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
                     const freshUser = res.data.data;
 
                     // Merge: keep cached fields not returned by the endpoint
-                    const existingRaw = getCookie("user") || localStorage.getItem("user");
+                    const existingRaw = getCookie("user");
                     let merged = freshUser;
                     if (existingRaw) {
                         try {
@@ -39,8 +38,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
                         } catch {}
                     }
 
-                    // Update storage for other consumers
-                    localStorage.setItem("user", JSON.stringify(merged));
                     setUser(merged);
                 }
             })
