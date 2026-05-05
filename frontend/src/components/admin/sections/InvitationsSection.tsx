@@ -3,7 +3,8 @@ import { getInvitations, resendInvitation, cancelInvitation } from "../../../api
 import InviteEmployeeModal from "../modal/InviteEmployeeModal";
 import { useToast } from "../../common/ToastContext";
 import { Mail, RefreshCw, X } from "lucide-react";
-import { getUserLocal } from "../../../utils/getUser";
+import { useSelector } from "react-redux";
+import { RootState } from "../../../store";
 
 const STATUS_STYLES: Record<string, string> = {
     pending: "bg-amber-100 text-amber-600",
@@ -22,7 +23,7 @@ const FILTERS = ["all", "pending", "accepted", "expired", "cancelled"];
 
 const InvitationsSection = () => {
     const toast = useToast();
-    const user = getUserLocal();
+    const { user } = useSelector((state: RootState) => state.auth);
     const isAdmin = user?.role === 'admin';
     const canEdit = isAdmin || user?.permissions?.['admin_invitations']?.can_edit === true;
     const canDelete = isAdmin || user?.permissions?.['admin_invitations']?.can_delete === true;

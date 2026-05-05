@@ -16,11 +16,12 @@ import {
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
-import { getUserLocal } from "../../../utils/getUser";
+import { useSelector } from "react-redux";
+import { RootState } from "../../../store";
 
 const HolidaySection = () => {
   const toast = useToast();
-  const user = getUserLocal();
+  const { user } = useSelector((state: RootState) => state.auth);
   const isAdmin = user?.role === 'admin';
   const canEdit = isAdmin || user?.permissions?.['admin_holidays']?.can_edit === true;
   const canDelete = isAdmin || user?.permissions?.['admin_holidays']?.can_delete === true;

@@ -5,17 +5,21 @@ import {
     Scale, ShieldCheck, LogOut, UsersRound, Mail, CalendarDays,
     Umbrella, BookOpen,  PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
-import { useUser } from "../../context/UserContext";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../../store";
+import { logout as logoutAction } from "../../store/slices/authSlice";
 import { useSidebar } from "../../context/SidebarContext";
 
 const Sidebar: React.FC = () => {
     const location = useLocation();
-    const { user } = useUser();
+    const dispatch = useDispatch<AppDispatch>();
+    const { user } = useSelector((state: RootState) => state.auth);
     const { collapsed, toggle } = useSidebar();
 
     const handleLogout = () => {
         document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict";
         document.cookie = "user=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict";
+        dispatch(logoutAction());
         window.location.href = "/login";
     };
 

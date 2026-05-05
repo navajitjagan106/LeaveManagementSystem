@@ -7,7 +7,8 @@ import PageHeader from "../common/PageHeader"
 import Loader from "../common/Loader"
 import { CalendarDays, Palmtree, Users, CalendarX2, Sunrise, PartyPopper, ChevronLeft, ChevronRight } from "lucide-react"
 import { useToast } from "../common/ToastContext"
-import { getCookie } from "../../utils/cookies"
+import { useSelector } from "react-redux"
+import { RootState } from "../../store"
 import { Card, CardContent } from "../ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "../ui/sheet"
 
@@ -70,10 +71,8 @@ const TeamView: React.FC = () => {
     const { holidays } = useOutletContext<{ holidays: any[] }>()
 
     const [calEvents, setCalEvents] = useState<CalendarEvent[]>([])
-    const [role, setRole] = useState<string>(() => {
-        const user = JSON.parse(getCookie("user") || "null")
-        return user?.role ?? ""
-    })
+    const { user } = useSelector((state: RootState) => state.auth)
+    const role = user?.role ?? ""
     const [selectedLeave, setSelectedLeave] = useState<RawLeave | null>(null)
     const [loading, setLoading] = useState(true)
     const [calTitle, setCalTitle] = useState("")
@@ -129,9 +128,9 @@ const TeamView: React.FC = () => {
                 const leaveData: RawLeave[] = Array.isArray(payload)
                     ? payload
                     : (payload.events ?? [])
-                const serverRole: string = Array.isArray(payload) ? "" : (payload.role ?? "")
-
-                if (serverRole) setRole(serverRole)
+                // Role is handled by Redux now, no need to set it locally
+                // const serverRole: string = Array.isArray(payload) ? "" : (payload.role ?? "")
+                // if (serverRole) setRole(serverRole)
 
                 const leaveEvents = expandLeaves(leaveData)
                 const holidayEvents: CalendarEvent[] = holidays.map((h: any) => ({

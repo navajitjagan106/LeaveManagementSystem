@@ -13,3 +13,4 @@ export const acceptInvitation = (token: string, data: { password: string }) =>
     API.post(`/auth/accept-invitation/${token}`, data);
 
 export const logoutApi = () => API.post("/auth/logout");
+export const getMe = () => API.get("/auth/me");

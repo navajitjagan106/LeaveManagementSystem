@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useUser } from "../../context/UserContext";
+import { useSelector } from "react-redux";
+import { RootState } from "../../store";
 import { Bell } from "lucide-react";
 import { getNotifications, markNotificationsRead } from "../../api/leaveApi";
 import { logoutApi } from "../../api/authApi";
@@ -13,7 +14,7 @@ type Notification = {
 };
 
 const Header: React.FC = () => {
-    const { user } = useUser();
+    const { user } = useSelector((state: RootState) => state.auth);
     const navigate = useNavigate();
 
     const [showNotif, setShowNotif] = useState(false);

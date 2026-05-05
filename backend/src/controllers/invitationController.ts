@@ -243,7 +243,7 @@ export const acceptInvitation = async (req: Request, res: Response) => {
             permissions,
         };
 
-        setAuthCookies(res, tokenForUser, userData);
+        setAuthCookies(res, tokenForUser);
 
         res.json({ success: true, user: userData });
 

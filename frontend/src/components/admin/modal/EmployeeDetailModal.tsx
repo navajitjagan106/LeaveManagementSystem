@@ -3,7 +3,8 @@ import {
     deleteEmployee, getuserBalance, getEmployees, getPolicies,
     reassignPolicy, resetLeaveBalance, updateManager
 } from "../../../api/adminApi";
-import { useUser } from "../../../context/UserContext";
+import { useSelector } from "react-redux";
+import { RootState } from "../../../store";
 import { useToast } from "../../common/ToastContext";
 import { ManagerCombobox } from "../../common/ManagerCombobox";
 import {
@@ -32,7 +33,7 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 );
 
 const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
-    const { user: currentUser } = useUser();
+    const { user: currentUser } = useSelector((state: RootState) => state.auth);
     const isAdmin = currentUser?.role === "admin";
     const canEdit = isAdmin;
     const canDelete = isAdmin;

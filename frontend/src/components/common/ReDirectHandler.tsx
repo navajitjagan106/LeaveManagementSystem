@@ -1,17 +1,13 @@
 import { Navigate } from "react-router-dom";
-import { getCookie } from "../../utils/cookies";
-import { User } from "../../types";
+import { useSelector } from "react-redux";
+import { RootState } from "../../store";
 
 const RedirectHandler = () => {
-    const raw = getCookie("user");
-    if (!raw) return <Navigate to="/login" replace />;
+    const { user, initialized } = useSelector((state: RootState) => state.auth);
 
-    try {
-        const user: User = JSON.parse(raw);
-        if (user.role === "admin") return <Navigate to="/admin" replace />;
-    } catch {
-        // fall through
-    }
+    if (!initialized) return null; // Wait for Redux to verify session
+    if (!user) return <Navigate to="/login" replace />;
+    if (user.role === "admin") return <Navigate to="/admin" replace />;
 
     return <Navigate to="/dashboard" replace />;
 };

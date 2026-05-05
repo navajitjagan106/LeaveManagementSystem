@@ -2,10 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getTeamMembers, getTeamBalanceSummary } from '../../api/leaveApi';
 import { getEmployees } from '../../api/adminApi';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store';
 import PageHeader from '../common/PageHeader';
 import Loader from '../common/Loader';
 import { Search, ChevronRight, Phone, MapPin, MoreHorizontal } from 'lucide-react';
-import { getUserLocal } from '../../utils/getUser';
 import { Card, CardContent, CardTitle, CardDescription } from '../ui/card';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
@@ -132,7 +133,7 @@ const EmployeeCard: React.FC<{
 /* ── Page ── */
 const EmployeeDirectory: React.FC = () => {
     const navigate = useNavigate();
-    const user = getUserLocal();
+    const { user } = useSelector((state: RootState) => state.auth);
     const isAdmin = user?.role === 'admin';
     const canEdit = isAdmin;
     const canDelete = isAdmin;

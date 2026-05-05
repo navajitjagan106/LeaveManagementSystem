@@ -83,7 +83,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
             permissions,
         };
 
-        setAuthCookies(res, token, user);
+        setAuthCookies(res, token);
         res.json({ success: true, user });
     } catch (err) {
         console.error("OTP VERIFY ERROR:", err);
@@ -91,8 +91,30 @@ export const verifyOtp = async (req: Request, res: Response) => {
     }
 };
 
+export const getMe = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+        
+        const userResult = await pool.query(
+            `SELECT u.id, u.name, u.email, u.role, u.department, u.phone, u.gender, u.date_of_birth, u.location,
+             m.name AS manager_name, p.name AS policy_name
+             FROM users u
+             LEFT JOIN users m ON u.manager_id = m.id
+             LEFT JOIN leave_policies p ON u.policy_id = p.id
+             WHERE u.id = $1`,
+            [req.user.id]
+        );
+
+        if (userResult.rows.length === 0) return res.status(404).json({ error: "User not found" });
+
+        const permissions = await fetchUserPermissions(req.user.id);
+        res.json({ success: true, data: { ...userResult.rows[0], permissions } });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch user data" });
+    }
+};
+
 export const logout = (req: Request, res: Response) => {
     res.clearCookie("token", { path: "/", httpOnly: true, sameSite: "lax" });
-    res.clearCookie("user", { path: "/", sameSite: "lax" });
     res.json({ success: true });
 };

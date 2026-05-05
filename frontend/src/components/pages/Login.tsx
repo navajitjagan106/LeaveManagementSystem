@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { login, verifyOtp } from "../../api/authApi";
 import { useNavigate } from "react-router-dom";
 import { OTPInput, SlotProps } from "input-otp";
-import { getCookie } from "../../utils/cookies";
+import { useSelector } from "react-redux";
+import { RootState } from "../../store";
 
 const OtpSlot = (props: SlotProps) => (
     <div
@@ -18,6 +19,7 @@ const OtpSlot = (props: SlotProps) => (
 );
 
 const Login: React.FC = () => {
+    const { user, initialized } = useSelector((state: RootState) => state.auth);
     const [step, setStep] = useState<"credentials" | "otp">("credentials");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -29,15 +31,10 @@ const Login: React.FC = () => {
     const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     useEffect(() => {
-        const raw = getCookie("user");
-        if (!raw) return;
-        try {
-            const user = JSON.parse(raw);
+        if (initialized && user) {
             navigate(user.role === "admin" ? "/admin" : "/dashboard");
-        } catch {
-            navigate("/dashboard");
         }
-    }, [navigate]);
+    }, [initialized, user, navigate]);
 
     useEffect(() => {
         if (resendCooldown <= 0) return;

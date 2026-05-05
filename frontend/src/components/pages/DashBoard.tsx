@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import StatCard from "../common/cards/StatCard";
 import { getDashboard } from "../../api/leaveApi";
-import { getUserLocal } from '../../utils/getUser';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { DashboardData, User } from "../../types";
+import { DashboardData } from "../../types";
 import PageHeader from '../common/PageHeader';
 import Loader from '../common/Loader';
 import { CalendarCheck, CalendarMinus, Clock, BookOpen, FileText, Users, ChevronRight } from "lucide-react";
@@ -13,14 +14,13 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../ui/chart";
 const COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899", "#14b8a6", "#f97316"];
 
 const DashBoard: React.FC = () => {
-    const [user, setUser] = useState<User | null>(null);
+    const { user } = useSelector((state: RootState) => state.auth);
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<DashboardData | null>(null);
     const [error, setError] = useState<string | null>(null);
     const { holidays } = useOutletContext<{ holidays: any[] }>();
     const navigate = useNavigate();
 
-    useEffect(() => { setUser(getUserLocal()); }, []);
     useEffect(() => {
         getDashboard()
             .then((res) => setData(res.data))

@@ -1,8 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User } from "../types/user";
-import { getuserdata } from "../api/leaveApi";
-import { getCookie } from "../utils/cookies";
-import { LiveUserContext } from "../components/common/ProtectedRoute";
+import { getMe } from "../api/authApi";
 
 interface UserCtx {
     user: User | null;
@@ -18,30 +16,17 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        try {
-            const raw = getCookie("user");
-            if (raw) setUser(JSON.parse(raw));
-        } catch {}
-
-        // Then fetch fresh data (with latest permissions) from the server
-        getuserdata()
+        // Fetch everything in one go from our optimized /me endpoint
+        getMe()
             .then((res) => {
-                if (res.data?.data) {
-                    const freshUser = res.data.data;
-
-                    // Merge: keep cached fields not returned by the endpoint
-                    const existingRaw = getCookie("user");
-                    let merged = freshUser;
-                    if (existingRaw) {
-                        try {
-                            merged = { ...JSON.parse(existingRaw), ...freshUser };
-                        } catch {}
-                    }
-
-                    setUser(merged);
+                if (res.data?.success) {
+                    setUser(res.data.data);
                 }
             })
-            .catch((err) => console.error("Failed to refresh user data", err))
+            .catch((err) => {
+                console.error("Initial user fetch failed", err);
+                // On failure (e.g., 401), user stays null which triggers redirect to login
+            })
             .finally(() => setLoading(false));
     }, []);
 
@@ -49,10 +34,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
     return (
         <UserContext.Provider value={value}>
-            {/* Also feed the ProtectedRoute's LiveUserContext */}
-            <LiveUserContext.Provider value={value}>
                 {children}
-            </LiveUserContext.Provider>
         </UserContext.Provider>
     );
 };

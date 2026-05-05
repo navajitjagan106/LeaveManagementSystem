@@ -3,7 +3,6 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { Outlet } from "react-router-dom";
 import { getHolidays } from "../../api/leaveApi";
-import { UserProvider } from "../../context/UserContext";
 import { SidebarProvider, useSidebar } from "../../context/SidebarContext";
 
 const LayoutInner = ({ holidays }: { holidays: any[] }) => {
@@ -35,11 +34,9 @@ const MainLayout = () => {
   }, []);
 
   return (
-    <UserProvider>
-      <SidebarProvider>
-        <LayoutInner holidays={holidays} />
-      </SidebarProvider>
-    </UserProvider>
+    <SidebarProvider>
+      <LayoutInner holidays={holidays} />
+    </SidebarProvider>
   );
 };
 

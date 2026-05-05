@@ -16,11 +16,12 @@ import {
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
-import { getUserLocal } from "../../../utils/getUser";
+import { useSelector } from "react-redux";
+import { RootState } from "../../../store";
 
 const LeaveSection = () => {
     const toast = useToast();
-    const user = getUserLocal();
+    const { user } = useSelector((state: RootState) => state.auth);
     const isAdmin = user?.role === 'admin';
     const canEdit = isAdmin || user?.permissions?.['admin_leave_types']?.can_edit === true;
     const [types, setTypes] = useState<any[]>([]);

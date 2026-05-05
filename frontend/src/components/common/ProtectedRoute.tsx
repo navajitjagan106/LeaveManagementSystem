@@ -1,7 +1,8 @@
 import { Navigate } from "react-router-dom";
-import React, { createContext, useContext } from "react";
-import { User } from "../../types";
-import { getCookie } from "../../utils/cookies";
+import React, { useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../../store";
+import { fetchMe } from "../../store/slices/authSlice";
 
 type Props = {
     children: React.ReactNode;
@@ -9,31 +10,33 @@ type Props = {
     requiredPage?: string;
 };
 
-// Lightweight context that inner ProtectedRoutes (inside MainLayout) can use
-// to get the live user from UserProvider. Defaults to null when outside the provider.
-export const LiveUserContext = createContext<{ user: User | null; loading: boolean } | null>(null);
-
 const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles, requiredPage }) => {
-    const liveCtx = useContext(LiveUserContext);
+    const dispatch = useDispatch<AppDispatch>();
+    const { user, loading, initialized } = useSelector((state: RootState) => state.auth);
 
-    // Use live context if available, otherwise fall back to cookie
-    let user: User | null = liveCtx?.user ?? null;
-    const loading = liveCtx?.loading ?? false;
-
-    if (!user) {
-        try {
-            user = JSON.parse(getCookie("user") || "null");
-        } catch {
-            user = null;
+    useEffect(() => {
+        if (!initialized && !user) {
+            dispatch(fetchMe());
         }
+    }, [dispatch, initialized, user]);
+
+    // Show a global spinner while we fetch the user session on boot
+    if (loading && !initialized) {
+        return (
+            <div className="flex items-center justify-center h-screen bg-gray-50">
+                <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
     }
 
-    if (!user) return <Navigate to="/login" />;
+    if (!user && initialized) return <Navigate to="/login" />;
+
+    if (!user) return null; // Wait for initialization
 
     // Admin bypasses all restrictions
     if (user.role === "admin") return <>{children}</>;
 
-    // If still loading fresh permissions, show a brief spinner to avoid false redirects
+    // If still loading fresh permissions for a specific page check
     if (loading && requiredPage) {
         return (
             <div className="flex items-center justify-center h-full">
