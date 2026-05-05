@@ -48,9 +48,10 @@ export const sendInvitation = async (req: Request, res: Response) => {
             name,
             email,
             token,
-            inviterName: "Admin",
+            inviterName: (req.user as any)?.name || "Admin",
             role,
-            frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000"
+            department: department || undefined
+
         });
 
         res.json({ success: true, data: result.rows[0] });
@@ -113,9 +114,9 @@ export const resendInvitation = async (req: Request, res: Response) => {
             name: invitation.name,
             email: invitation.email,
             token: newToken,
-            inviterName: "Admin",
+            inviterName: (req.user as any)?.name || "Admin",
             role: invitation.role,
-            frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000"
+            department: invitation.department
         });
 
         res.json({ success: true });

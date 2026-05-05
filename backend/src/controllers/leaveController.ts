@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { pool } from "../config/db";
 import { calculateWorkingDays } from "../utils/calculateWorkingDays";
 import { getHolidaysinRange } from "../utils/getHolidaysinRange";
-import { sendLeaveApplicationEmail, sendLeaveApprovedEmail, sendLeaveRejectedEmail } from "../utils/emailService";
+import { sendLeaveApplicationEmail, sendLeaveStatusEmail } from "../utils/emailService";
 import { fetchUserPermissions } from "../utils/permissionUtils";
 
 export const getDashboardData = async (req: Request, res: Response) => {
@@ -639,27 +639,16 @@ export const approveLeave = async (req: Request, res: Response) => {
             console.error("Failed to insert notification:", notifErr);
         }
 
-        const emailPromise = status === "approved"
-            ? sendLeaveApprovedEmail({
-                employeeEmail,
-                employeeName,
-                managerName: req.user!.name,
-                leaveType: leave_type_name,
-                fromDate: leaveData.from_date,
-                toDate: leaveData.to_date,
-                totalDays: correctDays,
-            })
-            : sendLeaveRejectedEmail({
-                employeeEmail,
-                employeeName,
-                managerName: req.user!.name,
-                leaveType: leave_type_name,
-                fromDate: leaveData.from_date,
-                toDate: leaveData.to_date,
-                totalDays: correctDays,
-                rejectionReason: rejectionReason || "No reason provided",
-            });
-        void emailPromise.catch((emailErr) => console.error("Failed to send leave decision email:", emailErr));
+        const emailPromise = sendLeaveStatusEmail({
+            employeeEmail,
+            employeeName,
+            leaveType: leave_type_name,
+            status: status as "approved" | "rejected",
+            fromDate: leaveData.from_date,
+            toDate: leaveData.to_date,
+            rejectionReason: status === "rejected" ? (rejectionReason || "No reason provided") : undefined,
+        });
+        void emailPromise.catch((emailErr: any) => console.error("Failed to send leave decision email:", emailErr));
         res.json({
             success: true,
             data: result.rows[0]
