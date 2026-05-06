@@ -57,122 +57,100 @@ const InviteEmployeeModal = ({ onClose, onSuccess }: any) => {
 
     return (
         <Sheet open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
-            <SheetContent className="overflow-y-auto sm:max-w-[540px] w-full p-0 flex flex-col border-l-0 shadow-2xl bg-white">
-                <div className="px-6 py-8 border-b border-gray-100 bg-white sticky top-0 z-10">
-                    <SheetHeader className="text-left">
-                        <SheetTitle className="text-xl font-bold text-gray-900">Invite Employee</SheetTitle>
-                        <SheetDescription className="text-sm font-medium text-gray-500 mt-1">
-                            Employee will receive a secure link to set their password and join the organization.
-                        </SheetDescription>
-                    </SheetHeader>
-                </div>
+            <SheetContent className="overflow-y-auto">
+                <SheetHeader>
+                    <SheetTitle>Invite Employee</SheetTitle>
+                    <SheetDescription>Employee will receive a link to set their password</SheetDescription>
+                </SheetHeader>
 
-                <div className="px-8 py-8 flex-1 flex flex-col gap-8 overflow-y-auto">
+                <div className="px-6 py-5 flex-1 flex flex-col gap-6">
                     {/* Personal Info */}
-                    <div className="space-y-4">
-                        <Field label="Personal Information" />
-                        <div className="grid gap-3">
-                            <Input
-                                placeholder="Full name"
-                                value={form.name}
-                                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                className="rounded-xl border-gray-200 h-10"
-                            />
-                            <Input
-                                type="email"
-                                placeholder="Email address"
-                                value={form.email}
-                                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                className="rounded-xl border-gray-200 h-10"
-                            />
-                            <Input
-                                placeholder="Department (optional)"
-                                value={form.department}
-                                onChange={(e) => setForm({ ...form, department: e.target.value })}
-                                className="rounded-xl border-gray-200 h-10"
-                            />
-                        </div>
+                    <div className="space-y-2">
+                        <Field label="Personal Info" />
+                        <Input
+                            placeholder="Full name"
+                            value={form.name}
+                            onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        />
+                        <Input
+                            type="email"
+                            placeholder="Email address"
+                            value={form.email}
+                            onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        />
+                        <Input
+                            placeholder="Department (optional)"
+                            value={form.department}
+                            onChange={(e) => setForm({ ...form, department: e.target.value })}
+                        />
                     </div>
 
                     {/* Role & Manager */}
-                    <div className="space-y-4">
-                        <Field label="Role & Organization" />
-                        <div className="grid gap-3">
-                            <select
-                                value={form.role}
-                                onChange={(e) => setForm({ ...form, role: e.target.value })}
-                                className="w-full border border-gray-200 px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all bg-white"
-                            >
-                                {roles.map((r) => (
-                                    <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
-                                ))}
-                            </select>
-                            <ManagerCombobox
-                                value={form.manager_id}
-                                onChange={(id) => setForm({ ...form, manager_id: id })}
-                                managers={managers}
-                                placeholder="Assign Manager (optional)"
-                                className="rounded-xl"
-                            />
-                        </div>
+                    <div className="space-y-2">
+                        <Field label="Role & Manager" />
+                        <select
+                            value={form.role}
+                            onChange={(e) => setForm({ ...form, role: e.target.value })}
+                            className="w-full border border-gray-200 px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                        >
+                            {roles.map((r) => (
+                                <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
+                            ))}
+                        </select>
+                        <ManagerCombobox
+                            value={form.manager_id}
+                            onChange={(id) => setForm({ ...form, manager_id: id })}
+                            managers={managers}
+                            placeholder="No Manager"
+                        />
                     </div>
 
                     {/* Employment Level */}
-                    <div className="space-y-4">
-                        <Field label="Leave Policy" />
-                        <div className="grid gap-3">
-                            <select
-                                value={form.policy_id}
-                                onChange={(e) => setForm({ ...form, policy_id: e.target.value })}
-                                className="w-full border border-gray-200 px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all bg-white"
-                            >
-                                <option value="">No policy (set later)</option>
-                                {policies.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </select>
-                            <p className="text-[11px] text-gray-400 leading-relaxed px-1 font-medium">
-                                Leave allocations will be applied automatically once the employee joins.
-                            </p>
-                        </div>
+                    <div className="space-y-2">
+                        <Field label="Employment Level" />
+                        <select
+                            value={form.policy_id}
+                            onChange={(e) => setForm({ ...form, policy_id: e.target.value })}
+                            className="w-full border border-gray-200 px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                        >
+                            <option value="">No policy (set later)</option>
+                            {policies.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                        <p className="text-xs text-gray-400">Leave allocations will be applied automatically based on the selected policy</p>
                     </div>
 
                     {/* Link Expiry */}
-                    <div className="space-y-4">
-                        <Field label="Invitation Security" />
-                        <div className="grid gap-3">
-                            <select
-                                value={form.expires_in_hours}
-                                onChange={(e) => setForm({ ...form, expires_in_hours: e.target.value })}
-                                className="w-full border border-gray-200 px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all bg-white"
-                            >
-                                <option value="24">Expires in 24 hours</option>
-                                <option value="48">Expires in 48 hours (default)</option>
-                                <option value="72">Expires in 72 hours</option>
-                                <option value="168">Expires in 7 days</option>
-                            </select>
-                        </div>
+                    <div className="space-y-2">
+                        <Field label="Link Expiry" />
+                        <select
+                            value={form.expires_in_hours}
+                            onChange={(e) => setForm({ ...form, expires_in_hours: e.target.value })}
+                            className="w-full border border-gray-200 px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                        >
+                            <option value="24">24 hours</option>
+                            <option value="48">48 hours (default)</option>
+                            <option value="72">72 hours</option>
+                            <option value="168">7 days</option>
+                        </select>
                     </div>
                 </div>
 
-                <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50">
-                    <SheetFooter className="flex-row sm:justify-end gap-3">
-                        <Button
-                            variant="ghost"
-                            size="lg"
-                            onClick={onClose}
-                            className="flex-1 rounded-xl text-gray-500 font-medium"
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={handleSubmit}
-                            disabled={loading}
-                            size="lg"
-                            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-lg shadow-purple-100 font-bold"
-                        >
-                            {loading ? "Sending Invitation…" : "Send Invitation"}
-                        </Button>
-                    </SheetFooter>
-                </div>
+                <SheetFooter>
+                    <Button
+                        variant="outline"
+                        onClick={onClose}
+                        className="flex-1"
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                        {loading ? "Sending…" : "Send Invitation"}
+                    </Button>
+                </SheetFooter>
             </SheetContent>
         </Sheet>
     );

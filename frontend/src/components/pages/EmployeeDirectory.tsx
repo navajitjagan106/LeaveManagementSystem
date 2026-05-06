@@ -1,17 +1,29 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getTeamMembers, getTeamBalanceSummary } from '../../api/leaveApi';
+import { getTeamMembers } from '../../api/leaveApi';
 import { getEmployees } from '../../api/adminApi';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import PageHeader from '../common/PageHeader';
 import Loader from '../common/Loader';
-import { Search, ChevronRight, Phone, MapPin, MoreHorizontal } from 'lucide-react';
-import { Card, CardContent, CardTitle, CardDescription } from '../ui/card';
+import { Search, ChevronRight, Phone, MapPin, MoreHorizontal, Users, Briefcase } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "../ui/chart";
+import { 
+    Bar, 
+    BarChart, 
+    XAxis, 
+    YAxis,
+    Pie,
+    PieChart,
+    Cell
+} from "recharts";
+import { 
+    ChartContainer, 
+    ChartTooltip, 
+    ChartTooltipContent, 
+} from "../ui/chart";
 import EmployeeDetailsModal from '../admin/modal/EmployeeDetailModal';
 import InviteEmployeeModal from '../admin/modal/InviteEmployeeModal';
 
@@ -32,15 +44,9 @@ type Employee = {
     policy_name?: string | null;
     created_at?: string | null;
 };
-type SummaryItem = { id: number; name: string; total_allocated: number; used: number; remaining: number };
 type FilterKey = 'all' | 'manager' | 'employee' | 'admin';
 
 const avatarColor = (name: string) => PALETTE[name.charCodeAt(0) % PALETTE.length];
-
-const chartConfig = {
-    used:      { label: "Used Days",      color: "#f59e0b" },
-    remaining: { label: "Remaining Days", color: "#5746AF" },
-};
 
 const FILTERS: { key: FilterKey; label: string }[] = [
     { key: 'all',      label: 'All Staff'  },
@@ -139,7 +145,6 @@ const EmployeeDirectory: React.FC = () => {
     const canDelete = isAdmin;
 
     const [employees, setEmployees]     = useState<Employee[]>([]);
-    const [summary, setSummary]         = useState<SummaryItem[]>([]);
     const [loading, setLoading]         = useState(true);
     const [search, setSearch]           = useState('');
     const [roleFilter, setRoleFilter]   = useState<FilterKey>('all');
@@ -147,22 +152,21 @@ const EmployeeDirectory: React.FC = () => {
     const [showInvite, setShowInvite]   = useState(false);
 
     const fetchEmployees = async () => {
-        if (isAdmin) {
-            const res = await getEmployees();
-            setEmployees(res.data.data || []);
-        } else {
-            const res = await getTeamMembers();
-            setEmployees(res.data.data || []);
+        try {
+            if (isAdmin) {
+                const res = await getEmployees();
+                setEmployees(res.data.data || []);
+            } else {
+                const res = await getTeamMembers();
+                setEmployees(res.data.data || []);
+            }
+        } finally {
+            setLoading(false);
         }
     };
 
     useEffect(() => {
-        Promise.all([
-            fetchEmployees(),
-            getTeamBalanceSummary().then(r => setSummary(r.data.data || [])),
-        ])
-            .catch(console.error)
-            .finally(() => setLoading(false));
+        fetchEmployees();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -173,10 +177,27 @@ const EmployeeDirectory: React.FC = () => {
         admin:    employees.filter(e => e.role === 'admin').length,
     }), [employees]);
 
-    const totals = useMemo(() => ({
-        used:      summary.reduce((s, e) => s + e.used, 0),
-        remaining: summary.reduce((s, e) => s + e.remaining, 0),
-    }), [summary]);
+    // Compute Organizational Metrics
+    const departmentStats = useMemo(() => {
+        const map: Record<string, number> = {};
+        employees.forEach(e => {
+            const d = e.department || "Other";
+            map[d] = (map[d] || 0) + 1;
+        });
+        return Object.entries(map).map(([name, count], i) => ({
+            name,
+            count,
+            fill: PALETTE[i % PALETTE.length]
+        })).sort((a, b) => b.count - a.count);
+    }, [employees]);
+
+    const roleStats = useMemo(() => {
+        return [
+            { role: "Managers", count: counts.manager, fill: "#ede9fe" },
+            { role: "Employees", count: counts.employee, fill: "#dbeafe" },
+            { role: "Admins", count: counts.admin, fill: "#fee2e2" },
+        ].filter(r => r.count > 0);
+    }, [counts]);
 
     const filtered = useMemo(() =>
         employees
@@ -197,7 +218,7 @@ const EmployeeDirectory: React.FC = () => {
             <div className="flex items-start justify-between gap-3 flex-wrap">
                 <PageHeader
                     title="Employee Directory"
-                    subtitle={isAdmin ? 'All employees in your organisation' : 'Your team members'}
+                    subtitle={isAdmin ? 'Overview of your organizational structure' : 'Your team members'}
                     divider={false}
                 />
                 {isAdmin && (
@@ -213,54 +234,94 @@ const EmployeeDirectory: React.FC = () => {
             </div>
             <div className="border-t border-gray-100" />
 
-            {/* ── Team Leave Overview ── */}
-            <Card className="overflow-hidden p-0 bg-gray-50 shadow-none">
-                <div className="flex flex-col sm:flex-row items-stretch border-b border-gray-100">
-                    <div className="flex-1 px-6 py-4">
-                        <CardTitle className="text-sm">Team Leave Overview</CardTitle>
-                        <CardDescription className="text-xs mt-0.5">Used vs remaining days per employee</CardDescription>
-                    </div>
-                    <div className="flex divide-x divide-gray-100 border-t sm:border-t-0 sm:border-l border-gray-100">
-                        <div className="flex flex-col justify-center px-5 py-3">
-                            <span className="text-[10px] text-gray-400 whitespace-nowrap">{chartConfig.used.label}</span>
-                            <span className="text-xl font-bold mt-0.5" style={{ color: chartConfig.used.color }}>{totals.used}</span>
+            {/* ── Organizational Overview ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Department Distribution */}
+                <Card className="shadow-none border-gray-100 bg-gray-50/50">
+                    <CardHeader className="pb-0">
+                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                            <Users size={16} className="text-purple-500" />
+                            Department Split
+                        </CardTitle>
+                        <CardDescription className="text-[10px]">Headcount distribution across departments</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-col sm:flex-row items-center justify-around py-4">
+                        <ChartContainer config={{}} className="aspect-square max-h-[160px]">
+                            <PieChart>
+                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                <Pie
+                                    data={departmentStats}
+                                    dataKey="count"
+                                    nameKey="name"
+                                    innerRadius={50}
+                                    outerRadius={70}
+                                    strokeWidth={5}
+                                >
+                                    {departmentStats.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                    ))}
+                                </Pie>
+                            </PieChart>
+                        </ChartContainer>
+                        <div className="flex flex-col gap-2 min-w-[140px]">
+                            {departmentStats.slice(0, 4).map((d) => (
+                                <div key={d.name} className="flex items-center justify-between text-xs">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full" style={{ background: d.fill }} />
+                                        <span className="text-gray-500 font-medium">{d.name}</span>
+                                    </div>
+                                    <span className="font-bold text-gray-900">{d.count}</span>
+                                </div>
+                            ))}
                         </div>
-                        <div className="flex flex-col justify-center px-5 py-3">
-                            <span className="text-[10px] text-gray-400 whitespace-nowrap">{chartConfig.remaining.label}</span>
-                            <span className="text-xl font-bold mt-0.5" style={{ color: chartConfig.remaining.color }}>{totals.remaining}</span>
-                        </div>
-                    </div>
-                </div>
-                <CardContent className="px-2 pt-3 pb-3 sm:px-4">
-                    {summary.length === 0 ? (
-                        <div className="h-32 flex items-center justify-center text-sm text-gray-400">No data available</div>
-                    ) : (
-                        <ChartContainer config={chartConfig} className="h-32 w-full">
-                            <BarChart data={summary} margin={{ left: 8, right: 8 }}>
-                                <CartesianGrid vertical={false} stroke="#f0f0f0" />
-                                <XAxis
-                                    dataKey="name"
-                                    tickLine={false}
+                    </CardContent>
+                </Card>
+
+                {/* Role Breakdown */}
+                <Card className="shadow-none border-gray-100 bg-gray-50/50">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                            <Briefcase size={16} className="text-purple-500" />
+                            Role Composition
+                        </CardTitle>
+                        <CardDescription className="text-[10px]">Staff split by administrative levels</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[160px]">
+                         <ChartContainer config={{}} className="h-full w-full">
+                            <BarChart
+                                data={roleStats}
+                                layout="vertical"
+                                margin={{ left: 10, right: 30, top: 10, bottom: 10 }}
+                            >
+                                <XAxis type="number" hide />
+                                <YAxis 
+                                    dataKey="role" 
+                                    type="category" 
+                                    tickLine={false} 
                                     axisLine={false}
-                                    tickMargin={6}
-                                    tick={{ fontSize: 10 }}
-                                    tickFormatter={v => v.split(' ')[0]}
+                                    tick={{ fontSize: 11, fontWeight: 500, fill: '#6b7280' }}
                                 />
-                                <ChartTooltip content={<ChartTooltipContent className="w-40" labelFormatter={v => String(v)} />} />
-                                <ChartLegend content={<ChartLegendContent />} />
-                                <Bar dataKey="used"      stackId="a" fill={chartConfig.used.color}      radius={[0, 0, 4, 4]} maxBarSize={40} />
-                                <Bar dataKey="remaining" stackId="a" fill={chartConfig.remaining.color} radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                                <Bar 
+                                    dataKey="count" 
+                                    radius={[0, 4, 4, 0]} 
+                                    barSize={24}
+                                >
+                                    {roleStats.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.fill} stroke={ROLE_STYLE[entry.role.toLowerCase().slice(0,-1)]?.text || '#ccc'} strokeWidth={1} />
+                                    ))}
+                                </Bar>
                             </BarChart>
                         </ChartContainer>
-                    )}
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+            </div>
 
             {/* ── Directory ── */}
-            <Card className="overflow-hidden p-0 bg-gray-50 shadow-none">
+            <Card className="overflow-hidden p-0 bg-gray-50/50 shadow-none border-gray-100 mt-2">
                 <div className="flex flex-col sm:flex-row items-stretch border-b border-gray-100">
                     <div className="flex-1 px-6 py-4">
-                        <CardTitle className="text-sm">Directory</CardTitle>
+                        <CardTitle className="text-sm font-semibold">Directory</CardTitle>
                         <CardDescription className="text-xs mt-0.5">
                             {canEdit ? 'Click ··· to edit, or the card to view profile' : 'Click any card to view full profile'}
                         </CardDescription>
@@ -289,7 +350,7 @@ const EmployeeDirectory: React.FC = () => {
                             placeholder="Search name, email or department…"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            className="pl-8 h-8 text-xs rounded-lg"
+                            className="pl-8 h-8 text-xs rounded-lg border-gray-200"
                         />
                     </div>
                     <span className="text-xs text-gray-400 flex-shrink-0">

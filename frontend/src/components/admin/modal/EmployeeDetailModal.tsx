@@ -12,8 +12,8 @@ import {
 } from "../../ui/sheet";
 
 const roleColors: Record<string, string> = {
-    admin:    "bg-purple-100 text-purple-700",
-    manager:  "bg-blue-100 text-blue-700",
+    admin: "bg-purple-100 text-purple-700",
+    manager: "bg-blue-100 text-blue-700",
     employee: "bg-gray-100 text-gray-600",
 };
 
@@ -39,21 +39,21 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
     const canDelete = isAdmin;
     const toast = useToast();
 
-    const [balances, setBalances]             = useState<any[]>([]);
+    const [balances, setBalances] = useState<any[]>([]);
     const [balancesLoading, setBalancesLoading] = useState(true);
-    const [managers, setManagers]             = useState<any[]>([]);
-    const [policies, setPolicies]             = useState<any[]>([]);
+    const [managers, setManagers] = useState<any[]>([]);
+    const [policies, setPolicies] = useState<any[]>([]);
 
-    const [selectedPolicy, setSelectedPolicy]   = useState<number | "">(user.policy_id || "");
+    const [selectedPolicy, setSelectedPolicy] = useState<number | "">(user.policy_id || "");
     const [selectedManager, setSelectedManager] = useState<number | "">(user.manager_id || "");
 
-    const [savingPolicy, setSavingPolicy]   = useState(false);
+    const [savingPolicy, setSavingPolicy] = useState(false);
     const [savingManager, setSavingManager] = useState(false);
-    const [resetting, setResetting]         = useState(false);
+    const [resetting, setResetting] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
-    const [deleting, setDeleting]           = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
-    const policyChanged  = selectedPolicy  !== (user.policy_id  || "");
+    const policyChanged = selectedPolicy !== (user.policy_id || "");
     const managerChanged = selectedManager !== (user.manager_id || "");
 
     const fetchManagers = useCallback(async () => {
@@ -79,8 +79,8 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
             setBalances((res.data.data || []).map((b: any) => ({
                 ...b,
                 total_allocated: Number(b.total_allocated),
-                used:            Number(b.used),
-                remaining:       Number(b.remaining),
+                used: Number(b.used),
+                remaining: Number(b.remaining),
             })));
         } catch { } finally {
             setBalancesLoading(false);
