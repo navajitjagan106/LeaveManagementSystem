@@ -66,7 +66,7 @@ const Header: React.FC = () => {
     }, []);
 
     return (
-        <div className="h-14 bg-[#5746AF] flex items-center justify-between px-6 text-white sticky top-0 z-50 shadow-md">
+        <div className="h-14 bg-primary flex items-center justify-between px-6 text-white sticky top-0 z-50 shadow-md">
             <div className="flex items-center gap-4">
                 <span className="font-semibold">Lumel Technologies</span>
                 <input
@@ -96,7 +96,7 @@ const Header: React.FC = () => {
                                     {notifications.map(n => (
                                         <div
                                             key={n.id}
-                                            className={`px-4 py-3 border-b last:border-0 text-sm ${!n.is_read ? "bg-purple-50" : ""}`}
+                                            className={`px-4 py-3 border-b last:border-0 text-sm ${!n.is_read ? "bg-primary-light" : ""}`}
                                         >
                                             <p className="text-gray-800 leading-snug">{n.message}</p>
                                             <p className="text-xs text-gray-400 mt-1">
@@ -112,7 +112,7 @@ const Header: React.FC = () => {
 
                 <div className="relative" ref={profileRef}>
                     <div
-                        className="w-8 h-8 rounded-full bg-white text-purple-600 flex items-center justify-center cursor-pointer"
+                        className="w-8 h-8 rounded-full bg-white text-primary flex items-center justify-center cursor-pointer"
                         onClick={(e) => { e.stopPropagation(); setShowProfile(!showProfile); }}
                     >
                         {user?.name?.charAt(0)?.toUpperCase() || "U"}

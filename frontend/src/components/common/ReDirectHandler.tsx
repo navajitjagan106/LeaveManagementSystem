@@ -7,7 +7,7 @@ const RedirectHandler = () => {
 
     if (!initialized) return null; // Wait for Redux to verify session
     if (!user) return <Navigate to="/login" replace />;
-    if (user.role === "admin") return <Navigate to="/admin" replace />;
+    if (user.role === "admin" || !!user?.permissions?.['admin_dashboard']?.can_view) return <Navigate to="/management" replace />;
 
     return <Navigate to="/dashboard" replace />;
 };

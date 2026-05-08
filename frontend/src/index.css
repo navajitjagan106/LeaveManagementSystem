@@ -2,19 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-.fc-day-today { background-color: transparent !important; }
+.fc-day-today {
+  background-color: transparent !important;
+}
 
 /* ===== FullCalendar polish ===== */
-.fc { font-family: inherit; }
+.fc {
+  font-family: inherit;
+}
 
 /* remove outer scrollgrid borders */
 .fc-scrollgrid,
-.fc-scrollgrid-section > td,
-.fc-scrollgrid-section > th { border: none !important; }
+.fc-scrollgrid-section>td,
+.fc-scrollgrid-section>th {
+  border: none !important;
+}
 
 /* day-header strip */
-.fc-col-header { background: #f5f3ff; }
-.fc-col-header-cell { border: none !important; padding: 10px 0 !important; }
+.fc-col-header {
+  background: #f5f3ff;
+}
+
+.fc-col-header-cell {
+  border: none !important;
+  padding: 10px 0 !important;
+}
+
 .fc-col-header-cell-cushion {
   color: #6d5fd3;
   font-size: 11px;
@@ -25,7 +38,10 @@
 }
 
 /* day cells */
-.fc-daygrid-day { border-color: #f3f4f6 !important; }
+.fc-daygrid-day {
+  border-color: #f3f4f6 !important;
+}
+
 .fc-daygrid-day-number {
   color: #374151;
   font-size: 13px;
@@ -33,31 +49,74 @@
   text-decoration: none !important;
   padding: 6px 8px !important;
 }
-.fc-day-other .fc-daygrid-day-number { color: #d1d5db !important; }
+
+.fc-day-other .fc-daygrid-day-number {
+  color: #d1d5db !important;
+}
 
 /* events */
-.fc-event { border-radius: 6px !important; border: none !important; }
-.fc-event-main { padding: 1px 0 !important; }
-.fc-daygrid-event-harness { margin-top: 2px !important; }
-.fc-event:hover { filter: brightness(0.93); cursor: pointer; }
+.fc-event {
+  border-radius: 6px !important;
+  border: none !important;
+}
 
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+.fc-event-main {
+  padding: 1px 0 !important;
+}
 
+.fc-daygrid-event-harness {
+  margin-top: 2px !important;
+}
+
+.fc-event:hover {
+  filter: brightness(0.93);
+  cursor: pointer;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
 
 @layer base {
   :root {
+    --lms-primary:        #274C77;    /* Main brand color (Deep Blue) */
+    --lms-primary-dark:   #1B3655;    /* Hover / active dark blue */
+    --lms-primary-light:  #A3CEF1;    /* Soft blue UI highlight */
+    --lms-grey:           #6096BA;    /* Accent secondary interactives */
+    --lms-grey-light:     #E2E8F0;    /* Soft border lines */
+    --lms-surface:        #E2E8ED;    /* Page main background (cool steel-blue tint) */
+    --lms-sidebar:        #0F172A;    /* Dark navy sidebar */
+    --lms-sidebar-active: #1E293B;    /* Sidebar active indicator highlight */
+    --lms-text:           #0F172A;    /* Primary dark slate text */
+    --lms-text-muted:     #64748B;    /* Muted secondary text */
+    --lms-border:         #E2E8F0;    /* Standard border separator */
+    --lms-success:        #22C55E;    /* Success state indicator */
+    --lms-warning:        #F59E0B;    /* Warning state indicator */
+    --lms-danger:         #EF4444;    /* Danger state indicator */
+
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 252 47% 49%;
+    --primary-hsl: 252 47% 49%;
     --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
+    --secondary-hsl: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
@@ -84,5 +143,4 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
-  .dark { --heatmap-zero: rgb(51, 51, 51); --sidebar-background: 240 5.9% 10%; --sidebar-foreground: 240 4.8% 95.9%; --sidebar-primary: 224.3 76.3% 48%; --sidebar-primary-foreground: 0 0% 100%; --sidebar-accent: 240 3.7% 15.9%; --sidebar-accent-foreground: 240 4.8% 95.9%; --sidebar-border: 240 3.7% 15.9%; --sidebar-ring: 217.2 91.2% 59.8%; }
 }

@@ -2,6 +2,7 @@ export interface PagePermission {
     can_view: boolean;
     can_edit: boolean;
     can_delete: boolean;
+    scope?: string;
 }
 
 export interface User {
@@ -18,4 +19,5 @@ export interface User {
     date_of_birth?: string | null;
     location?: string | null;
     permissions?: Record<string, PagePermission>;
+    has_reportees?: boolean;
 }

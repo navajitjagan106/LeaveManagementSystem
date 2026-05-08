@@ -8,12 +8,12 @@ import { RootState } from "../../store";
 const OtpSlot = (props: SlotProps) => (
     <div
         className={`w-11 h-12 border-2 rounded-xl flex items-center justify-center text-lg font-semibold transition-all
-            ${props.isActive ? "border-purple-500 bg-purple-50" : "border-gray-200 bg-white"}
+            ${props.isActive ? "border-primary bg-primary-light" : "border-gray-200 bg-white"}
             ${props.char ? "text-gray-900" : "text-gray-300"}`}
     >
         {props.char ?? <span className="text-gray-300">·</span>}
         {props.hasFakeCaret && (
-            <span className="animate-pulse text-purple-500 ml-0.5">|</span>
+            <span className="animate-pulse text-primary-light0 ml-0.5">|</span>
         )}
     </div>
 );
@@ -32,7 +32,7 @@ const Login: React.FC = () => {
 
     useEffect(() => {
         if (initialized && user) {
-            navigate(user.role === "admin" ? "/admin" : "/dashboard");
+            navigate(user.role === "admin" ? "/management" : "/dashboard");
         }
     }, [initialized, user, navigate]);
 
@@ -72,7 +72,7 @@ const Login: React.FC = () => {
             const res = await verifyOtp({ email, code: otp });
             const role = res.data.user?.role;
             setTimeout(() => {
-                window.location.href = role === "admin" ? "/admin" : "/dashboard";
+                window.location.href = role === "admin" ? "/management" : "/dashboard";
             }, 100);
         } catch (err: any) {
             setError(err?.response?.data?.error || "Invalid or expired OTP");
@@ -99,12 +99,27 @@ const Login: React.FC = () => {
 
     return (
         <div className="flex h-screen">
-            <div className="hidden md:block w-2/3 relative">
-                <img
-                    src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&auto=format&fit=crop"
-                    alt="background"
-                    className="w-full h-full object-cover"
-                />
+            {/* ── Left Pane: Soft Blue-Tinted Welcome Panel (2/3 Width on Desktop) ── */}
+            <div className="hidden md:flex md:w-2/3 bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-slate-50/30 items-center justify-center p-12 relative border-r border-slate-100">
+                {/* Clean, subtle geometric elements in matching light tints */}
+                <div className="absolute top-20 left-20 w-72 h-72 rounded-full bg-blue-100/20 blur-3xl" />
+                <div className="absolute bottom-20 right-20 w-72 h-72 rounded-full bg-indigo-100/20 blur-3xl" />
+                
+                <div className="max-w-lg text-center flex flex-col items-center gap-8 z-10">
+                    <img 
+                        src="/login-illustration.svg" 
+                        className="w-96 h-96 object-contain" 
+                        alt="Login Illustration" 
+                    />
+                    <div className="space-y-3">
+                        <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">
+                            Access Your Dashboard
+                        </h1>
+                        <p className="text-slate-500 text-sm max-w-md leading-relaxed font-medium">
+                            Secure workspace with automated OTP verification to protect your leave requests, allowances, and team calendars.
+                        </p>
+                    </div>
+                </div>
             </div>
 
             <div className="w-full md:w-1/3 flex flex-col justify-between px-12 py-10 bg-white">
@@ -123,7 +138,7 @@ const Login: React.FC = () => {
                                         placeholder="you@company.com"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500"
+                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-primary"
                                         required
                                     />
                                 </div>
@@ -134,7 +149,7 @@ const Login: React.FC = () => {
                                         placeholder="••••••••"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500"
+                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-primary"
                                         required
                                     />
                                 </div>
@@ -144,8 +159,7 @@ const Login: React.FC = () => {
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="w-full py-2.5 rounded-lg text-white text-sm font-medium mt-2 disabled:opacity-60"
-                                    style={{ background: "var(--theme-color, #5746AF)" }}
+                                    className="w-full py-3 rounded-xl text-white text-sm font-bold mt-2 disabled:opacity-60 bg-primary hover:bg-primary-dark shadow-md shadow-blue-50 transition-all"
                                 >
                                     {loading ? "Checking…" : "Continue"}
                                 </button>
@@ -183,8 +197,7 @@ const Login: React.FC = () => {
                             <button
                                 onClick={handleVerifyOtp}
                                 disabled={loading || otp.length !== 6}
-                                className="w-full py-2.5 rounded-lg text-white text-sm font-medium disabled:opacity-50"
-                                style={{ background: "var(--theme-color, #5746AF)" }}
+                                className="w-full py-3 rounded-xl text-white text-sm font-bold disabled:opacity-50 bg-primary hover:bg-primary-dark shadow-md shadow-blue-50 transition-all"
                             >
                                 {loading ? "Verifying…" : "Verify & Login"}
                             </button>
@@ -195,7 +208,7 @@ const Login: React.FC = () => {
                                 ) : (
                                     <button
                                         onClick={handleResend}
-                                        className="text-sm text-purple-600 hover:underline"
+                                        className="text-sm text-primary hover:underline"
                                     >
                                         Resend code
                                     </button>

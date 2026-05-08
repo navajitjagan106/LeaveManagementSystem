@@ -5,7 +5,7 @@ interface SidebarCtx {
     toggle: () => void;
 }
 
-const SidebarContext = createContext<SidebarCtx>({ collapsed: false, toggle: () => {} });
+const SidebarContext = createContext<SidebarCtx>({ collapsed: false, toggle: () => { } });
 
 export const useSidebar = () => useContext(SidebarContext);
 

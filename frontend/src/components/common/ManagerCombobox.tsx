@@ -35,8 +35,8 @@ export function ManagerCombobox({ value, onChange, managers, placeholder = "No m
         <div className={cn("relative", className)}>
             <div className={cn(
                 "flex items-center gap-2 w-full border rounded-xl px-3 py-2 text-sm transition-colors",
-                changed ? "border-purple-300 bg-purple-50" : "border-gray-200 bg-white",
-                open && "ring-2 ring-purple-300 border-purple-300"
+                changed ? "border-primary-light bg-primary-light" : "border-gray-200 bg-white",
+                open && "ring-2 ring-primary-light border-primary-light"
             )}>
                 <Search size={13} className="text-gray-400 shrink-0" />
                 <input
@@ -67,7 +67,7 @@ export function ManagerCombobox({ value, onChange, managers, placeholder = "No m
                             onMouseDown={(e) => { e.preventDefault(); select(""); }}
                             className={cn(
                                 "w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50",
-                                value === "" && "bg-purple-50 text-purple-700 font-medium"
+                                value === "" && "bg-primary-light text-primary-dark font-medium"
                             )}
                         >
                             <span className="italic text-gray-400">No manager</span>
@@ -82,7 +82,7 @@ export function ManagerCombobox({ value, onChange, managers, placeholder = "No m
                                     onMouseDown={(e) => { e.preventDefault(); select(m.id); }}
                                     className={cn(
                                         "w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center justify-between gap-2",
-                                        value === m.id && "bg-purple-50 text-purple-700"
+                                        value === m.id && "bg-primary-light text-primary-dark"
                                     )}
                                 >
                                     <span className="font-medium truncate">{m.name}</span>

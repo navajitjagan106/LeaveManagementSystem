@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import DateRangePicker from '../common/forms/DateRangePicker';
-import { applyLeave, calculateDays, getLeaveInitData, getTeamOnLeave } from "../../api/leaveApi";
+import { applyLeave, getLeaveInitData, getTeamOnLeave } from "../../api/leaveApi";
 import { LeaveBalance, LeaveType } from "../../types";
 import PageHeader from '../common/PageHeader';
 import { useToast } from '../common/ToastContext';
+import { calculateWorkingDays } from "../../utils/calculateWorkingDays";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +36,7 @@ const ApplyLeave: React.FC = () => {
     const [totalDays, setTotalDays] = useState(0);
     const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
     const [balances, setBalances] = useState<LeaveBalance[]>([]);
+    const [holidays, setHolidays] = useState<string[]>([]);
     const [teamOnLeave, setTeamOnLeave] = useState<any[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const toast = useToast();
@@ -45,6 +47,8 @@ const ApplyLeave: React.FC = () => {
                 setManager(res.data.data.manager);
                 setLeaveTypes(res.data.data.leaveTypes);
                 setBalances(res.data.data.balances);
+                const hDates = res.data.data.holidays?.map((h: any) => h.date.slice(0, 10)) || [];
+                setHolidays(hDates);
                 if (res.data.data.leaveTypes?.[0]) {
                     setFormData(f => ({ ...f, leaveType: String(res.data.data.leaveTypes[0].id) }));
                 }
@@ -61,10 +65,9 @@ const ApplyLeave: React.FC = () => {
 
     useEffect(() => {
         if (!formData.fromDate || !formData.toDate) { setTotalDays(0); return; }
-        calculateDays({ from_date: formData.fromDate, to_date: formData.toDate, duration_type: formData.durationType })
-            .then(res => setTotalDays(res.data.days))
-            .catch(() => setTotalDays(0));
-    }, [formData.fromDate, formData.toDate, formData.durationType]);
+        const days = calculateWorkingDays(formData.fromDate, formData.toDate, formData.durationType, holidays);
+        setTotalDays(days);
+    }, [formData.fromDate, formData.toDate, formData.durationType, holidays]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -114,19 +117,17 @@ const ApplyLeave: React.FC = () => {
                                         key={type.id}
                                         type="button"
                                         onClick={() => setFormData(f => ({ ...f, leaveType: String(type.id) }))}
-                                        className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${
-                                            isSelected
-                                                ? 'border-[#5746AF] bg-purple-50/50 shadow-sm'
-                                                : 'border-gray-200 bg-white hover:border-purple-200 hover:bg-gray-50'
-                                        }`}
+                                        className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${isSelected
+                                                ? 'border-primary bg-primary-light/50 shadow-sm'
+                                                : 'border-gray-200 bg-white hover:border-primary-light hover:bg-gray-50'
+                                            }`}
                                     >
-                                        <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
-                                            isSelected ? 'bg-[#5746AF] text-white' : 'bg-gray-100 text-gray-500'
-                                        }`}>
+                                        <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500'
+                                            }`}>
                                             {LEAVE_ICONS[type.name] ?? <CalendarDays className="w-4 h-4" />}
                                         </span>
                                         <div className="min-w-0 flex-1 pt-0.5">
-                                            <p className={`text-sm font-semibold leading-snug ${isSelected ? 'text-[#5746AF]' : 'text-gray-800'}`}>
+                                            <p className={`text-sm font-semibold leading-snug ${isSelected ? 'text-primary' : 'text-gray-800'}`}>
                                                 {type.name}
                                             </p>
                                             <p className="text-[11px] text-gray-400 mt-0.5">
@@ -153,11 +154,10 @@ const ApplyLeave: React.FC = () => {
                                     key={opt.value}
                                     type="button"
                                     onClick={() => setFormData(f => ({ ...f, durationType: opt.value }))}
-                                    className={`px-5 py-1.5 rounded-md text-sm font-medium transition-all ${
-                                        formData.durationType === opt.value
-                                            ? 'bg-white text-[#5746AF] shadow-sm border border-gray-200'
+                                    className={`px-5 py-1.5 rounded-md text-sm font-medium transition-all ${formData.durationType === opt.value
+                                            ? 'bg-white text-primary shadow-sm border border-gray-200'
                                             : 'text-gray-500 hover:text-gray-700'
-                                    }`}
+                                        }`}
                                 >
                                     {opt.label}
                                 </button>
@@ -186,7 +186,7 @@ const ApplyLeave: React.FC = () => {
                             value={formData.reason}
                             onChange={e => setFormData(f => ({ ...f, reason: e.target.value }))}
                             placeholder="Briefly describe the reason for your leave…"
-                            className="h-20 resize-none border-gray-200 focus:border-[#5746AF] focus:ring-[#5746AF]/20 text-sm"
+                            className="h-20 resize-none border-gray-200 focus:border-primary focus:ring-primary/20 text-sm"
                             required
                         />
                     </div>
@@ -195,7 +195,7 @@ const ApplyLeave: React.FC = () => {
                     <Button
                         type="submit"
                         disabled={submitting}
-                        className="w-full h-11 bg-[#5746AF] hover:bg-[#4a3a9a] text-white font-semibold text-sm mt-1"
+                        className="w-full h-11 bg-primary hover:bg-[#4a3a9a] text-white font-semibold text-sm mt-1"
                     >
                         {submitting ? 'Submitting…' : 'Submit Request'}
                     </Button>
@@ -223,9 +223,8 @@ const ApplyLeave: React.FC = () => {
                                     <div
                                         key={b.leave_type_id}
                                         onClick={() => setFormData(f => ({ ...f, leaveType: String(b.leave_type_id) }))}
-                                        className={`rounded-lg p-3 cursor-pointer transition-all border ${
-                                            isSelected ? 'border-[#5746AF] bg-purple-50/40' : 'border-transparent hover:border-gray-200 hover:bg-gray-50'
-                                        }`}
+                                        className={`rounded-lg p-3 cursor-pointer transition-all border ${isSelected ? 'border-primary bg-primary-light/40' : 'border-transparent hover:border-gray-200 hover:bg-gray-50'
+                                            }`}
                                     >
                                         <div className="flex items-center justify-between mb-1.5">
                                             <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: light, color: col }}>
@@ -247,17 +246,22 @@ const ApplyLeave: React.FC = () => {
                         </CardContent>
                     </Card>
 
-                    {/* Manager */}
-                    <Card className="shadow-none border-gray-100">
-                        <CardContent className="px-4 py-4 flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-[#ede9fe] flex items-center justify-center flex-shrink-0">
-                                <UserCircle2 className="w-5 h-5 text-[#5746AF]" />
+                    {/* Integrated Manager & Forms-cuate Card */}
+                    <Card className="shadow-none border-gray-100 bg-gradient-to-br from-blue-50/30 via-indigo-50/20 to-slate-50/10 p-4 flex items-center justify-between gap-3 overflow-hidden relative">
+                        <div className="flex items-center gap-3 max-w-[65%]">
+                            <div className="w-9 h-9 rounded-xl bg-[#ede9fe] flex items-center justify-center flex-shrink-0">
+                                <UserCircle2 className="w-5 h-5 text-primary" />
                             </div>
-                            <div>
-                                <p className="text-[10px] text-gray-400 uppercase tracking-wider">Reporting Manager</p>
-                                <p className="text-sm font-semibold text-gray-800">{manager?.name ?? 'Loading…'}</p>
+                            <div className="min-w-0">
+                                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-extrabold">Reporting Manager</p>
+                                <p className="text-sm font-bold text-slate-800 truncate">{manager?.name ?? 'Loading…'}</p>
                             </div>
-                        </CardContent>
+                        </div>
+                        <img 
+                            src="/Forms-cuate.svg" 
+                            className="w-32 h-32 object-contain select-none shrink-0 opacity-90 transform translate-x-1" 
+                            alt="Forms Illustration" 
+                        />
                     </Card>
 
                     {/* Team on leave */}

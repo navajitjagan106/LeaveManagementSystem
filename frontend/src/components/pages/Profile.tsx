@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { getuserdata, getBalance, updateUserProfile } from "../../api/leaveApi";
+import { getBalance, updateUserProfile } from "../../api/leaveApi";
+import { getMe } from "../../api/authApi";
 import { User } from "../../types";
 import {
     Mail, Building2, Users, BookOpen, Shield,
@@ -33,10 +34,33 @@ function fmtDob(dob: string | null | undefined): string {
 
 const GENDER_OPTIONS = ["Male", "Female", "Non-binary", "Prefer not to say"];
 
-const ROLE_STYLE: Record<string, { bg: string; text: string }> = {
-    admin: { bg: "#fee2e2", text: "#ef4444" },
-    manager: { bg: "#ede9fe", text: "#5746AF" },
-    employee: { bg: "#dbeafe", text: "#3b82f6" },
+const getRoleStyle = (role: string) => {
+    const r = role.toLowerCase();
+    if (r === 'admin') return { bg: "#fee2e2", text: "#ef4444" };
+    if (r === 'manager') return { bg: "#ede9fe", text: "#5746AF" };
+    if (r === 'hr') return { bg: "#fce7f3", text: "#db2777" };
+    if (r === 'employee') return { bg: "#dbeafe", text: "#3b82f6" };
+    
+    // Deterministic random hex colors matching the modal palette
+    const colors = [
+        { bg: "#fee2e2", text: "#b91c1c" }, // red
+        { bg: "#ffedd5", text: "#c2410c" }, // orange
+        { bg: "#fef3c7", text: "#b45309" }, // amber
+        { bg: "#d1fae5", text: "#047857" }, // emerald
+        { bg: "#ccfbf1", text: "#0f766e" }, // teal
+        { bg: "#cffafe", text: "#0e7490" }, // cyan
+        { bg: "#e0f2fe", text: "#0369a1" }, // sky
+        { bg: "#e0e7ff", text: "#4338ca" }, // indigo
+        { bg: "#ede9fe", text: "#6d28d9" }, // violet
+        { bg: "#fae8ff", text: "#a21caf" }, // fuchsia
+        { bg: "#ffe4e6", text: "#be123c" }  // rose
+    ];
+    let hash = 0;
+    for (let i = 0; i < role.length; i++) {
+        hash = role.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
 };
 
 type BalanceItem = { leave_type_id: number; type: string; total_allocated: number; used: number; remaining: number; is_unlimited: boolean };
@@ -58,7 +82,7 @@ const Profile: React.FC = () => {
     const [form, setForm] = useState({ phone: "", gender: "", date_of_birth: "", location: "" });
 
     useEffect(() => {
-        Promise.all([getuserdata(), getBalance()])
+        Promise.all([getMe(), getBalance()])
             .then(([userRes, balRes]) => {
                 const u = userRes.data.data;
                 setUser(u);
@@ -108,7 +132,7 @@ const Profile: React.FC = () => {
 
     const initials = user.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
     const color = avatarColor(user.name);
-    const roleStyle = ROLE_STYLE[user.role] ?? ROLE_STYLE.employee;
+    const roleStyle = getRoleStyle(user.role);
 
     const employmentFields = [
         { icon: Mail, label: "Email", value: user.email, cls: "break-all" },
@@ -133,7 +157,7 @@ const Profile: React.FC = () => {
                 <select
                     value={form.gender}
                     onChange={e => setForm(f => ({ ...f, gender: e.target.value }))}
-                    className="w-full h-7 text-sm border border-gray-200 rounded-md px-2 bg-white focus:outline-none focus:ring-1 focus:ring-purple-400"
+                    className="w-full h-7 text-sm border border-gray-200 rounded-md px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                     <option value="">Select…</option>
                     {GENDER_OPTIONS.map(g => <option key={g} value={g}>{g}</option>)}
@@ -142,13 +166,13 @@ const Profile: React.FC = () => {
         },
         {
             icon: CalendarDays, label: "Date of Birth",
-            iconCls: "text-amber-500", bgCls: "bg-amber-50",
+            iconCls: "text-primarymber-500", bgCls: "bg-primarymber-50",
             view: user.date_of_birth ? `${fmtDob(user.date_of_birth)} ${calcAge(user.date_of_birth)}` : "—",
             edit: <Input type="date" value={form.date_of_birth} onChange={e => setForm(f => ({ ...f, date_of_birth: e.target.value }))} className="h-7 text-sm px-2" />,
         },
         {
             icon: MapPin, label: "Location",
-            iconCls: "text-emerald-500", bgCls: "bg-emerald-50",
+            iconCls: "text-emerald-500", bgCls: "bg-primary-lightmerald-50",
             view: user.location || "—",
             edit: <Input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="City, State" className="h-7 text-sm px-2" />,
         },
@@ -179,7 +203,7 @@ const Profile: React.FC = () => {
                             {initials}
                         </div>
                         <h1 className="text-white font-bold text-lg leading-tight">{user.name}</h1>
-                        <p className="text-purple-200 text-xs mt-1 break-all">{user.email}</p>
+                        <p className="text-primary-light text-xs mt-1 break-all">{user.email}</p>
                         <span
                             className="mt-3 text-xs font-semibold px-3 py-1 rounded-full capitalize"
                             style={{ background: roleStyle.bg, color: roleStyle.text }}
@@ -196,8 +220,8 @@ const Profile: React.FC = () => {
                         <div className="flex flex-col gap-4 mb-6">
                             {employmentFields.map(({ icon: Icon, label, value, cls }) => (
                                 <div key={label} className="flex items-start gap-3">
-                                    <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
-                                        <Icon size={13} className="text-[#5746AF]" />
+                                    <div className="w-7 h-7 rounded-lg bg-primary-light flex items-center justify-center flex-shrink-0">
+                                        <Icon size={13} className="text-primary" />
                                     </div>
                                     <div className="min-w-0">
                                         <p className="text-[10px] text-gray-400 uppercase tracking-wider">{label}</p>
@@ -213,7 +237,7 @@ const Profile: React.FC = () => {
                             {!editing ? (
                                 <button
                                     onClick={() => setEditing(true)}
-                                    className="flex items-center gap-1.5 text-xs font-medium text-[#5746AF] hover:text-purple-700 transition-colors"
+                                    className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary-dark transition-colors"
                                 >
                                     <Pencil size={12} /> Edit
                                 </button>
@@ -225,7 +249,7 @@ const Profile: React.FC = () => {
                                     <button
                                         onClick={handleSave}
                                         disabled={saving}
-                                        className="flex items-center gap-1 text-xs font-semibold text-white bg-[#5746AF] hover:bg-purple-700 px-3 py-1 rounded-lg transition-colors disabled:opacity-60"
+                                        className="flex items-center gap-1 text-xs font-semibold text-white bg-primary hover:bg-primary-dark px-3 py-1 rounded-lg transition-colors disabled:opacity-60"
                                     >
                                         <Check size={12} /> {saving ? "Saving…" : "Save"}
                                     </button>
@@ -328,21 +352,33 @@ const Profile: React.FC = () => {
                                 <CardDescription className="text-xs">Approved leave frequency by day of week</CardDescription>
                             </CardHeader>
                             <CardContent className="flex-1 min-h-0 px-2 pb-4">
-                                {!hasWeekly ? (
-                                    <div className="h-full flex items-center justify-center text-sm text-gray-400">
-                                        No approved leaves yet
-                                    </div>
-                                ) : (
+                                <div className="relative h-full w-full">
                                     <ChartContainer config={weeklyChartConfig} className="h-full w-full">
-                                        <BarChart data={weeklyChartData} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
+                                        <BarChart 
+                                            data={hasWeekly ? weeklyChartData : ["Mon", "Tue", "Wed", "Thu", "Fri"].map(d => ({ day: d, value: 0.15 }))} 
+                                            margin={{ left: 0, right: 8, top: 4, bottom: 4 }}
+                                        >
                                             <CartesianGrid vertical={false} stroke="#f0f0f0" />
                                             <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
                                             <YAxis hide />
-                                            <ChartTooltip content={<ChartTooltipContent className="w-36" />} />
-                                            <Bar dataKey="value" fill={weeklyChartConfig.value.color} radius={[3, 3, 0, 0]} maxBarSize={32} />
+                                            {hasWeekly && <ChartTooltip content={<ChartTooltipContent className="w-36" />} />}
+                                            <Bar 
+                                                dataKey="value" 
+                                                fill={hasWeekly ? weeklyChartConfig.value.color : "#E2E8F0"} 
+                                                radius={[3, 3, 0, 0]} 
+                                                maxBarSize={32} 
+                                            />
                                         </BarChart>
                                     </ChartContainer>
-                                )}
+                                    {!hasWeekly && (
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <div className="bg-white/80 border border-gray-100 px-3 py-2 rounded-xl shadow-md backdrop-blur-sm text-center">
+                                                <p className="text-xs font-bold text-gray-500">No Approved Leaves Yet</p>
+                                                <p className="text-[10px] text-gray-400">Activity will populate here</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </CardContent>
                         </Card>
                     </div>

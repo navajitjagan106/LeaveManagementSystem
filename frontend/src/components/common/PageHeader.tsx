@@ -12,7 +12,7 @@ const PageHeader: React.FC<Props> = ({ title, subtitle, action, card = false, di
     const inner = (
         <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
-                <div className="w-1 h-7 rounded-full bg-[#5746AF] flex-shrink-0" />
+                <div className="w-1 h-7 rounded-full bg-primary flex-shrink-0" />
                 <div>
                     <h1 className="text-lg font-semibold text-gray-900 leading-tight">{title}</h1>
                     {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}

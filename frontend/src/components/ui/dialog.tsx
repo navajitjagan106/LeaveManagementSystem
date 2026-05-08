@@ -9,8 +9,26 @@ interface DialogCtx {
 
 const DialogContext = createContext<DialogCtx>({ open: false, setOpen: () => {} });
 
-export function Dialog({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false);
+export function Dialog({
+  children,
+  open: controlledOpen,
+  onOpenChange,
+}: {
+  children: ReactNode;
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
+}) {
+  const [localOpen, setLocalOpen] = useState(false);
+
+  const open = controlledOpen !== undefined ? controlledOpen : localOpen;
+  const setOpen = (v: boolean) => {
+    if (onOpenChange) {
+      onOpenChange(v);
+    } else {
+      setLocalOpen(v);
+    }
+  };
+
   return (
     <DialogContext.Provider value={{ open, setOpen }}>
       {children}
@@ -53,18 +71,18 @@ export function DialogContent({ children, className }: { children: ReactNode; cl
   );
 }
 
-export function DialogHeader({ children }: { children: ReactNode }) {
-  return <div className="mb-4 space-y-1 pr-4">{children}</div>;
+export function DialogHeader({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn("mb-4 space-y-1 pr-4", className)}>{children}</div>;
 }
 
-export function DialogTitle({ children }: { children: ReactNode }) {
-  return <h2 className="text-base font-semibold text-gray-900">{children}</h2>;
+export function DialogTitle({ children, className }: { children: ReactNode; className?: string }) {
+  return <h2 className={cn("text-base font-semibold text-gray-900", className)}>{children}</h2>;
 }
 
-export function DialogDescription({ children }: { children: ReactNode }) {
-  return <p className="text-sm text-gray-500">{children}</p>;
+export function DialogDescription({ children, className }: { children: ReactNode; className?: string }) {
+  return <p className={cn("text-sm text-gray-500", className)}>{children}</p>;
 }
 
-export function DialogFooter({ children }: { children: ReactNode }) {
-  return <div className="flex gap-3 mt-6">{children}</div>;
+export function DialogFooter({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn("flex gap-3 mt-6", className)}>{children}</div>;
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { getBalance } from '../../api/leaveApi';
 import {
     PieChart, Pie, Label,
@@ -8,7 +8,7 @@ import {
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import PageHeader from '../common/PageHeader';
-import { Loader } from 'lucide-react';
+import { useAsync } from '../../hooks/useAsync';
 
 type LeaveBalanceType = {
     type: string;
@@ -18,19 +18,19 @@ type LeaveBalanceType = {
     is_unlimited: boolean;
 };
 
-const PALETTE       = ["#6366f1","#10b981","#f59e0b","#ef4444","#3b82f6","#ec4899","#14b8a6","#f97316"];
-const LIGHT_PALETTE = ["#eef2ff","#d1fae5","#fef3c7","#fee2e2","#dbeafe","#fce7f3","#ccfbf1","#ffedd5"];
+const PALETTE = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899", "#14b8a6", "#f97316"];
+const LIGHT_PALETTE = ["#eef2ff", "#d1fae5", "#fef3c7", "#fee2e2", "#dbeafe", "#fce7f3", "#ccfbf1", "#ffedd5"];
 
 /* ── Slim Ring card — horizontal strip, fixed ~68px tall ── */
 const RingCard: React.FC<{ item: LeaveBalanceType; color: string; light: string }> = ({ item, color, light }) => {
-    const used      = Number(item.used);
+    const used = Number(item.used);
     const allocated = Number(item.total_allocated);
     const remaining = item.is_unlimited ? null : allocated - used;
-    const pct       = item.is_unlimited
+    const pct = item.is_unlimited
         ? Math.min(used / Math.max(used * 2, 1), 1)  // visual only — fill half ring per used day
         : allocated > 0 ? used / allocated : 0;
     const size = 52; const r = 20;
-    const circ   = 2 * Math.PI * r;
+    const circ = 2 * Math.PI * r;
     const offset = circ * (1 - pct);
 
     return (
@@ -41,9 +41,9 @@ const RingCard: React.FC<{ item: LeaveBalanceType; color: string; light: string 
             {/* Mini ring */}
             <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
                 <svg width={size} height={size} className="-rotate-90" style={{ display: "block" }}>
-                    <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#f3f4f6" strokeWidth="4" />
+                    <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#f3f4f6" strokeWidth="4" />
                     <circle
-                        cx={size/2} cy={size/2} r={r}
+                        cx={size / 2} cy={size / 2} r={r}
                         fill="none" stroke={color} strokeWidth="4" strokeLinecap="round"
                         strokeDasharray={circ} strokeDashoffset={offset}
                         style={{ transition: "stroke-dashoffset 0.6s ease" }}
@@ -89,22 +89,17 @@ const RingCard: React.FC<{ item: LeaveBalanceType; color: string; light: string 
 
 /* ── Page ── */
 const LeaveBalance: React.FC = () => {
-    const [leaveBalances, setLeaveBalances] = useState<LeaveBalanceType[]>([]);
-    const [weeklyData, setWeeklyData]       = useState<{ day: string; value: number }[]>([]);
-    const [loading, setLoading]             = useState(true);
+    const { data, LoadingScreen, execute } = useAsync(getBalance, true);
 
     useEffect(() => {
-        getBalance()
-            .then(res => {
-                setLeaveBalances(res.data.leaveBalances || []);
-                setWeeklyData(res.data.weeklyPattern   || []);
-            })
-            .catch(err => console.error("Failed to fetch leave balance", err))
-            .finally(() => setLoading(false));
-    }, []);
+        execute();
+    }, [execute]);
+
+    const leaveBalances: LeaveBalanceType[] = data?.leaveBalances || [];
+    const weeklyData = data?.weeklyPattern || [];
 
     // For unlimited types (LOP): remaining is meaningless — show used so the segment always appears
-    const chartDatarem  = leaveBalances.map((lb, i) => ({
+    const chartDatarem = leaveBalances.map((lb, i) => ({
         name: lb.type,
         value: lb.is_unlimited ? Math.max(Number(lb.used), 0.5) : Math.max(Number(lb.remaining), 0),
         fill: PALETTE[i % PALETTE.length],
@@ -121,16 +116,11 @@ const LeaveBalance: React.FC = () => {
     }, {} as Record<string, { label: string; color: string }>);
 
     const totalRemaining = leaveBalances.reduce((s, lb) => s + (lb.is_unlimited ? 0 : Math.max(Number(lb.remaining), 0)), 0);
-    const totalUsed      = leaveBalances.reduce((s, lb) => s + Number(lb.used), 0);
-
-    if (loading) return (
-        <div className="flex justify-center items-center h-full">
-            <Loader className="animate-spin text-purple-500" />
-        </div>
-    );
+    const totalUsed = leaveBalances.reduce((s, lb) => s + Number(lb.used), 0);
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3 h-full min-h-0">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3 h-full min-h-0 relative">
+            <LoadingScreen />
             <PageHeader title="Leave Balance" subtitle="View your leave balance" divider />
 
             {/* Ring cards — fixed height strips, 4 cols, no wrap overflow */}
@@ -167,15 +157,22 @@ const LeaveBalance: React.FC = () => {
                 {/* Remaining by Type */}
                 <Card className="bg-gray-50 shadow-none flex flex-col min-h-0">
                     <CardHeader className="pb-1 pt-3 px-4 flex-shrink-0">
-                        <CardTitle className="text-sm">Remaining by Type</CardTitle>
+                        <div className="flex justify-between items-center">
+                            <CardTitle className="text-sm">Remaining by Type</CardTitle>
+                            {totalRemaining === 0 && (
+                                <span className="px-1.5 py-0.5 bg-gray-200 text-gray-500 rounded text-[8px] font-bold uppercase tracking-wider">
+                                    Skeleton
+                                </span>
+                            )}
+                        </div>
                         <CardDescription className="text-xs">Days left per leave type</CardDescription>
                     </CardHeader>
                     <CardContent className="flex-1 min-h-0 pb-3 px-3">
                         <ChartContainer config={pieConfig} className="w-full h-full">
                             <PieChart>
-                                <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
+                                {totalRemaining > 0 && <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />}
                                 <Pie
-                                    data={chartDatarem}
+                                    data={totalRemaining > 0 ? chartDatarem : [{ name: "none", value: 1, fill: "#cbd5e1" }]}
                                     dataKey="value" nameKey="name"
                                     cx="50%" cy="50%"
                                     outerRadius="72%" innerRadius="42%"
@@ -200,15 +197,22 @@ const LeaveBalance: React.FC = () => {
                 {/* Used by Type */}
                 <Card className="bg-gray-50 shadow-none flex flex-col min-h-0">
                     <CardHeader className="pb-1 pt-3 px-4 flex-shrink-0">
-                        <CardTitle className="text-sm">Used by Type</CardTitle>
+                        <div className="flex justify-between items-center">
+                            <CardTitle className="text-sm">Used by Type</CardTitle>
+                            {totalUsed === 0 && (
+                                <span className="px-1.5 py-0.5 bg-gray-200 text-gray-500 rounded text-[8px] font-bold uppercase tracking-wider">
+                                    Skeleton
+                                </span>
+                            )}
+                        </div>
                         <CardDescription className="text-xs">Days consumed per leave type</CardDescription>
                     </CardHeader>
                     <CardContent className="flex-1 min-h-0 pb-3 px-3">
                         <ChartContainer config={pieConfig} className="w-full h-full">
                             <PieChart>
-                                <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
+                                {totalUsed > 0 && <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />}
                                 <Pie
-                                    data={chartDataused}
+                                    data={totalUsed > 0 ? chartDataused : [{ name: "none", value: 1, fill: "#cbd5e1" }]}
                                     dataKey="value" nameKey="name"
                                     cx="50%" cy="50%"
                                     outerRadius="72%" innerRadius="42%"

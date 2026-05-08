@@ -1,14 +1,15 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-    LayoutDashboard, FileText, History, Users, CheckCircle,
+    LayoutDashboard, FileText, History, CheckCircle,
     Scale, ShieldCheck, LogOut, UsersRound, Mail, CalendarDays,
-    Umbrella, BookOpen,  PanelLeftClose, PanelLeftOpen,
+    BookOpen, PanelLeftClose, PanelLeftOpen, Umbrella,
 } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
 import { logout as logoutAction } from "../../store/slices/authSlice";
 import { useSidebar } from "../../context/SidebarContext";
+import { logoutApi } from "../../api/authApi";
 
 const Sidebar: React.FC = () => {
     const location = useLocation();
@@ -16,42 +17,45 @@ const Sidebar: React.FC = () => {
     const { user } = useSelector((state: RootState) => state.auth);
     const { collapsed, toggle } = useSidebar();
 
-    const handleLogout = () => {
-        document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict";
-        document.cookie = "user=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict";
+    const handleLogout = async () => {
+        try {
+            await logoutApi();
+        } catch (err) {
+            console.error("Backend logout failed", err);
+        }
         dispatch(logoutAction());
         window.location.href = "/login";
     };
 
     const isAdmin = user?.role === "admin";
     const hasPage = (key: string) => isAdmin || user?.permissions?.[key]?.can_view === true;
-    const canEditOrDelete = (key: string) =>
-        isAdmin || user?.permissions?.[key]?.can_edit === true || user?.permissions?.[key]?.can_delete === true;
+    const canManageHolidays = isAdmin || 
+        user?.permissions?.["manage_holidays"]?.can_edit === true || 
+        user?.permissions?.["manage_holidays"]?.can_delete === true;
 
     const menuItems = [
         { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard, show: !isAdmin },
-
-        { path: "/admin", label: "Overview", icon: LayoutDashboard, show: isAdmin },
-        { path: "/approvals", label: "Approvals", icon: CheckCircle, show: user?.role === "manager" || hasPage("approvals") },
-        { path: "/employees", label: "Employees", icon: UsersRound, show: isAdmin || user?.role === "manager" || hasPage("employee_directory") || hasPage("admin_employees") },
-        { path: "/admin/invitations", label: "Invites", icon: Mail, show: isAdmin || hasPage("admin_invitations") },
-        { path: "/admin/leave-types", label: "Leave Types", icon: CalendarDays, show: isAdmin || hasPage("admin_leave_types") },
-        // Only show Holidays in sidebar when user can edit/delete (not just view)
-        { path: "/admin/holidays", label: "Holidays", icon: Umbrella, show: canEditOrDelete("admin_holidays") },
-        { path: "/admin/policies", label: "Policies", icon: BookOpen, show: isAdmin || hasPage("admin_policies") },
-        { path: "/admin/permissions", label: "Perms", icon: ShieldCheck, show: isAdmin },
+        { path: "/management", label: "Overview", icon: LayoutDashboard, show: hasPage("admin_dashboard") },
+        { path: "/approvals", label: "Approvals", icon: CheckCircle, show: !!user?.has_reportees || hasPage("approvals") },
+        { path: "/employees", label: "Employees", icon: UsersRound, show: hasPage("team_access") || hasPage("manage_employees") },
+        { path: "/management/invitations", label: "Invites", icon: Mail, show: hasPage("manage_invitations") },
+        { path: "/management/leave-types", label: "Leave Types", icon: CalendarDays, show: hasPage("manage_leave_types") },
+        { path: "/management/policies", label: "Policies", icon: BookOpen, show: hasPage("manage_policies") },
+        { path: "/management/global-leaves", label: "Global Leaves", icon: FileText, show: hasPage("manage_leave_records") },
+        { path: "/management/permissions", label: "Perms", icon: ShieldCheck, show: isAdmin },
         { path: "/apply-leave", label: "Apply Leave", icon: FileText, show: !isAdmin },
         { path: "/leave-history", label: "History", icon: History, show: !isAdmin },
-        { path: "/team-view", label: "Team View", icon: Users, show: true },
+        { path: "/calendar", label: "Calendar", icon: CalendarDays, show: true },
+        { path: "/holidays", label: "Holidays", icon: Umbrella, show: canManageHolidays },
         { path: "/leave-balance", label: "Balance", icon: Scale, show: !isAdmin },
     ];
 
     const w = collapsed ? "w-16" : "w-28";
 
     return (
-        <div className={`${w} bg-[#0b2239] text-white h-screen fixed flex flex-col transition-all duration-300 z-40`}>
+        <div className={`${w} bg-sidebar text-white h-screen fixed flex flex-col transition-all duration-300 z-40`}>
             {/* Logo */}
-            <div className="w-full h-14 bg-[#2f2370] flex items-center justify-center text-white text-sm font-bold tracking-wide border-b border-black/10 flex-shrink-0">
+            <div className="w-full h-14 bg-sidebar flex items-center justify-center text-white text-sm font-bold tracking-wide border-b border-black/10 flex-shrink-0">
                 {collapsed ? "L" : "LeaveMS"}
             </div>
 
@@ -68,7 +72,7 @@ const Sidebar: React.FC = () => {
                                 to={item.path}
                                 title={collapsed ? item.label : undefined}
                                 className={`flex flex-col items-center justify-center w-full py-3 transition-all flex-shrink-0
-                                    ${isActive ? "bg-[#132f4c]" : "hover:bg-[#132f4c]"}`}
+                                    ${isActive ? "bg-sidebar-active" : "hover:bg-sidebar-active"}`}
                                 style={{ color: isActive ? "#fff" : "rgba(255,255,255,0.6)" }}
                             >
                                 <Icon size={19} />
@@ -82,7 +86,7 @@ const Sidebar: React.FC = () => {
             <div className="flex-shrink-0 border-t border-white/10">
                 <button
                     onClick={toggle}
-                    className="flex flex-col items-center justify-center w-full py-2.5 hover:bg-[#132f4c] transition-all text-white/40 hover:text-white"
+                    className="flex flex-col items-center justify-center w-full py-2.5 hover:bg-sidebar-active transition-all text-white/40 hover:text-white"
                     title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >
                     {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
@@ -90,7 +94,7 @@ const Sidebar: React.FC = () => {
                 </button>
                 <button
                     onClick={handleLogout}
-                    className="flex flex-col items-center justify-center w-full py-2.5 hover:bg-[#132f4c] transition-all text-white/50 hover:text-white"
+                    className="flex flex-col items-center justify-center w-full py-2.5 hover:bg-sidebar-active transition-all text-white/50 hover:text-white"
                 >
                     <LogOut size={19} />
                     {!collapsed && <span className="text-[10px] mt-1 font-medium">Logout</span>}

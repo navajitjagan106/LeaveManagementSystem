@@ -11,7 +11,7 @@ import { CalendarCheck, CalendarMinus, Clock, BookOpen, FileText, Users, Chevron
 import { PieChart, Pie, Label } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../ui/chart";
 
-const COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899", "#14b8a6", "#f97316"];
+const COLORS = ["#274C77", "#6096BA", "#A3CEF1", "#1B3655", "#64748B"];
 
 const DashBoard: React.FC = () => {
     const { user } = useSelector((state: RootState) => state.auth);
@@ -38,10 +38,10 @@ const DashBoard: React.FC = () => {
     if (loading || !data) return <div className="flex justify-center items-center h-48"><Loader /></div>;
 
     const stats = [
-        { label: "Available", value: data.leave_balance.reduce((s, i) => s + ((i as any).is_unlimited ? 0 : Math.max(i.remaining, 0)), 0), icon: CalendarCheck, accent: "#10b981", bg: "#d1fae5" },
-        { label: "Used This Year", value: data.leave_balance.reduce((s, i) => s + i.used, 0), icon: CalendarMinus, accent: "#f59e0b", bg: "#fef3c7" },
-        { label: "Pending", value: data.pending_requests, icon: Clock, accent: "#3b82f6", bg: "#dbeafe" },
-        { label: "Total Entitled", value: data.leave_balance.reduce((s, i) => s + ((i as any).is_unlimited ? 0 : i.total_allocated), 0), icon: BookOpen, accent: "#5746AF", bg: "#ede9fe" },
+        { label: "Available", value: data.leave_balance.reduce((s, i) => s + ((i as any).is_unlimited ? 0 : Math.max(i.remaining, 0)), 0), icon: CalendarCheck, accent: "#274C77", bg: "#E8F1F5" },
+        { label: "Used This Year", value: data.leave_balance.reduce((s, i) => s + i.used, 0), icon: CalendarMinus, accent: "#274C77", bg: "#E8F1F5" },
+        { label: "Pending", value: data.pending_requests, icon: Clock, accent: "#274C77", bg: "#E8F1F5" },
+        { label: "Total Entitled", value: data.leave_balance.reduce((s, i) => s + ((i as any).is_unlimited ? 0 : i.total_allocated), 0), icon: BookOpen, accent: "#274C77", bg: "#E8F1F5" },
     ];
 
     const totalUsed = data.leave_balance.reduce((s, i) => s + i.used, 0);
@@ -69,21 +69,32 @@ const DashBoard: React.FC = () => {
             <PageHeader title="Dashboard" subtitle="Overview of your leave activity" divider />
 
             {/* Welcome Banner */}
-            <div className="bg-gradient-to-r from-[#5746AF] to-[#302178] text-white px-6 py-3 rounded-2xl flex items-center justify-between">
-                <div>
-                    <p className="text-xs text-purple-200 mb-0.5">
+            <div className="bg-gradient-to-r from-primary to-primary-dark text-white px-6 py-5 rounded-2xl flex items-center justify-between relative overflow-hidden min-h-[130px]">
+                {/* Subtle ambient light glow */}
+                <div className="absolute top-0 right-0 w-64 h-full bg-white/5 rounded-full blur-2xl transform translate-x-20 pointer-events-none" />
+                
+                <div className="z-10 max-w-[65%] sm:max-w-[75%]">
+                    <p className="text-xs text-primary-light mb-1">
                         {today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
                     </p>
-                    <h1 className="text-xl font-bold mb-0.5">
+                    <h1 className="text-2xl font-bold mb-1">
                         {greeting}, {user?.name?.split(" ")[0] || "there"}!
                     </h1>
-                    <p className="text-purple-200 text-xs">
+                    <p className="text-primary-light text-xs sm:text-sm">
                         {data.pending_requests > 0
                             ? `You have ${data.pending_requests} pending leave request${data.pending_requests > 1 ? "s" : ""}.`
                             : "No pending requests — all caught up!"}
                     </p>
                 </div>
-                <CalendarCheck size={40} className="text-purple-300 opacity-40 hidden md:block" />
+
+                {/* Floating Dashboard Illustration SVG (Desktop Only) */}
+                <div className="absolute right-4 bottom-0 top-0 hidden md:flex items-center justify-center w-44 z-10 pointer-events-none">
+                    <img 
+                        src="/Dashboard.svg" 
+                        className="h-[120%] object-contain transform translate-y-3 select-none" 
+                        alt="Dashboard Illustration" 
+                    />
+                </div>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -98,7 +109,7 @@ const DashBoard: React.FC = () => {
                 <div className="lg:col-span-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
                     <div className="flex items-center justify-between mb-3">
                         <h3 className="text-sm font-semibold text-gray-800">Leave Balance</h3>
-                        <span className="text-xs px-3 py-1 rounded-full font-medium bg-purple-50 text-purple-600">
+                        <span className="text-xs px-3 py-1 rounded-full font-medium bg-primary-light text-primary">
                             {totalAlloc - totalUsed} / {totalAlloc} remaining
                         </span>
                     </div>
@@ -110,7 +121,7 @@ const DashBoard: React.FC = () => {
                             style={{ width: donutSize, height: donutSize, flexShrink: 0 }}
                         >
                             <PieChart>
-                                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                                {pieData.length > 0 && <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />}
                                 <Pie
                                     data={donutData}
                                     dataKey="value"
@@ -190,8 +201,8 @@ const DashBoard: React.FC = () => {
                 <div className="lg:col-span-2 flex flex-col gap-3">
                     {/* Apply Leave CTA */}
                     <div
-                        className="rounded-2xl p-4 flex flex-col justify-between cursor-pointer group"
-                        style={{ background: "linear-gradient(135deg, #5746AF 0%, #302178 100%)", minHeight: 110 }}
+                        className="rounded-2xl p-4 flex flex-col justify-between cursor-pointer group bg-gradient-to-r from-primary to-primary-dark"
+                        style={{ minHeight: 110 }}
                         onClick={() => navigate("/apply-leave")}
                     >
                         <div className="flex items-start justify-between">
@@ -200,7 +211,7 @@ const DashBoard: React.FC = () => {
                                     <FileText size={15} className="text-white" />
                                 </div>
                                 <h3 className="text-sm font-semibold text-white mb-0.5">Apply for Leave</h3>
-                                <p className="text-xs text-purple-200">Submit a new leave request</p>
+                                <p className="text-xs text-primary-light">Submit a new leave request</p>
                             </div>
                             <ChevronRight size={16} className="text-white/50 group-hover:text-white group-hover:translate-x-1 transition-all" />
                         </div>
@@ -212,7 +223,7 @@ const DashBoard: React.FC = () => {
                             <h3 className="text-sm font-semibold text-gray-800">Upcoming Holidays</h3>
                             <button
                                 onClick={() => navigate("/holidays")}
-                                className="text-xs text-purple-600 hover:text-purple-800 font-medium hover:underline"
+                                className="text-xs text-primary hover:text-primary-dark font-medium hover:underline"
                             >
                                 View All →
                             </button>
@@ -225,11 +236,11 @@ const DashBoard: React.FC = () => {
                                         const d = new Date(h.date);
                                         return (
                                             <div key={i} className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-lg bg-purple-50 flex flex-col items-center justify-center flex-shrink-0">
-                                                    <span className="text-[8px] font-bold text-purple-400 uppercase leading-none">
+                                                <div className="w-9 h-9 rounded-lg bg-primary-light flex flex-col items-center justify-center flex-shrink-0">
+                                                    <span className="text-[8px] font-bold text-primary uppercase leading-none">
                                                         {d.toLocaleDateString("en-GB", { month: "short" })}
                                                     </span>
-                                                    <span className="text-sm font-bold text-purple-700 leading-tight">{d.getDate()}</span>
+                                                    <span className="text-sm font-bold text-primary-dark leading-tight">{d.getDate()}</span>
                                                 </div>
                                                 <span className="text-xs text-gray-600">{h.name}</span>
                                             </div>
@@ -244,8 +255,8 @@ const DashBoard: React.FC = () => {
             <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                 <h3 className="text-sm font-semibold text-gray-800 mb-3">Team Members on Leave</h3>
                 {todayHoliday ? (
-                    <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-100">
-                        <p className="text-sm font-medium text-amber-700">Today is a holiday — {todayHoliday.name}</p>
+                    <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-primarymber-50 border border-primarymber-100">
+                        <p className="text-sm font-medium text-primarymber-700">Today is a holiday — {todayHoliday.name}</p>
                     </div>
                 ) : data.team_on_leave.length === 0 ? (
                     <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-green-50 border border-green-100">

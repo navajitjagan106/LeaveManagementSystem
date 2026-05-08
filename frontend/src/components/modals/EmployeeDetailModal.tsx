@@ -1,26 +1,50 @@
 import { useCallback, useEffect, useState } from "react";
 import {
     deleteEmployee, getuserBalance, getEmployees, getPolicies,
-    reassignPolicy, resetLeaveBalance, updateManager
-} from "../../../api/adminApi";
+    reassignPolicy, resetLeaveBalance, updateManager, updateEmployee
+} from "../../api/managementApi";
 import { useSelector } from "react-redux";
-import { RootState } from "../../../store";
-import { useToast } from "../../common/ToastContext";
-import { ManagerCombobox } from "../../common/ManagerCombobox";
+import { RootState } from "../../store";
+import { useToast } from "../common/ToastContext";
+import { ManagerCombobox } from "../common/ManagerCombobox";
 import {
     Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
-} from "../../ui/sheet";
+} from "../ui/sheet";
+import { getAvailableRoles } from "../../api/permissionsApi";
 
-const roleColors: Record<string, string> = {
-    admin: "bg-purple-100 text-purple-700",
-    manager: "bg-blue-100 text-blue-700",
-    employee: "bg-gray-100 text-gray-600",
+const getRoleColor = (role: string) => {
+    const r = role.toLowerCase();
+    if (r === 'admin') return "bg-primary-light text-primary-dark";
+    if (r === 'manager') return "bg-blue-100 text-blue-700";
+    if (r === 'hr') return "bg-pink-100 text-pink-700";
+    if (r === 'employee') return "bg-gray-100 text-gray-600";
+    
+    // Deterministic random color for custom roles
+    const colors = [
+        "bg-red-100 text-red-700",
+        "bg-orange-100 text-orange-700",
+        "bg-primarymber-100 text-primarymber-700",
+        "bg-primary-lightmerald-100 text-emerald-700",
+        "bg-teal-100 text-teal-700",
+        "bg-cyan-100 text-cyan-700",
+        "bg-sky-100 text-sky-700",
+        "bg-indigo-100 text-indigo-700",
+        "bg-violet-100 text-violet-700",
+        "bg-primaryuchsia-100 text-primaryuchsia-700",
+        "bg-rose-100 text-rose-700"
+    ];
+    let hash = 0;
+    for (let i = 0; i < role.length; i++) {
+        hash = role.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
 };
 
 const barColor = (pct: number) => {
     if (pct >= 80) return "bg-red-400";
-    if (pct >= 50) return "bg-amber-400";
-    return "bg-emerald-400";
+    if (pct >= 50) return "bg-primarymber-400";
+    return "bg-primary-lightmerald-400";
 };
 
 const initials = (name: string) =>
@@ -35,8 +59,9 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
     const { user: currentUser } = useSelector((state: RootState) => state.auth);
     const isAdmin = currentUser?.role === "admin";
-    const canEdit = isAdmin;
-    const canDelete = isAdmin;
+    const canEdit = isAdmin || !!currentUser?.permissions?.['manage_employees']?.can_edit;
+    const canDelete = isAdmin || !!currentUser?.permissions?.['manage_employees']?.can_delete;
+    const canViewBalance = isAdmin || !!currentUser?.permissions?.["manage_leave_records"]?.can_view;
     const toast = useToast();
 
     const [balances, setBalances] = useState<any[]>([]);
@@ -46,22 +71,41 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
 
     const [selectedPolicy, setSelectedPolicy] = useState<number | "">(user.policy_id || "");
     const [selectedManager, setSelectedManager] = useState<number | "">(user.manager_id || "");
+    const [selectedRole, setSelectedRole] = useState<string>(user.role);
+    const [selectedDept, setSelectedDept] = useState<string>(user.department || "");
+    const [roles, setRoles] = useState<any[]>([user.role]);
 
     const [savingPolicy, setSavingPolicy] = useState(false);
     const [savingManager, setSavingManager] = useState(false);
+    const [savingProfile, setSavingProfile] = useState(false);
     const [resetting, setResetting] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
     const policyChanged = selectedPolicy !== (user.policy_id || "");
     const managerChanged = selectedManager !== (user.manager_id || "");
+    const roleChanged = selectedRole !== user.role;
+    const deptChanged = selectedDept !== (user.department || "");
+    const profileChanged = roleChanged || deptChanged;
 
     const fetchManagers = useCallback(async () => {
         try {
             const res = await getEmployees();
-            setManagers(res.data.data.filter((u: any) =>
-                (u.role === "manager" || u.role === "admin") && u.id !== user.id
-            ));
+            const list = res.data.data || [];
+            const filtered = list.filter((u: any) => {
+                if (u.id === user.id) return false;
+                
+                // Prevent circular manager loops (if u reports up to user.id, u cannot be user.id's manager)
+                let tempId = u.manager_id;
+                while (tempId) {
+                    if (tempId === user.id) return false; // reports to user, filter out
+                    const currentSearchId = tempId;
+                    const parent = list.find((e: any) => e.id === currentSearchId);
+                    tempId = parent ? parent.manager_id : null;
+                }
+                return true;
+            });
+            setManagers(filtered);
         } catch { }
     }, [user.id]);
 
@@ -88,11 +132,33 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
     }, [user.id]);
 
     useEffect(() => {
+        if (!canEdit) return;
         fetchManagers();
         fetchPolicies();
-    }, [fetchManagers, fetchPolicies]);
+        getAvailableRoles()
+            .then((roleRes) => {
+                const fetched = roleRes.data.data;
+                if (fetched && fetched.length > 0) {
+                    const updated = [...fetched];
+                    const hasAdmin = updated.some(r => (typeof r === "string" ? r : r.name) === "admin");
+                    if (!hasAdmin) {
+                        updated.push("admin");
+                    }
+                    setRoles(updated);
+                }
+            })
+            .catch(() => {
+                console.log("Using fallback default roles due to permission restrictions.");
+            });
+    }, [canEdit, fetchManagers, fetchPolicies]);
 
-    useEffect(() => { fetchBalance(); }, [fetchBalance]);
+    useEffect(() => { 
+        if (canViewBalance) {
+            fetchBalance(); 
+        } else {
+            setBalancesLoading(false);
+        }
+    }, [canViewBalance, fetchBalance]);
 
     const handleSavePolicy = async () => {
         setSavingPolicy(true);
@@ -105,6 +171,23 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
             toast.error("Failed to update policy");
         } finally {
             setSavingPolicy(false);
+        }
+    };
+
+    const handleSaveProfile = async () => {
+        setSavingProfile(true);
+        try {
+            await updateEmployee(user.id, {
+                role: selectedRole,
+                department: selectedDept === "" ? null : selectedDept,
+                manager_id: selectedManager === "" ? null : Number(selectedManager),
+            });
+            toast.success("Profile details updated successfully");
+            onSuccess();
+        } catch {
+            toast.error("Failed to update profile details");
+        } finally {
+            setSavingProfile(false);
         }
     };
 
@@ -153,13 +236,13 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                 <div className="px-6 py-6 border-b border-gray-100 bg-white sticky top-0 z-10">
                     <SheetHeader className="text-left">
                         <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-purple-200 flex-shrink-0">
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-primary-light flex-shrink-0">
                                 {initials(user.name)}
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <SheetTitle className="text-lg font-bold text-gray-900">{user.name}</SheetTitle>
-                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${roleColors[user.role] || roleColors.employee}`}>
+                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${getRoleColor(user.role)}`}>
                                         {user.role}
                                     </span>
                                 </div>
@@ -173,23 +256,74 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
 
                     {/* ── Profile ── */}
                     <div>
-                        <SectionLabel>Profile</SectionLabel>
-                        <div className="grid grid-cols-2 gap-2">
-                            {[
-                                { label: "Department", value: user.department || "—" },
-                                {
-                                    label: "Joined",
-                                    value: user.created_at
-                                        ? new Date(user.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" })
-                                        : "—"
-                                },
-                            ].map(({ label, value }) => (
-                                <div key={label} className="bg-gray-50 rounded-xl px-3 py-2.5">
-                                    <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-                                    <p className="text-sm font-medium text-gray-800">{value}</p>
+                        <SectionLabel>Profile & Role</SectionLabel>
+                        {canEdit ? (
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1.5">Role</p>
+                                        <select
+                                            value={selectedRole}
+                                            onChange={(e) => setSelectedRole(e.target.value)}
+                                            className="w-full border border-gray-200 px-3 py-2.5 rounded-xl text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-light transition-colors capitalize"
+                                        >
+                                            {roles.map((r) => {
+                                                const rVal = typeof r === "string" ? r : r.name;
+                                                const rLabel = typeof r === "string"
+                                                    ? r.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")
+                                                    : r.label || r.name;
+                                                return (
+                                                    <option key={rVal} value={rVal}>
+                                                        {rLabel}
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1.5">Department</p>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. Engineering"
+                                            value={selectedDept}
+                                            onChange={(e) => setSelectedDept(e.target.value)}
+                                            className="w-full border border-gray-200 px-3 py-2.5 rounded-xl text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-light transition-colors"
+                                        />
+                                    </div>
                                 </div>
-                            ))}
-                        </div>
+                                <div className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-xl mt-2 text-xs text-gray-500">
+                                    <span>Joined: {user.created_at
+                                        ? new Date(user.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" })
+                                        : "—"}
+                                    </span>
+                                    <button
+                                        onClick={handleSaveProfile}
+                                        disabled={savingProfile || !profileChanged}
+                                        className="px-4 py-1.5 bg-primary text-white rounded-lg font-semibold disabled:opacity-40 hover:bg-primary-dark transition-colors text-xs shadow-sm hover:shadow-primary-light"
+                                    >
+                                        {savingProfile ? "Updating…" : "Update Details"}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-2">
+                                {[
+                                    { label: "Role", value: user.role },
+                                    { label: "Department", value: user.department || "—" },
+                                    {
+                                        label: "Joined",
+                                        value: user.created_at
+                                            ? new Date(user.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" })
+                                            : "—"
+                                    },
+                                ].map(({ label, value }) => (
+                                    <div key={label} className="bg-gray-50 rounded-xl px-3 py-2.5">
+                                        <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+                                        <p className="text-sm font-medium text-gray-800 capitalize">{value}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <Divider />
@@ -214,7 +348,7 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                                 <button
                                     onClick={handleSaveManager}
                                     disabled={savingManager || !managerChanged}
-                                    className="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-purple-700 transition-colors"
+                                    className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-primary-dark transition-colors"
                                 >
                                     {savingManager ? "Saving…" : "Update"}
                                 </button>
@@ -242,7 +376,7 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                                     <select
                                         value={selectedPolicy}
                                         onChange={(e) => setSelectedPolicy(e.target.value === "" ? "" : Number(e.target.value))}
-                                        className={`flex-1 border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 transition-colors ${policyChanged ? "border-purple-300 bg-purple-50" : "border-gray-200"}`}
+                                        className={`flex-1 border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light transition-colors ${policyChanged ? "border-primary-light bg-primary-light" : "border-gray-200"}`}
                                     >
                                         <option value="">No policy</option>
                                         {policies.map((p) => (
@@ -252,13 +386,13 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                                     <button
                                         onClick={handleSavePolicy}
                                         disabled={savingPolicy || !policyChanged}
-                                        className="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-purple-700 transition-colors"
+                                        className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-primary-dark transition-colors"
                                     >
                                         {savingPolicy ? "Saving…" : "Update"}
                                     </button>
                                 </div>
                                 {policyChanged && (
-                                    <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                                    <p className="text-xs text-primarymber-600 mt-2 flex items-center gap-1">
                                         <span>⚠</span> Updating will reset all leave balances to the new policy
                                     </p>
                                 )}

@@ -1,0 +1,48 @@
+<!-- orbit.svg -->
+<svg width="300" height="300" viewBox="0 0 300 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="orbitGradient" x1="0" y1="0" x2="300" y2="300">
+      <stop offset="0%" stop-color="#A3CEF1"/>
+      <stop offset="100%" stop-color="#274C77"/>
+    </linearGradient>
+
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Main Orbit -->
+  <ellipse
+    cx="150"
+    cy="150"
+    rx="95"
+    ry="60"
+    transform="rotate(-25 150 150)"
+    stroke="url(#orbitGradient)"
+    stroke-width="8"
+    fill="none"
+    filter="url(#glow)"
+  />
+
+  <!-- Secondary Orbit -->
+  <ellipse
+    cx="150"
+    cy="150"
+    rx="75"
+    ry="115"
+    transform="rotate(25 150 150)"
+    stroke="url(#orbitGradient)"
+    stroke-width="6"
+    opacity="0.7"
+    fill="none"
+    filter="url(#glow)"
+  />
+
+  <!-- Orbit Nodes -->
+  <circle cx="220" cy="82" r="10" fill="#A3CEF1" filter="url(#glow)" />
+  <circle cx="245" cy="200" r="12" fill="#6096BA" filter="url(#glow)" />
+</svg>

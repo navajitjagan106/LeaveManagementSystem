@@ -8,6 +8,9 @@ export type ApprovalRequest = {
     total_days: number;
     reason: string;
     status: "pending" | "approved" | "rejected";
+    duration_type: "full" | "half";
+    approved_by?: number;
+    approved_by_name?: string;
     approved_at?: string;
     rejection_reason?: string;
     applied_at?: string;

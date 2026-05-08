@@ -6,8 +6,8 @@ import MainLayout from "./components/layout/MainLayout";
 import Dashboard from "./components/pages/DashBoard";
 import ApplyLeave from "./components/pages/ApplyLeave";
 import LeaveHistory from "./components/pages/LeaveHistory";
-import Approvals from "./components/Manager/Approvals";
-import TeamView from "./components/pages/TeamView";
+import Approvals from "./components/pages/Approvals";
+import CalendarPage from "./components/pages/CalendarPage";
 import LeaveBalance from "./components/pages/LeaveBalance";
 import Profile from "./components/pages/Profile";
 import EmployeeDirectory from "./components/pages/EmployeeDirectory";
@@ -18,15 +18,15 @@ import HolidaysPage from "./components/pages/HolidaysPage";
 import { ToastProvider } from "./components/common/ToastContext";
 
 // Admin pages
-import AdminDashboard from "./components/admin/AdminDashboard";
+import AdminDashboard from "./components/management/AdminDashboard";
 import { Navigate } from "react-router-dom";
-import AdminInvitationsPage from "./components/admin/AdminInvitationsPage";
-import AdminLeaveTypesPage from "./components/admin/AdminLeaveTypesPage";
-import AdminHolidaysPage from "./components/admin/AdminHolidaysPage";
-import AdminPoliciesPage from "./components/admin/AdminPoliciesPage";
-import AdminPermissionsPage from "./components/admin/AdminPermissionsPage";
+import ManageInvitationsPage from "./components/management/ManageInvitationsPage";
+import ManageLeaveTypesPage from "./components/management/ManageLeaveTypesPage";
+import ManagePoliciesPage from "./components/management/ManagePoliciesPage";
+import ManagePermissionsPage from "./components/management/ManagePermissionsPage";
+import GlobalLeavesPage from "./components/management/GlobalLeavesPage";
 
-const App: React.FC = () => {   
+const App: React.FC = () => {
   return (
     <ToastProvider>
       <Router>
@@ -47,22 +47,22 @@ const App: React.FC = () => {
             <Route path="leave-history" element={<LeaveHistory />} />
             <Route path="profile" element={<Profile />} />
             <Route path="leave-balance" element={<LeaveBalance />} />
-            <Route path="team-view" element={<TeamView />} />
+            <Route path="calendar" element={<CalendarPage />} />
+            <Route path="team-view" element={<Navigate to="/calendar" replace />} />
             <Route path="holidays" element={<HolidaysPage />} />
 
             <Route
               path="approvals"
               element={
-                <ProtectedRoute allowedRoles={["manager"]} requiredPage="approvals">
+                <ProtectedRoute requiredPage="approvals">
                   <Approvals />
                 </ProtectedRoute>
               }
             />
             <Route
-            
               path="employees"
               element={
-                <ProtectedRoute allowedRoles={["manager", "admin"]} requiredPage="employee_directory">
+                <ProtectedRoute requiredPage="team_access">
                   <EmployeeDirectory />
                 </ProtectedRoute>
               }
@@ -70,59 +70,60 @@ const App: React.FC = () => {
             <Route
               path="employees/:id"
               element={
-                <ProtectedRoute allowedRoles={["manager", "admin"]} requiredPage="employee_directory">
+                <ProtectedRoute requiredPage="team_access">
                   <EmployeeProfile />
                 </ProtectedRoute>
               }
             />
 
-            {/* ── Admin pages  */}
+            {/* ── Management pages  */}
             <Route
-              path="admin"
+              path="management"
               element={
-                <ProtectedRoute allowedRoles={["admin"]}>
+                <ProtectedRoute requiredPage="admin_dashboard">
                   <AdminDashboard />
                 </ProtectedRoute>
               }
             />
-            <Route path="admin/employees" element={<Navigate to="/employees" replace />} />
+            <Route path="management/employees" element={<Navigate to="/employees" replace />} />
             <Route
-              path="admin/invitations"
+              path="management/invitations"
               element={
-                <ProtectedRoute requiredPage="admin_invitations">
-                  <AdminInvitationsPage />
+                <ProtectedRoute requiredPage="manage_invitations">
+                  <ManageInvitationsPage />
                 </ProtectedRoute>
               }
             />
             <Route
-              path="admin/leave-types"
+              path="management/leave-types"
               element={
-                <ProtectedRoute requiredPage="admin_leave_types">
-                  <AdminLeaveTypesPage />
+                <ProtectedRoute requiredPage="manage_leave_types">
+                  <ManageLeaveTypesPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="management/policies"
+              element={
+                <ProtectedRoute requiredPage="manage_policies">
+                  <ManagePoliciesPage />
                 </ProtectedRoute>
               }
             />
             <Route
-              path="admin/holidays"
+              path="management/global-leaves"
               element={
-                <ProtectedRoute requiredPage="admin_holidays">
-                  <AdminHolidaysPage />
+                <ProtectedRoute requiredPage="manage_leave_records">
+                  <GlobalLeavesPage />
                 </ProtectedRoute>
               }
             />
             <Route
-              path="admin/policies"
-              element={
-                <ProtectedRoute requiredPage="admin_policies">
-                  <AdminPoliciesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="admin/permissions"
+              path="management/permissions"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
-                  <AdminPermissionsPage />
+                  <ManagePermissionsPage />
                 </ProtectedRoute>
               }
             />

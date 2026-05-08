@@ -130,7 +130,7 @@ const EmployeeProfile: React.FC = () => {
                 <BreadcrumbList>
                     <BreadcrumbItem>
                         <BreadcrumbLink asChild>
-                            <button onClick={() => navigate('/employees')} className="text-gray-400 hover:text-[#5746AF] text-sm transition-colors">
+                            <button onClick={() => navigate('/employees')} className="text-gray-400 hover:text-primary text-sm transition-colors">
                                 Employees
                             </button>
                         </BreadcrumbLink>
@@ -159,7 +159,7 @@ const EmployeeProfile: React.FC = () => {
                             {employee.name.charAt(0).toUpperCase()}
                         </div>
                         <h1 className="text-white font-bold text-lg leading-tight">{employee.name}</h1>
-                        <p className="text-purple-200 text-xs mt-1 break-all">{employee.email}</p>
+                        <p className="text-primary-light text-xs mt-1 break-all">{employee.email}</p>
                         <span
                             className="mt-3 text-xs font-semibold px-3 py-1 rounded-full capitalize"
                             style={{ background: roleStyle.bg, color: roleStyle.text }}
@@ -173,8 +173,8 @@ const EmployeeProfile: React.FC = () => {
                         <div className="flex flex-col gap-4">
                             {profileDetails.map(({ icon: Icon, label, value, cls }) => (
                                 <div key={label} className="flex items-start gap-3">
-                                    <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
-                                        <Icon size={13} className="text-[#5746AF]" />
+                                    <div className="w-7 h-7 rounded-lg bg-primary-light flex items-center justify-center flex-shrink-0">
+                                        <Icon size={13} className="text-primary" />
                                     </div>
                                     <div className="min-w-0">
                                         <p className="text-[10px] text-gray-400 uppercase tracking-wider">{label}</p>
@@ -260,20 +260,32 @@ const EmployeeProfile: React.FC = () => {
                                 <CardDescription className="text-xs">Approved leave days — last 12 months</CardDescription>
                             </CardHeader>
                             <CardContent className="flex-1 min-h-0 px-2 pb-4">
-                                {!hasMonthly ? (
-                                    <div className="h-full flex items-center justify-center text-sm text-gray-400">
-                                        No approved leaves in the past year
-                                    </div>
-                                ) : (
+                                <div className="relative h-full w-full">
                                     <ChartContainer config={monthlyChartConfig} className="h-full w-full">
-                                        <BarChart data={monthlyData} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
+                                        <BarChart 
+                                            data={hasMonthly ? monthlyData : monthlyData.map(d => ({ ...d, days: 0.15 }))} 
+                                            margin={{ left: 0, right: 8, top: 4, bottom: 4 }}
+                                        >
                                             <CartesianGrid vertical={false} stroke="#f0f0f0" />
                                             <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
-                                            <ChartTooltip content={<ChartTooltipContent className="w-36" />} />
-                                            <Bar dataKey="days" fill={monthlyChartConfig.days.color} radius={[3,3,0,0]} maxBarSize={28} />
+                                            {hasMonthly && <ChartTooltip content={<ChartTooltipContent className="w-36" />} />}
+                                            <Bar 
+                                                dataKey="days" 
+                                                fill={hasMonthly ? monthlyChartConfig.days.color : "#E2E8F0"} 
+                                                radius={[3,3,0,0]} 
+                                                maxBarSize={28} 
+                                            />
                                         </BarChart>
                                     </ChartContainer>
-                                )}
+                                    {!hasMonthly && (
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <div className="bg-white/80 border border-gray-100 px-3 py-2 rounded-xl shadow-md backdrop-blur-sm text-center">
+                                                <p className="text-xs font-bold text-gray-500">No Approved Leaves</p>
+                                                <p className="text-[10px] text-gray-400">Past 12 months</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </CardContent>
                         </Card>
                     </div>

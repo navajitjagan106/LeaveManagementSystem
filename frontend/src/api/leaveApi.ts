@@ -40,8 +40,7 @@ export const calculateDays = (data: {
 export const getLeaveInitData = () =>
     API.get("/leaves/getinitdata")
 
-export const getuserdata = () =>
-    API.get("/leaves/getuserdata")
+
 
 export const updateUserProfile = (data: {
     phone?: string | null;

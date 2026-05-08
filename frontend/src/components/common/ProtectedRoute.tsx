@@ -24,7 +24,7 @@ const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles, requiredPage 
     if (loading && !initialized) {
         return (
             <div className="flex items-center justify-center h-screen bg-gray-50">
-                <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                <div className="w-8 h-8 border-primary border-primary border-t-transparent rounded-full animate-spin" />
             </div>
         );
     }
@@ -40,7 +40,7 @@ const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles, requiredPage 
     if (loading && requiredPage) {
         return (
             <div className="flex items-center justify-center h-full">
-                <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
         );
     }
@@ -48,7 +48,10 @@ const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles, requiredPage 
     // If restrictions are specified, at least one must grant access
     if (allowedRoles || requiredPage) {
         const roleGrants = allowedRoles?.includes(user.role) ?? false;
-        const permGrants = requiredPage ? (user.permissions?.[requiredPage]?.can_view ?? false) : false;
+        let permGrants = requiredPage ? (user.permissions?.[requiredPage]?.can_view ?? false) : false;
+        if (requiredPage === "approvals" && user.has_reportees) {
+            permGrants = true;
+        }
         if (!roleGrants && !permGrants) return <Navigate to="/dashboard" replace />;
     }
 

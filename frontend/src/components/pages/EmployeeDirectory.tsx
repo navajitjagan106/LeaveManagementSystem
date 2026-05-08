@@ -1,37 +1,36 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getTeamMembers } from '../../api/leaveApi';
-import { getEmployees } from '../../api/adminApi';
+import { getTeamMembers, getLeaveTrend } from '../../api/leaveApi';
+import { getEmployees } from '../../api/managementApi';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import PageHeader from '../common/PageHeader';
 import Loader from '../common/Loader';
-import { Search, ChevronRight, Phone, MapPin, MoreHorizontal, Users, Briefcase } from 'lucide-react';
+import { Search, ChevronRight, Phone, MapPin, MoreHorizontal, Users, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { 
-    Bar, 
-    BarChart, 
-    XAxis, 
-    YAxis,
-    Pie,
-    PieChart,
-    Cell
-} from "recharts";
-import { 
-    ChartContainer, 
-    ChartTooltip, 
-    ChartTooltipContent, 
-} from "../ui/chart";
-import EmployeeDetailsModal from '../admin/modal/EmployeeDetailModal';
-import InviteEmployeeModal from '../admin/modal/InviteEmployeeModal';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '../ui/tooltip';
+
+import EmployeeDetailsModal from '../modals/EmployeeDetailModal';
+import InviteEmployeeModal from '../modals/InviteEmployeeModal';
 
 const PALETTE = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899", "#14b8a6", "#f97316"];
+const ROLE_COLORS = [
+    { bg: '#ede9fe', text: '#5746AF' },
+    { bg: '#dbeafe', text: '#3b82f6' },
+    { bg: '#dcfce7', text: '#16a34a' },
+    { bg: '#fef3c7', text: '#d97706' },
+    { bg: '#fce7f3', text: '#db2777' },
+    { bg: '#e0f2fe', text: '#0284c7' },
+];
 const ROLE_STYLE: Record<string, { bg: string; text: string }> = {
-    admin:    { bg: '#fee2e2', text: '#ef4444' },
-    manager:  { bg: '#ede9fe', text: '#5746AF' },
-    employee: { bg: '#dbeafe', text: '#3b82f6' },
+    admin: { bg: '#fee2e2', text: '#ef4444' },
+};
+const getRoleStyle = (role: string) => {
+    if (ROLE_STYLE[role]) return ROLE_STYLE[role];
+    const idx = role.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % ROLE_COLORS.length;
+    return ROLE_COLORS[idx];
 };
 
 type Employee = {
@@ -44,28 +43,20 @@ type Employee = {
     policy_name?: string | null;
     created_at?: string | null;
 };
-type FilterKey = 'all' | 'manager' | 'employee' | 'admin';
+type FilterKey = string
 
 const avatarColor = (name: string) => PALETTE[name.charCodeAt(0) % PALETTE.length];
 
-const FILTERS: { key: FilterKey; label: string }[] = [
-    { key: 'all',      label: 'All Staff'  },
-    { key: 'manager',  label: 'Managers'   },
-    { key: 'employee', label: 'Employees'  },
-    { key: 'admin',    label: 'Admins'     },
-];
-
-/* ── Employee card ── */
 const EmployeeCard: React.FC<{
     emp: Employee;
     onClick: () => void;
     onEdit?: () => void;
 }> = ({ emp, onClick, onEdit }) => {
-    const roleStyle = ROLE_STYLE[emp.role] ?? ROLE_STYLE.employee;
+    const roleStyle = getRoleStyle(emp.role);
     const color = avatarColor(emp.name);
 
     return (
-        <div className="bg-white border border-gray-100 rounded-xl p-4 flex flex-col gap-3 hover:border-purple-200 hover:shadow-md transition-all group">
+        <div className="bg-white border border-gray-100 rounded-xl p-4 flex flex-col gap-3 hover:border-primary-light hover:shadow-md transition-all group">
             <div className="flex items-center gap-3">
                 <div
                     role="button"
@@ -76,7 +67,7 @@ const EmployeeCard: React.FC<{
                     {emp.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1 cursor-pointer" onClick={onClick}>
-                    <p className="text-sm font-semibold text-gray-800 group-hover:text-[#5746AF] transition-colors truncate">
+                    <p className="text-sm font-semibold text-gray-800 group-hover:text-primary transition-colors truncate">
                         {emp.name}
                     </p>
                     <p className="text-xs text-gray-400 truncate">{emp.email}</p>
@@ -84,7 +75,7 @@ const EmployeeCard: React.FC<{
                 {onEdit ? (
                     <button
                         onClick={(e) => { e.stopPropagation(); onEdit(); }}
-                        className="text-gray-300 hover:text-purple-600 hover:bg-purple-50 p-1.5 rounded-lg transition flex-shrink-0"
+                        className="text-gray-300 hover:text-primary hover:bg-primary-light p-1.5 rounded-lg transition flex-shrink-0"
                         title="Edit employee"
                     >
                         <MoreHorizontal size={16} />
@@ -93,7 +84,7 @@ const EmployeeCard: React.FC<{
                     <ChevronRight
                         size={14}
                         onClick={onClick}
-                        className="text-gray-300 group-hover:text-[#5746AF] flex-shrink-0 transition-colors cursor-pointer"
+                        className="text-gray-300 group-hover:text-primary flex-shrink-0 transition-colors cursor-pointer"
                     />
                 )}
             </div>
@@ -141,25 +132,52 @@ const EmployeeDirectory: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useSelector((state: RootState) => state.auth);
     const isAdmin = user?.role === 'admin';
-    const canEdit = isAdmin;
-    const canDelete = isAdmin;
+    const canEdit = isAdmin || !!user?.permissions?.['manage_employees']?.can_edit;
+    const canDelete = isAdmin || !!user?.permissions?.['manage_employees']?.can_delete;
+    const canInvite = isAdmin || !!user?.permissions?.['manage_invitations']?.can_edit;
 
-    const [employees, setEmployees]     = useState<Employee[]>([]);
-    const [loading, setLoading]         = useState(true);
-    const [search, setSearch]           = useState('');
-    const [roleFilter, setRoleFilter]   = useState<FilterKey>('all');
-    const [editTarget, setEditTarget]   = useState<Employee | null>(null);
-    const [showInvite, setShowInvite]   = useState(false);
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+    const [roleFilter, setRoleFilter] = useState<FilterKey>('all');
+    const [editTarget, setEditTarget] = useState<Employee | null>(null);
+    const [showInvite, setShowInvite] = useState(false);
+    const [dirPage, setDirPage] = useState(1);
+
+    useEffect(() => {
+        setDirPage(1);
+    }, [search, roleFilter]);
+
+    const [leaveTrend, setLeaveTrend] = useState<{ date: string, count: number, employees: string[] }[]>([]);
 
     const fetchEmployees = async () => {
         try {
-            if (isAdmin) {
-                const res = await getEmployees();
-                setEmployees(res.data.data || []);
-            } else {
-                const res = await getTeamMembers();
-                setEmployees(res.data.data || []);
-            }
+            const employeesPromise = isAdmin ? getEmployees() : getTeamMembers();
+            const trendPromise = getLeaveTrend();
+
+            const [empRes, trendRes] = await Promise.all([employeesPromise, trendPromise]);
+
+            setEmployees(empRes.data.data || []);
+
+            const trendMap = new Map<string, { count: number; employees: string[] }>();
+            trendRes.data.data.forEach((row: any) => {
+                const d = new Date(row.date);
+                // Adjust for local timezone safely to avoid off-by-one errors
+                const dateStr = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
+                const existing = trendMap.get(dateStr) || { count: 0, employees: [] };
+                const rowEmployees = row.employees || [];
+                const mergedEmployees = Array.from(new Set([...existing.employees, ...rowEmployees]));
+
+                trendMap.set(dateStr, {
+                    count: existing.count + Number(row.count),
+                    employees: mergedEmployees
+                });
+            });
+            setLeaveTrend(Array.from(trendMap.entries()).map(([date, val]) => ({ date, count: val.count, employees: val.employees })));
+        } catch (err: any) {
+            console.error("Failed to load data:", err);
+            setEmployees([]);
         } finally {
             setLoading(false);
         }
@@ -167,37 +185,74 @@ const EmployeeDirectory: React.FC = () => {
 
     useEffect(() => {
         fetchEmployees();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const counts = useMemo(() => ({
-        all:      employees.length,
-        manager:  employees.filter(e => e.role === 'manager').length,
-        employee: employees.filter(e => e.role === 'employee').length,
-        admin:    employees.filter(e => e.role === 'admin').length,
-    }), [employees]);
-
-    // Compute Organizational Metrics
-    const departmentStats = useMemo(() => {
-        const map: Record<string, number> = {};
-        employees.forEach(e => {
-            const d = e.department || "Other";
-            map[d] = (map[d] || 0) + 1;
+    const { filters, counts } = useMemo(() => {
+        const roleSet = Array.from(new Set(employees.map(e => e.role))).sort();
+        const filters = [
+            { key: 'all', label: 'All Staff' },
+            ...roleSet.map(role => ({
+                key: role,
+                label: role.split(/[-_]/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + 's',
+            })),
+        ];
+        const counts: Record<string, number> = { all: employees.length };
+        roleSet.forEach(role => {
+            counts[role] = employees.filter(e => e.role === role).length;
         });
-        return Object.entries(map).map(([name, count], i) => ({
-            name,
-            count,
-            fill: PALETTE[i % PALETTE.length]
-        })).sort((a, b) => b.count - a.count);
+        return { filters, counts };
     }, [employees]);
 
-    const roleStats = useMemo(() => {
-        return [
-            { role: "Managers", count: counts.manager, fill: "#ede9fe" },
-            { role: "Employees", count: counts.employee, fill: "#dbeafe" },
-            { role: "Admins", count: counts.admin, fill: "#fee2e2" },
-        ].filter(r => r.count > 0);
-    }, [counts]);
+    // GitHub-style Calendar Heatmap Logic
+    const { weeks, maxCount } = useMemo(() => {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - 364);
+
+        // Snap to previous Sunday to align the columns
+        while (start.getDay() !== 0) {
+            start.setDate(start.getDate() - 1);
+        }
+
+        const days = [];
+        let current = new Date(start);
+        while (current <= end) {
+            days.push(new Date(current));
+            current.setDate(current.getDate() + 1);
+        }
+
+        const map = new Map<string, { count: number; employees: string[] }>();
+        leaveTrend.forEach(d => map.set(d.date, { count: d.count, employees: d.employees || [] }));
+
+        const max = Math.max(1, ...leaveTrend.map(d => d.count));
+
+        const gridWeeks = [];
+        for (let i = 0; i < days.length; i += 7) {
+            const weekDays = days.slice(i, i + 7).map(day => {
+                const dateStr = new Date(day.getTime() - (day.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                const dayData = map.get(dateStr) || { count: 0, employees: [] };
+                return {
+                    day,
+                    dateStr,
+                    count: dayData.count,
+                    employeesOnLeave: dayData.employees
+                };
+            });
+            gridWeeks.push(weekDays);
+        }
+
+        return { weeks: gridWeeks, maxCount: max };
+    }, [leaveTrend]);
+
+    const getHeatmapColor = (count: number) => {
+        if (count === 0) return '#ebedf0'; // GitHub empty gray
+        const ratio = count / maxCount;
+        if (ratio <= 0.25) return '#9be9a8'; // Light green
+        if (ratio <= 0.50) return '#40c463'; // Medium green
+        if (ratio <= 0.75) return '#30a14e'; // Dark green
+        return '#216e39'; // Deepest green
+    };
 
     const filtered = useMemo(() =>
         employees
@@ -211,6 +266,13 @@ const EmployeeDirectory: React.FC = () => {
         [employees, roleFilter, search]
     );
 
+    const ITEMS_PER_PAGE = 6;
+    const totalDirPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
+    const paginatedEmployees = useMemo(() => {
+        const startIdx = (dirPage - 1) * ITEMS_PER_PAGE;
+        return filtered.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+    }, [filtered, dirPage]);
+
     if (loading) return <div className="flex justify-center items-center h-48"><Loader /></div>;
 
     return (
@@ -221,101 +283,97 @@ const EmployeeDirectory: React.FC = () => {
                     subtitle={isAdmin ? 'Overview of your organizational structure' : 'Your team members'}
                     divider={false}
                 />
-                {isAdmin && (
-                    <Button
+                {canInvite && (
+                    <button
                         onClick={() => setShowInvite(true)}
-                        variant="outline"
-                        size="sm"
-                        className="border-purple-300 text-purple-700 hover:bg-purple-50 shrink-0 mt-1"
+                        className="flex items-center gap-1.5 bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm hover:shadow-md active:scale-95 flex-shrink-0 mt-1"
                     >
-                        + Invite Employee
-                    </Button>
+                        <Plus size={13} className="stroke-[3px]" /> Invite Employee
+                    </button>
                 )}
             </div>
             <div className="border-t border-gray-100" />
 
-            {/* ── Organizational Overview ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Department Distribution */}
-                <Card className="shadow-none border-gray-100 bg-gray-50/50">
-                    <CardHeader className="pb-0">
-                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                            <Users size={16} className="text-purple-500" />
-                            Department Split
-                        </CardTitle>
-                        <CardDescription className="text-[10px]">Headcount distribution across departments</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex flex-col sm:flex-row items-center justify-around py-4">
-                        <ChartContainer config={{}} className="aspect-square max-h-[160px]">
-                            <PieChart>
-                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                <Pie
-                                    data={departmentStats}
-                                    dataKey="count"
-                                    nameKey="name"
-                                    innerRadius={50}
-                                    outerRadius={70}
-                                    strokeWidth={5}
-                                >
-                                    {departmentStats.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                                    ))}
-                                </Pie>
-                            </PieChart>
-                        </ChartContainer>
-                        <div className="flex flex-col gap-2 min-w-[140px]">
-                            {departmentStats.slice(0, 4).map((d) => (
-                                <div key={d.name} className="flex items-center justify-between text-xs">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full" style={{ background: d.fill }} />
-                                        <span className="text-gray-500 font-medium">{d.name}</span>
-                                    </div>
-                                    <span className="font-bold text-gray-900">{d.count}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
+            {/* ── Annual Leave Heatmap ── */}
+            <Card className="shadow-none border-gray-100 bg-gray-50/50 mb-2">
+                <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                        <Users size={16} className="text-[#30a14e]" />
+                        Team Leave Activity (365 Days)
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                        Daily leave volume across your team over the past year. Darker green indicates higher absence density.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="overflow-x-auto pb-5 pt-6">
+                    <TooltipProvider>
+                        <div className="flex min-w-[800px] w-full gap-2">
+                            {/* Day labels (Sun, Mon, etc) */}
+                            <div className="flex flex-col gap-[4px] justify-end pr-2 text-[10px] text-gray-400 font-medium pb-[1px] w-[32px] shrink-0">
+                                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                                    <span key={d} className="leading-[14px]">{d}</span>
+                                ))}
+                            </div>
+                            {/* 52-week Grid */}
+                            <div className="flex flex-1 justify-between gap-1">
+                                {weeks.map((week, wi) => {
+                                    let monthLabel = null;
+                                    if (wi > 0 && weeks[wi - 1][0].day.getMonth() !== week[0].day.getMonth()) {
+                                        monthLabel = week[0].day.toLocaleDateString('en-US', { month: 'short' });
+                                    }
 
-                {/* Role Breakdown */}
-                <Card className="shadow-none border-gray-100 bg-gray-50/50">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                            <Briefcase size={16} className="text-purple-500" />
-                            Role Composition
-                        </CardTitle>
-                        <CardDescription className="text-[10px]">Staff split by administrative levels</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[160px]">
-                         <ChartContainer config={{}} className="h-full w-full">
-                            <BarChart
-                                data={roleStats}
-                                layout="vertical"
-                                margin={{ left: 10, right: 30, top: 10, bottom: 10 }}
-                            >
-                                <XAxis type="number" hide />
-                                <YAxis 
-                                    dataKey="role" 
-                                    type="category" 
-                                    tickLine={false} 
-                                    axisLine={false}
-                                    tick={{ fontSize: 11, fontWeight: 500, fill: '#6b7280' }}
-                                />
-                                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                                <Bar 
-                                    dataKey="count" 
-                                    radius={[0, 4, 4, 0]} 
-                                    barSize={24}
-                                >
-                                    {roleStats.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.fill} stroke={ROLE_STYLE[entry.role.toLowerCase().slice(0,-1)]?.text || '#ccc'} strokeWidth={1} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ChartContainer>
-                    </CardContent>
-                </Card>
-            </div>
+                                    return (
+                                        <div key={wi} className="flex flex-col gap-[4px] relative flex-1 max-w-[16px] items-center">
+                                            {/* Dynamic Month Label above the column */}
+                                            {monthLabel && (
+                                                <span className="absolute -top-5 left-0 text-[10px] text-gray-500 font-semibold whitespace-nowrap">
+                                                    {monthLabel}
+                                                </span>
+                                            )}
+                                            {/* Days */}
+                                            {week.map((cell, di) => {
+                                                const { day, count, employeesOnLeave } = cell;
+
+                                                return (
+                                                    <Tooltip key={di}>
+                                                        <TooltipTrigger asChild>
+                                                            <div
+                                                                className="w-full aspect-square rounded-[2px] transition-transform hover:scale-125 hover:z-10 cursor-pointer shadow-sm"
+                                                                style={{
+                                                                    backgroundColor: getHeatmapColor(count),
+                                                                    border: count === 0 ? '1px solid rgba(27,31,35,0.06)' : '1px solid rgba(27,31,35,0.1)'
+                                                                }}
+                                                            />
+                                                        </TooltipTrigger>
+                                                        <TooltipContent className="p-3 bg-white border border-gray-100 shadow-xl rounded-xl text-xs flex flex-col gap-1.5 max-w-[220px]">
+                                                            <div className="font-bold text-gray-800">
+                                                                {day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                                                            </div>
+                                                            <div className="text-gray-500 font-medium">
+                                                                {count} employee{count !== 1 ? 's' : ''} on leave
+                                                            </div>
+                                                            {employeesOnLeave.length > 0 && (
+                                                                <div className="mt-1 pt-1 border-t border-gray-100 flex flex-col gap-1">
+                                                                    <span className="text-[10px] uppercase font-bold text-gray-400">On Leave:</span>
+                                                                    <div className="flex flex-col gap-0.5 text-gray-700 font-medium max-h-[100px] overflow-y-auto pr-1">
+                                                                        {employeesOnLeave.map((emp, i) => (
+                                                                            <span key={i} className="truncate">• {emp}</span>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </TooltipProvider>
+                </CardContent>
+            </Card>
 
             {/* ── Directory ── */}
             <Card className="overflow-hidden p-0 bg-gray-50/50 shadow-none border-gray-100 mt-2">
@@ -327,12 +385,12 @@ const EmployeeDirectory: React.FC = () => {
                         </CardDescription>
                     </div>
                     <div className="flex divide-x divide-gray-100 border-t sm:border-t-0 sm:border-l border-gray-100">
-                        {FILTERS.filter(f => f.key === 'all' || counts[f.key] > 0).map(f => (
+                        {filters.filter(f => f.key === 'all' || counts[f.key] > 0).map(f => (
                             <button
                                 key={f.key}
                                 onClick={() => setRoleFilter(f.key)}
                                 data-active={roleFilter === f.key}
-                                className="flex flex-col justify-center px-5 py-3 text-left transition-colors hover:bg-gray-50 data-[active=true]:bg-purple-50/60"
+                                className="flex flex-col justify-center px-5 py-3 text-left transition-colors hover:bg-gray-50 data-[active=true]:bg-primary-light/60"
                             >
                                 <span className="text-[10px] text-gray-400 whitespace-nowrap">{f.label}</span>
                                 <span className="text-xl font-bold mt-0.5" style={{ color: roleFilter === f.key ? '#5746AF' : '#9ca3af' }}>
@@ -360,21 +418,54 @@ const EmployeeDirectory: React.FC = () => {
 
                 <CardContent className="p-4">
                     {filtered.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 text-gray-300">
-                            <Search size={36} className="mb-3" />
-                            <p className="text-sm text-gray-400">No employees match your search</p>
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                            <img 
+                                src="/empty.svg" 
+                                className="w-32 h-32 mb-3 object-contain opacity-75 select-none" 
+                                alt="No results" 
+                            />
+                            <p className="font-semibold text-slate-700 text-sm">No employees match your search</p>
+                            <p className="text-xs text-slate-400 mt-1">Try adjusting your search query or department filters.</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {filtered.map(emp => (
-                                <EmployeeCard
-                                    key={emp.id}
-                                    emp={emp}
-                                    onClick={() => navigate(`/employees/${emp.id}`, { state: { employee: emp } })}
-                                    onEdit={canEdit ? () => setEditTarget(emp) : undefined}
-                                />
-                            ))}
-                        </div>
+                        <>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {paginatedEmployees.map(emp => (
+                                    <EmployeeCard
+                                        key={emp.id}
+                                        emp={emp}
+                                        onClick={() => navigate(`/employees/${emp.id}`, { state: { employee: emp } })}
+                                        onEdit={canEdit ? () => setEditTarget(emp) : undefined}
+                                    />
+                                ))}
+                            </div>
+
+                            {totalDirPages > 1 && (
+                                <div className="flex justify-center items-center gap-4 mt-6 pt-4 border-t border-gray-100/50">
+                                    <Button
+                                        disabled={dirPage === 1}
+                                        onClick={() => setDirPage(p => p - 1)}
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 text-xs font-semibold"
+                                    >
+                                        Prev
+                                    </Button>
+                                    <span className="text-xs font-bold text-gray-600">
+                                        Page {dirPage} of {totalDirPages}
+                                    </span>
+                                    <Button
+                                        disabled={dirPage === totalDirPages}
+                                        onClick={() => setDirPage(p => p + 1)}
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 text-xs font-semibold"
+                                    >
+                                        Next
+                                    </Button>
+                                </div>
+                            )}
+                        </>
                     )}
                 </CardContent>
             </Card>

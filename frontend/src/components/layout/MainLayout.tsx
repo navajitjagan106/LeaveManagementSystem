@@ -9,14 +9,14 @@ const LayoutInner = ({ holidays }: { holidays: any[] }) => {
   const { collapsed } = useSidebar();
 
   return (
-    <div className="flex bg-gray-100 h-screen overflow-hidden">
+    <div className="flex bg-surface h-screen overflow-hidden">
       <Sidebar />
       <div
         className="flex-1 flex flex-col h-full overflow-hidden transition-all duration-300"
         style={{ marginLeft: collapsed ? 64 : 112 }}
       >
         <Header />
-        <div className="flex-1 p-5 overflow-y-auto min-h-0">
+        <div className="flex-1 p-4 md:p-5 overflow-y-auto min-h-0 flex flex-col relative">
           <Outlet context={{ holidays }} />
         </div>
       </div>
