@@ -4,6 +4,9 @@ import Header from "./Header";
 import { Outlet } from "react-router-dom";
 import { getHolidays } from "../../api/leaveApi";
 import { SidebarProvider, useSidebar } from "../../context/SidebarContext";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "../../store";
+import { fetchMe } from "../../store/slices/authSlice";
 
 const LayoutInner = ({ holidays }: { holidays: any[] }) => {
   const { collapsed } = useSidebar();
@@ -26,12 +29,22 @@ const LayoutInner = ({ holidays }: { holidays: any[] }) => {
 
 const MainLayout = () => {
   const [holidays, setHolidays] = useState<any[]>([]);
+  const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
     getHolidays()
       .then((res) => setHolidays(res.data))
       .catch((err) => console.error("Failed to fetch holidays", err));
   }, []);
+
+  useEffect(() => {
+    // 30-minute interval to keep the sliding session alive (refreshing the HTTPOnly cookie seamlessly)
+    const interval = setInterval(() => {
+      dispatch(fetchMe());
+    }, 30 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [dispatch]);
 
   return (
     <SidebarProvider>

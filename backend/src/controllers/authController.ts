@@ -129,8 +129,25 @@ export const getMe = async (req: Request, res: Response) => {
 
         if (userResult.rows.length === 0) return res.status(404).json({ error: "User not found" });
 
+        const dbUser = userResult.rows[0];
+        const newToken = jwt.sign(
+            { 
+                id: dbUser.id, 
+                role_id: dbUser.role_id, 
+                role: dbUser.role, 
+                name: dbUser.name, 
+                email: dbUser.email,
+                manager_id: dbUser.manager_id,
+                department: dbUser.department
+            },
+            process.env.JWT_SECRET as string,
+            { expiresIn: process.env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] }
+        );
+
+        setAuthCookies(res, newToken);
+
         const permissions = await fetchUserPermissions(req.user.id, req.user.role_id);
-        res.json({ success: true, data: { ...userResult.rows[0], permissions } });
+        res.json({ success: true, data: { ...dbUser, permissions } });
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch user data" });
     }
