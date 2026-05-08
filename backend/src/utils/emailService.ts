@@ -30,8 +30,7 @@ function emailWrapper(content: string) {
     `;
 }
 
-// ── SendGrid HTTP API Helper using Native Fetch 
-async function sendMail(options: { to: string; subject: string; html: string; otpCode?: string }) {
+async function sendMail(options: { to: string; subject: string; html: string; otpCode?: string; throwOnFailure?: boolean }) {
     const apiKey = process.env.SENDGRID_API_KEY;
     const sender = process.env.SENDER_EMAIL;
 
@@ -68,13 +67,19 @@ async function sendMail(options: { to: string; subject: string; html: string; ot
         console.log(`Email sent successfully via Fetch API to ${options.to}`);
     } catch (error: any) {
         console.error(`Email API delivery failed to ${options.to}:`, error.message);
-        
+
         // Local Fallback for OTP
         if (process.env.NODE_ENV === "development" && options.otpCode) {
             console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             console.log(`  LOCAL DEV OTP FOR ${options.to}: ${options.otpCode}`);
             console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-        } else if (process.env.NODE_ENV !== "development") {
+        } // REMOVE THIS:
+        else if (process.env.NODE_ENV !== "development") {
+            throw error;
+        }
+
+        // REPLACE WITH THIS:
+        else if (options.throwOnFailure) {
             throw error;
         }
     }
@@ -123,7 +128,7 @@ export async function sendOTPEmail(params: { email: string; name: string; code: 
             <span style="font-size: 32px; font-weight: bold; color: ${BRAND_COLOR}; letter-spacing: 5px; background: #eee; padding: 10px 20px; border-radius: 8px;">${params.code}</span>
         </div>
     `);
-    await sendMail({ to: params.email, subject: `${params.code} is your verification code`, html, otpCode: params.code });
+await sendMail({ to: params.email, subject: `${params.code} is your verification code`, html, otpCode: params.code, throwOnFailure: true });
 }
 
 export async function sendInvitationEmail(params: {
@@ -139,5 +144,5 @@ export async function sendInvitationEmail(params: {
             <a href="${acceptUrl}" style="background: ${BRAND_COLOR}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px;">Set Up Your Account</a>
         </div>
     `);
-    await sendMail({ to: params.email, subject: `Welcome to LeaveMS: Set up your account`, html });
+await sendMail({ to: params.email, subject: `Welcome to LeaveMS: Set up your account`, html, throwOnFailure: false });
 }

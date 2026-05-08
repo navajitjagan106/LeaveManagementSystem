@@ -6,7 +6,7 @@ import cookieParser from "cookie-parser";
 import leaveRoutes from "./routes/leaveRoute"
 import authRoutes from "./routes/authRoute";
 import { authenticate } from "./middleware/authMiddleware";
-import adminRoute from "./routes/adminRoute";
+import managementRoute from "./routes/managementRoute";
 
 const app = express();
 
@@ -31,7 +31,7 @@ app.use("/api/leaves", authenticate, leaveRoutes);
 app.use("/api/auth", authRoutes);
 
 
-app.use("/api/admin", authenticate, adminRoute);
+app.use("/api/management", authenticate, managementRoute);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {

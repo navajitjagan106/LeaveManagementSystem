@@ -6,3 +6,4 @@ node_modules
 dist
 
 src/migrate.ts
+src/seed.ts

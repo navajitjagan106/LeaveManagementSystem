@@ -68,13 +68,20 @@ export const setPolicyRules = async (req: Request, res: Response) => {
         await pool.query("DELETE FROM leave_policy_rules WHERE policy_id = $1", [id]);
 
         if (rules && rules.length > 0) {
-            for (const rule of rules) {
-                await pool.query(
-                    `INSERT INTO leave_policy_rules (policy_id, leave_type_id, total_allocated)
-                     VALUES ($1, $2, $3)`,
-                    [id, rule.leave_type_id, rule.total_allocated]
-                );
-            }
+            const values: any[] = [];
+            const valuePairs: string[] = [];
+            
+            rules.forEach((rule: any, idx: number) => {
+                const base = idx * 3;
+                valuePairs.push(`($${base + 1}, $${base + 2}, $${base + 3})`);
+                values.push(id, rule.leave_type_id, rule.total_allocated);
+            });
+
+            await pool.query(
+                `INSERT INTO leave_policy_rules (policy_id, leave_type_id, total_allocated)
+                 VALUES ${valuePairs.join(", ")}`,
+                values
+            );
         }
 
         res.json({ success: true });
@@ -97,10 +104,20 @@ export const reassignPolicy = async (req: Request, res: Response) => {
                 "SELECT leave_type_id, total_allocated FROM leave_policy_rules WHERE policy_id = $1",
                 [policy_id]
             );
-            for (const rule of rules.rows) {
+            if (rules.rows.length > 0) {
+                const values: any[] = [];
+                const valuePairs: string[] = [];
+
+                rules.rows.forEach((rule: any, idx: number) => {
+                    const base = idx * 3;
+                    valuePairs.push(`($${base + 1}, $${base + 2}, $${base + 3}, 0)`);
+                    values.push(id, rule.leave_type_id, rule.total_allocated);
+                });
+
                 await pool.query(
-                    `INSERT INTO leave_balances (user_id, leave_type_id, total_allocated, used) VALUES ($1, $2, $3, 0)`,
-                    [id, rule.leave_type_id, rule.total_allocated]
+                    `INSERT INTO leave_balances (user_id, leave_type_id, total_allocated, used)
+                     VALUES ${valuePairs.join(", ")}`,
+                    values
                 );
             }
         }
@@ -118,5 +135,21 @@ export const resetLeaveBalance = async (req: Request, res: Response) => {
         res.json({ success: true });
     } catch {
         res.status(500).json({ error: "Failed to reset leave balance" });
+    }
+};
+
+export const updatePolicy = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { name, description } = req.body;
+        if (!name) return res.status(400).json({ error: "Name is required" });
+        const result = await pool.query(
+            `UPDATE leave_policies SET name = $1, description = $2 WHERE id = $3 RETURNING *`,
+            [name, description || null, id]
+        );
+        res.json({ success: true, data: result.rows[0] });
+    } catch (err: any) {
+        if (err.code === "23505") return res.status(400).json({ error: "Policy name already exists" });
+        res.status(500).json({ error: "Failed to update policy" });
     }
 };

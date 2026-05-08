@@ -5,12 +5,28 @@ import { pool } from "../config/db";
 
 export const getAllEmployees = async (req: Request, res: Response) => {
     try {
-        const result = await pool.query(`
-            SELECT u.*, m.name AS manager_name, p.name AS policy_name
-            FROM users u
-            LEFT JOIN users m ON u.manager_id = m.id
-            LEFT JOIN leave_policies p ON u.policy_id = p.id
-        `);
+        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+        const { role } = req.user;
+
+        let result;
+        if (role !== "admin") {
+            result = await pool.query(`
+                SELECT u.*, r.id AS role_id, m.name AS manager_name, p.name AS policy_name
+                FROM users u
+                JOIN roles r ON u.role = r.name
+                LEFT JOIN users m ON u.manager_id = m.id
+                LEFT JOIN leave_policies p ON u.policy_id = p.id
+                WHERE r.name <> 'admin'
+            `);
+        } else {
+            result = await pool.query(`
+                SELECT u.*, r.id AS role_id, m.name AS manager_name, p.name AS policy_name
+                FROM users u
+                JOIN roles r ON u.role = r.name
+                LEFT JOIN users m ON u.manager_id = m.id
+                LEFT JOIN leave_policies p ON u.policy_id = p.id
+            `);
+        }
         res.json({ success: true, data: result.rows });
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch employees" });
@@ -23,15 +39,51 @@ export const updateEmployee = async (req: Request, res: Response) => {
         const { id } = req.params;
 
         const { role, manager_id, department } = req.body;
-        const result = await pool.query(
+
+        if (manager_id) {
+            if (Number(manager_id) === Number(id)) {
+                return res.status(400).json({ error: "An employee cannot be their own manager" });
+            }
+            const loopCheck = await pool.query(`
+                WITH RECURSIVE chain AS (
+                    SELECT id, manager_id FROM users WHERE id = $1
+                    UNION ALL
+                    SELECT u.id, u.manager_id FROM users u
+                    JOIN chain c ON u.id = c.manager_id
+                )
+                SELECT id FROM chain WHERE id = $2
+            `, [manager_id, id]);
+            if (loopCheck.rows.length > 0) {
+                return res.status(400).json({ error: "Circular manager assignment detected (this manager reports up to the employee)" });
+            }
+        }
+
+        const normalizedRole = role ? role.toLowerCase().trim() : undefined;
+        if (normalizedRole) {
+            const validRolesRes = await pool.query("SELECT name FROM roles");
+            const validRoles = validRolesRes.rows.map(r => r.name.toLowerCase().trim());
+            if (!validRoles.includes(normalizedRole)) {
+                return res.status(400).json({ 
+                    error: `Invalid role '${role}'. Available roles in the system: ${validRoles.join(", ")}` 
+                });
+            }
+        }
+
+        await pool.query(
             `UPDATE users
-            SET role = $1, manager_id = $2, department = $3
-            WHERE id = $4
-            RETURNING *`,
-            [role, manager_id, department, id]
+            SET role = COALESCE($1, role), manager_id = $2, department = $3
+            WHERE id = $4`,
+            [normalizedRole || null, manager_id, department, id]
         );
 
-        res.json({ success: true, data: result.rows[0] });
+        const userRes = await pool.query(
+            `SELECT u.*, r.id as role_id FROM users u 
+             JOIN roles r ON u.role = r.name 
+             WHERE u.id = $1`, 
+            [id]
+        );
+
+        res.json({ success: true, data: userRes.rows[0] });
     } catch (err) {
         res.status(500).json({ error: "Failed to update employee" });
     }
@@ -52,6 +104,24 @@ export const updateManager = async (req: Request, res: Response) => {
         const { id } = req.params;
 
         const { manager_id } = req.body;
+
+        if (manager_id) {
+            if (Number(manager_id) === Number(id)) {
+                return res.status(400).json({ error: "An employee cannot be their own manager" });
+            }
+            const loopCheck = await pool.query(`
+                WITH RECURSIVE chain AS (
+                    SELECT id, manager_id FROM users WHERE id = $1
+                    UNION ALL
+                    SELECT u.id, u.manager_id FROM users u
+                    JOIN chain c ON u.id = c.manager_id
+                )
+                SELECT id FROM chain WHERE id = $2
+            `, [manager_id, id]);
+            if (loopCheck.rows.length > 0) {
+                return res.status(400).json({ error: "Circular manager assignment detected (this manager reports up to the employee)" });
+            }
+        }
 
         const result = await pool.query(
             `UPDATE users
@@ -93,10 +163,10 @@ export const getAllLeaves = async (req: Request, res: Response) => {
                 l.status,
                 l.created_at,
                 u.name as employee_name,
-                lt.name as leave_type
+                COALESCE(lt.name, 'Unknown Leave Type') as leave_type
             FROM leaves l
             JOIN users u ON l.user_id = u.id
-            JOIN leave_types lt ON l.leave_type_id = lt.id
+            LEFT JOIN leave_types lt ON l.leave_type_id = lt.id
             ORDER BY l.created_at DESC
         `);
 
@@ -123,6 +193,64 @@ export const updateLeaveType = async (req: Request, res: Response) => {
         res.json({ success: true, data: result.rows[0] });
     } catch {
         res.status(500).json({ error: "Failed to update leave type" });
+    }
+};
+
+export const deleteLeaveType = async (req: Request, res: Response) => {
+    const client = await pool.connect();
+    try {
+        const { id } = req.params;
+
+        // Loss of Pay (ID: 7) should not be deletable as it's the absolute default
+        if (Number(id) === 7) {
+            return res.status(400).json({ error: "Cannot delete Loss of Pay as it is the system's absolute fallback leave type." });
+        }
+
+        // 1. Check if there are any pending or upcoming approved leave requests for this leave type
+        const checkQuery = await client.query(`
+            SELECT id FROM leaves 
+            WHERE leave_type_id = $1 
+              AND (
+                  status = 'pending' 
+                  OR (status = 'approved' AND to_date >= CURRENT_DATE)
+              )
+            LIMIT 1
+        `, [id]);
+
+        if (checkQuery.rows.length > 0) {
+            return res.status(400).json({ 
+                error: "Cannot delete leave type because there are active pending or upcoming approved leave requests associated with it." 
+            });
+        }
+
+        // Begin SQL Transaction to delete rules, balances, and update past leaves to NULL
+        await client.query("BEGIN");
+
+        // Set leave_type_id to NULL on past or rejected leaves so they remain as "unknown" type
+        await client.query("UPDATE leaves SET leave_type_id = NULL WHERE leave_type_id = $1", [id]);
+
+        // Delete leave balances associated with this leave type
+        await client.query("DELETE FROM leave_balances WHERE leave_type_id = $1", [id]);
+
+        // Delete policy rules associated with this leave type
+        await client.query("DELETE FROM leave_policy_rules WHERE leave_type_id = $1", [id]);
+
+        // Delete the leave type itself
+        const deleteRes = await client.query("DELETE FROM leave_types WHERE id = $1 RETURNING *", [id]);
+
+        if (deleteRes.rows.length === 0) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({ error: "Leave type not found" });
+        }
+
+        await client.query("COMMIT");
+        res.json({ success: true, message: "Leave type successfully deleted" });
+    } catch (err: any) {
+        await client.query("ROLLBACK");
+        console.error("Error in deleteLeaveType:", err);
+        res.status(500).json({ error: "Failed to delete leave type" });
+    } finally {
+        client.release();
     }
 };
 
@@ -179,11 +307,13 @@ export const getUserLeaveBalance = async (req: Request, res: Response) => {
         const role = req.user.role;
         const targetUserId = Number(req.params.id);
 
-        if (!["admin"].includes(role)) {
-            return res.status(403).json({ error: "Forbidden" });
-        }
+        const permResult = await pool.query(
+            "SELECT scope FROM role_permissions WHERE role_id = $1 AND page_key IN ('manage_employees', 'team_access') LIMIT 1",
+            [req.user.role_id]
+        );
+        const scope = permResult.rows.length > 0 ? permResult.rows[0].scope : 'sub';
 
-        if (role === "manager") {
+        if (role !== "admin" && requesterId !== targetUserId && scope === "sub") {
             const check = await pool.query(
                 "SELECT id FROM users WHERE id = $1 AND manager_id = $2",
                 [targetUserId, requesterId]
@@ -225,13 +355,7 @@ export const updateLeaveBalance = async (req: Request, res: Response) => {
             return res.status(401).json({ error: "Unauthorized" });
         }
 
-        const role = req.user.role;
-
         const { user_id, leave_type_id, change } = req.body;
-
-        if (!["admin"].includes(role)) {
-            return res.status(403).json({ error: "Forbidden" });
-        }
 
         const balance = await pool.query(
             `SELECT total_allocated, used 
@@ -296,7 +420,7 @@ export const exportLeaves = async (req: Request, res: Response) => {
             SELECT
                 u.name AS employee,
                 u.department,
-                lt.name  AS leave_type,
+                COALESCE(lt.name, 'Unknown Leave Type')  AS leave_type,
                 l.from_date,
                 l.to_date,
                 l.total_days,
@@ -308,7 +432,7 @@ export const exportLeaves = async (req: Request, res: Response) => {
                 l.created_at    AS applied_on
             FROM leaves l
             JOIN users u       ON l.user_id     = u.id
-            JOIN leave_types lt ON l.leave_type_id = lt.id
+            LEFT JOIN leave_types lt ON l.leave_type_id = lt.id
             LEFT JOIN users m  ON l.approved_by  = m.id
             ${where}
             ORDER BY l.created_at DESC

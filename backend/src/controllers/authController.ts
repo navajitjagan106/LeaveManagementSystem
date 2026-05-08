@@ -52,7 +52,12 @@ export const verifyOtp = async (req: Request, res: Response) => {
         const { email, code } = req.body;
         if (!email || !code) return res.status(400).json({ error: "Email and OTP are required" });
 
-        const userResult = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+        const userResult = await pool.query(
+            `SELECT u.*, r.id as role_id FROM users u 
+             JOIN roles r ON u.role = r.name 
+             WHERE u.email = $1`, 
+            [email]
+        );
         if (userResult.rows.length === 0)
             return res.status(400).json({ error: "Invalid request" });
 
@@ -70,17 +75,32 @@ export const verifyOtp = async (req: Request, res: Response) => {
         await redis.del(`otp:${dbUser.id}`);
 
         const token = jwt.sign(
-            { id: dbUser.id, role: dbUser.role, name: dbUser.name, email: dbUser.email },
+            { 
+                id: dbUser.id, 
+                role_id: dbUser.role_id, 
+                role: dbUser.role, 
+                name: dbUser.name, 
+                email: dbUser.email,
+                manager_id: dbUser.manager_id,
+                department: dbUser.department
+            },
             process.env.JWT_SECRET as string,
             { expiresIn: process.env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] }
         );
 
-        const permissions = await fetchUserPermissions(dbUser.id);
+        const permissions = await fetchUserPermissions(dbUser.id, dbUser.role_id);
+
+        const reporteesCheck = await pool.query(
+            "SELECT EXISTS (SELECT 1 FROM users WHERE manager_id = $1) AS has_reportees",
+            [dbUser.id]
+        );
+        const hasReportees = reporteesCheck.rows[0]?.has_reportees === true;
 
         const user = {
             id: dbUser.id, name: dbUser.name, email: dbUser.email,
-            role: dbUser.role, manager_id: dbUser.manager_id, department: dbUser.department,
+            role_id: dbUser.role_id, role: dbUser.role, manager_id: dbUser.manager_id, department: dbUser.department,
             permissions,
+            has_reportees: hasReportees,
         };
 
         setAuthCookies(res, token);
@@ -96,9 +116,11 @@ export const getMe = async (req: Request, res: Response) => {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
         
         const userResult = await pool.query(
-            `SELECT u.id, u.name, u.email, u.role, u.department, u.phone, u.gender, u.date_of_birth, u.location,
-             m.name AS manager_name, p.name AS policy_name
+            `SELECT u.id, u.name, u.email, r.id AS role_id, u.role, u.department, u.phone, u.gender, u.date_of_birth, u.location,
+             m.name AS manager_name, p.name AS policy_name,
+             EXISTS (SELECT 1 FROM users WHERE manager_id = u.id) AS has_reportees
              FROM users u
+             JOIN roles r ON u.role = r.name
              LEFT JOIN users m ON u.manager_id = m.id
              LEFT JOIN leave_policies p ON u.policy_id = p.id
              WHERE u.id = $1`,
@@ -107,7 +129,7 @@ export const getMe = async (req: Request, res: Response) => {
 
         if (userResult.rows.length === 0) return res.status(404).json({ error: "User not found" });
 
-        const permissions = await fetchUserPermissions(req.user.id);
+        const permissions = await fetchUserPermissions(req.user.id, req.user.role_id);
         res.json({ success: true, data: { ...userResult.rows[0], permissions } });
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch user data" });

@@ -12,23 +12,32 @@ export const authorizeApprovals = (action: "view" | "edit") =>
             return next();
         }
 
-        const permResult = await pool.query(
-            `SELECT can_view, can_edit FROM user_page_permissions
-            WHERE user_id = $1 AND page_key = 'approvals'`,
+        const reporteesCheck = await pool.query(
+            "SELECT EXISTS (SELECT 1 FROM users WHERE manager_id = $1) AS has_reportees",
             [req.user.id]
         );
+        const hasReportees = reporteesCheck.rows[0]?.has_reportees === true;
+
+        const permResult = await pool.query(
+            `SELECT can_view, can_edit, scope FROM role_permissions
+            WHERE role_id = $1 AND page_key = 'approvals'`,
+            [req.user.role_id]
+        );
+
+        let allowedByPerm = false;
+        let isScopeAll = false;
 
         if (permResult.rows.length > 0) {
             const perm = permResult.rows[0];
             const allowed = action === "view" ? perm.can_view : perm.can_edit;
             if (allowed) {
-                (req as any).fullApprovalAccess = true;
-                return next();
+                allowedByPerm = true;
+                isScopeAll = (perm.scope || "sub") === "all";
             }
         }
 
-        if (req.user.role === "manager") {
-            (req as any).fullApprovalAccess = false;
+        if (hasReportees || allowedByPerm) {
+            (req as any).fullApprovalAccess = isScopeAll;
             return next();
         }
 
@@ -43,9 +52,9 @@ export const requirePageAccess = (pageKey: string, action: Action) => {
 
         const result = await pool.query(
             `SELECT can_view, can_edit, can_delete
-            FROM user_page_permissions
-            WHERE user_id = $1 AND page_key = $2`,
-            [req.user.id, pageKey]
+            FROM role_permissions
+            WHERE role_id = $1 AND page_key = $2`,
+            [req.user.role_id, pageKey]
         );
 
         if (result.rows.length === 0) {
@@ -63,22 +72,24 @@ export const requirePageAccess = (pageKey: string, action: Action) => {
     };
 };
 
-export const authorizeEmployeeDirectory = () => {
+export const authorizeTeamAccess = () => {
     return async (req: Request, res: Response, next: NextFunction) => {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
-        if (req.user.role === "admin" || req.user.role === "manager") {
+        if (req.user.role === "admin") {
+            (req as any).directoryScope = "all";
             return next();
         }
 
         const result = await pool.query(
-            `SELECT can_view
-            FROM user_page_permissions
-            WHERE user_id = $1 AND page_key = 'employee_directory'`,
-            [req.user.id]
+            `SELECT can_view, scope
+            FROM role_permissions
+            WHERE role_id = $1 AND page_key = 'team_access'`,
+            [req.user.role_id]
         );
 
         if (result.rows.length > 0 && result.rows[0].can_view) {
+            (req as any).directoryScope = result.rows[0].scope || "sub";
             return next();
         }
 
