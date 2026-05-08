@@ -11,7 +11,13 @@ API.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       document.cookie = "user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      window.location.href = "/login";
+      
+      const isMeCheck = error.config?.url?.includes("/auth/me");
+      const isLoginPage = window.location.pathname === "/login";
+
+      if (!isMeCheck && !isLoginPage) {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }

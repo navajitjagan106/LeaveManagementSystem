@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { login, verifyOtp } from "../../api/authApi";
 import { useNavigate } from "react-router-dom";
 import { OTPInput, SlotProps } from "input-otp";
-import { useSelector } from "react-redux";
-import { RootState } from "../../store";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../../store";
+import { fetchMe } from "../../store/slices/authSlice";
 
 const OtpSlot = (props: SlotProps) => (
     <div
@@ -20,6 +21,7 @@ const OtpSlot = (props: SlotProps) => (
 
 const Login: React.FC = () => {
     const { user, initialized } = useSelector((state: RootState) => state.auth);
+    const dispatch = useDispatch<AppDispatch>();
     const [step, setStep] = useState<"credentials" | "otp">("credentials");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -29,6 +31,12 @@ const Login: React.FC = () => {
     const [resendCooldown, setResendCooldown] = useState(0);
     const navigate = useNavigate();
     const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    useEffect(() => {
+        if (!initialized) {
+            dispatch(fetchMe());
+        }
+    }, [dispatch, initialized]);
 
     useEffect(() => {
         if (initialized && user) {
