@@ -1,5 +1,24 @@
 import { pool } from "../config/db";
 
+/**
+ * Simple in-memory cache for role permissions.
+ * Keyed by roleId, stores the full permissions object.
+ * Auto-expires entries after TTL_MS.
+ */
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const permCache = new Map<number, { data: any; expires: number }>();
+
+const getCached = (roleId: number) => {
+    const entry = permCache.get(roleId);
+    if (entry && Date.now() < entry.expires) return entry.data;
+    if (entry) permCache.delete(roleId); // expired
+    return null;
+};
+
+const setCache = (roleId: number, data: any) => {
+    permCache.set(roleId, { data, expires: Date.now() + CACHE_TTL_MS });
+};
+
 export const fetchUserPermissions = async (userId: number, roleId?: number) => {
     let userRoleId = roleId;
 
@@ -14,7 +33,11 @@ export const fetchUserPermissions = async (userId: number, roleId?: number) => {
     const permissions: Record<string, { can_view: boolean; can_edit: boolean; can_delete: boolean }> = {};
     if (!userRoleId) return permissions;
 
-    // 2. Fetch role-based permission rows
+    // 2. Check in-memory cache
+    const cached = getCached(userRoleId);
+    if (cached) return cached;
+
+    // 3. Fetch role-based permission rows from DB
     const permResult = await pool.query(
         `SELECT page_key, can_view, can_edit, can_delete
         FROM role_permissions WHERE role_id = $1`,
@@ -22,12 +45,23 @@ export const fetchUserPermissions = async (userId: number, roleId?: number) => {
     );
 
     permResult.rows.forEach((p) => {
-        permissions[p.page_key] = { 
-            can_view: p.can_view, 
-            can_edit: p.can_edit, 
-            can_delete: p.can_delete 
+        permissions[p.page_key] = {
+            can_view: p.can_view,
+            can_edit: p.can_edit,
+            can_delete: p.can_delete
         };
     });
 
+    // 4. Store in cache
+    setCache(userRoleId, permissions);
+
     return permissions;
+};
+
+/**
+ * Invalidate the cached permissions for a specific role.
+ * Call this whenever role_permissions are updated or a role is deleted.
+ */
+export const invalidatePermissionCache = (roleId: number) => {
+    permCache.delete(roleId);
 };

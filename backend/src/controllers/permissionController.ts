@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import { pool } from "../config/db";
+import { invalidatePermissionCache } from "../utils/permissionUtils";
+import { invalidatePageAccessCache } from "../middleware/pageAccessMiddleware";
 
 export const getPageDefinitions = async (_req: Request, res: Response) => {
     try {
@@ -129,6 +131,10 @@ export const setRolePermissions = async (req: Request, res: Response) => {
             );
         }
 
+        // Bust in-memory caches so changes take effect immediately
+        invalidatePermissionCache(roleId);
+        invalidatePageAccessCache(roleId);
+
         res.json({ success: true });
     } catch (err) {
         console.error(err);
@@ -161,6 +167,10 @@ export const deleteRole = async (req: Request, res: Response) => {
 
         // 3. Delete from roles table (this cascades and deletes permissions due to foreign key ON DELETE CASCADE)
         await pool.query(`DELETE FROM roles WHERE id = $1`, [roleId]);
+
+        // Bust in-memory caches for the deleted role
+        invalidatePermissionCache(roleId);
+        invalidatePageAccessCache(roleId);
 
         res.json({ success: true, message: `Role '${role}' deleted successfully.` });
     } catch (err) {

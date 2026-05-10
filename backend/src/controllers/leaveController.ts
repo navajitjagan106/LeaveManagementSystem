@@ -986,62 +986,42 @@ export const getLeaveTrendByType = async (req: Request, res: Response) => {
 
         const { id: userId } = req.user;
         const months = Number(req.query.months) || 12;
+        const scope = (req as any).directoryScope;
 
+        // Date expansion, grouping, and employee aggregation done entirely in Postgres
         let query = `
-        SELECT 
-            l.from_date,
-            l.to_date,
+        SELECT
+            d::date AS date,
             COALESCE(lt.name, 'Unknown Leave Type') AS type,
-            u.name AS employee_name
+            COUNT(*)::int AS count,
+            ARRAY_AGG(DISTINCT u.name) AS employees
         FROM leaves l
+        CROSS JOIN LATERAL generate_series(l.from_date, l.to_date, '1 day'::interval) AS d
         LEFT JOIN leave_types lt ON l.leave_type_id = lt.id
         JOIN users u ON l.user_id = u.id
         WHERE l.status = 'approved'
-        AND l.to_date >= NOW() - CAST($1 || ' months' AS INTERVAL)
+          AND l.to_date >= NOW() - CAST($1 || ' months' AS INTERVAL)
         `;
 
         const values: any[] = [`${months}`];
-        const scope = (req as any).directoryScope;
 
         if (scope === "sub") {
             query += ` AND u.manager_id = $2`;
             values.push(userId);
         }
 
+        query += `
+        GROUP BY d::date, lt.name
+        ORDER BY d::date, lt.name
+        `;
+
         const result = await pool.query(query, values);
 
-        // Map individual dates in-memory safely to eliminate dynamic database expansion
-        const trendMap: Record<string, { date: string, type: string, count: number, employees: Set<string> }> = {};
-
-        for (const row of result.rows) {
-            const startDate = new Date(row.from_date);
-            const endDate = new Date(row.to_date);
-
-            const curDate = new Date(startDate);
-            while (curDate <= endDate) {
-                const dateStr = `${curDate.getFullYear()}-${String(curDate.getMonth() + 1).padStart(2, '0')}-${String(curDate.getDate()).padStart(2, '0')}`;
-
-                const key = `${dateStr}_${row.type}`;
-                if (!trendMap[key]) {
-                    trendMap[key] = {
-                        date: dateStr,
-                        type: row.type,
-                        count: 0,
-                        employees: new Set<string>()
-                    };
-                }
-                trendMap[key].count += 1;
-                trendMap[key].employees.add(row.employee_name);
-
-                curDate.setDate(curDate.getDate() + 1);
-            }
-        }
-
-        const aggregatedData = Object.values(trendMap).map(item => ({
-            date: item.date,
-            type: item.type,
-            count: item.count,
-            employees: Array.from(item.employees)
+        const aggregatedData = result.rows.map((row: any) => ({
+            date: row.date.toISOString().split("T")[0],
+            type: row.type,
+            count: row.count,
+            employees: row.employees
         }));
 
         res.json({

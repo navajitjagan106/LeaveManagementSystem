@@ -422,97 +422,99 @@ export const bulkUpload = async (req: Request, res: Response) => {
 
         if (sortedRecords.length > 0) {
             const policyCache = new Map<string, number>();
+            const BATCH_SIZE = 5; // Process 5 records at a time to avoid pool/rate-limit exhaustion
 
-            // Process database insertions and send invitation emails in parallel
-            const uploadPromises = sortedRecords.map(async (record) => {
-                const { name, email, role, department } = record;
-                const managerEmail = record.manageremail || "";
-                const policyName = record.policyname || "";
+            for (let i = 0; i < sortedRecords.length; i += BATCH_SIZE) {
+                const batch = sortedRecords.slice(i, i + BATCH_SIZE);
 
-                try {
-                    const existingUser = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
-                    if (existingUser.rows.length > 0) {
-                        throw new Error("User with this email already exists");
-                    }
+                await Promise.all(batch.map(async (record) => {
+                    const { name, email, role, department } = record;
+                    const managerEmail = record.manageremail || "";
+                    const policyName = record.policyname || "";
 
-                    const existingInv = await pool.query(
-                        "SELECT id FROM invitations WHERE email = $1 AND status = 'pending'",
-                        [email]
-                    );
-                    if (existingInv.rows.length > 0) {
-                        throw new Error("Pending invitation already exists for this email");
-                    }
+                    try {
+                        const existingUser = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
+                        if (existingUser.rows.length > 0) {
+                            throw new Error("User with this email already exists");
+                        }
 
-                    let policy_id: number | null = null;
-                    if (policyName) {
-                        const normPolicyName = policyName.trim();
-                        if (policyCache.has(normPolicyName.toLowerCase())) {
-                            policy_id = policyCache.get(normPolicyName.toLowerCase())!;
-                        } else {
-                            const policyRes = await pool.query(
-                                "SELECT id FROM leave_policies WHERE name ILIKE $1",
-                                [normPolicyName]
-                            );
-                            if (policyRes.rows.length > 0) {
-                                policy_id = policyRes.rows[0].id;
-                                policyCache.set(normPolicyName.toLowerCase(), policy_id!);
+                        const existingInv = await pool.query(
+                            "SELECT id FROM invitations WHERE email = $1 AND status = 'pending'",
+                            [email]
+                        );
+                        if (existingInv.rows.length > 0) {
+                            throw new Error("Pending invitation already exists for this email");
+                        }
+
+                        let policy_id: number | null = null;
+                        if (policyName) {
+                            const normPolicyName = policyName.trim();
+                            if (policyCache.has(normPolicyName.toLowerCase())) {
+                                policy_id = policyCache.get(normPolicyName.toLowerCase())!;
+                            } else {
+                                const policyRes = await pool.query(
+                                    "SELECT id FROM leave_policies WHERE name ILIKE $1",
+                                    [normPolicyName]
+                                );
+                                if (policyRes.rows.length > 0) {
+                                    policy_id = policyRes.rows[0].id;
+                                    policyCache.set(normPolicyName.toLowerCase(), policy_id!);
+                                }
                             }
                         }
-                    }
 
-                    let manager_id: number | null = null;
-                    let temp_manager_email: string | null = null;
+                        let manager_id: number | null = null;
+                        let temp_manager_email: string | null = null;
 
-                    if (managerEmail) {
-                        const normMgrEmail = managerEmail.trim().toLowerCase();
-                        const mgrUserRes = await pool.query("SELECT id FROM users WHERE LOWER(email) = $1", [normMgrEmail]);
-                        if (mgrUserRes.rows.length > 0) {
-                            manager_id = mgrUserRes.rows[0].id;
-                        } else {
-                            temp_manager_email = normMgrEmail;
+                        if (managerEmail) {
+                            const normMgrEmail = managerEmail.trim().toLowerCase();
+                            const mgrUserRes = await pool.query("SELECT id FROM users WHERE LOWER(email) = $1", [normMgrEmail]);
+                            if (mgrUserRes.rows.length > 0) {
+                                manager_id = mgrUserRes.rows[0].id;
+                            } else {
+                                temp_manager_email = normMgrEmail;
+                            }
                         }
-                    }
 
-                    const token = crypto.randomBytes(32).toString("hex");
-                    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
+                        const token = crypto.randomBytes(32).toString("hex");
+                        const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
 
-                    await pool.query(
-                        `INSERT INTO invitations 
-                        (name, email, role, department, manager_id, temp_manager_email, policy_id, token, expires_at, invited_by)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-                        [
+                        await pool.query(
+                            `INSERT INTO invitations 
+                            (name, email, role, department, manager_id, temp_manager_email, policy_id, token, expires_at, invited_by)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                            [
+                                name,
+                                email,
+                                role,
+                                department || null,
+                                manager_id,
+                                temp_manager_email,
+                                policy_id,
+                                token,
+                                expiresAt,
+                                invitedBy
+                            ]
+                        );
+
+                        // Send email invitation
+                        await sendInvitationEmail({
                             name,
                             email,
-                            role,
-                            department || null,
-                            manager_id,
-                            temp_manager_email,
-                            policy_id,
                             token,
-                            expiresAt,
-                            invitedBy
-                        ]
-                    );
+                            inviterName: (req.user as any)?.name || "HR Admin",
+                            role,
+                            department: department || undefined
+                        });
 
-                    // Send email invitation in parallel as part of the promise
-                    await sendInvitationEmail({
-                        name,
-                        email,
-                        token,
-                        inviterName: (req.user as any)?.name || "HR Admin",
-                        role,
-                        department: department || undefined
-                    });
-
-                    successCount++;
-                    processedList.push({ name, email, role, status: "invited" });
-                } catch (err: any) {
-                    failedCount++;
-                    processedList.push({ name, email, role, status: "failed", error: err.message });
-                }
-            });
-
-            await Promise.all(uploadPromises);
+                        successCount++;
+                        processedList.push({ name, email, role, status: "invited" });
+                    } catch (err: any) {
+                        failedCount++;
+                        processedList.push({ name, email, role, status: "failed", error: err.message });
+                    }
+                }));
+            }
         }
 
         return res.json({
