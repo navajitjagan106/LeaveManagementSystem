@@ -4,6 +4,7 @@ import {
     getDashboardData, getHolidays, getLeaveBalance, getLeaveHistory,
     getLeaveInitData, getLeaveTypes, getManagerLeaves, getTeamOnLeave,
     getNotifications, getTeamLeaves, markNotificationsRead,
+    getNotificationCount,
     getTeamMembers, getTeamBalanceSummary, getLeaveTrendByType,
     updateUserProfile, getTeamMemberProfileData,
 } from "../controllers/leaveController";
@@ -25,6 +26,7 @@ router.patch("/getuserdata", updateUserProfile)
 router.post("/calculatedays", calculateDays)
 router.get("/getinitdata", restrictAdmin, getLeaveInitData)
 router.get("/notifications", getNotifications);
+router.get("/notifications/count", getNotificationCount);
 router.patch("/notifications/read", markNotificationsRead);
 router.delete("/cancel/:id", cancelLeave);
 router.get("/team-members", authorizeTeamAccess(), getTeamMembers);

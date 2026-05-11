@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { login, verifyOtp } from "../../api/authApi";
+import { login, verifyOtp, forgotPasswordApi } from "../../api/authApi";
 import { useNavigate } from "react-router-dom";
 import { OTPInput, SlotProps } from "input-otp";
 import { useSelector, useDispatch } from "react-redux";
@@ -19,10 +19,11 @@ const OtpSlot = (props: SlotProps) => (
     </div>
 );
 
+
 const Login: React.FC = () => {
     const { user, initialized } = useSelector((state: RootState) => state.auth);
     const dispatch = useDispatch<AppDispatch>();
-    const [step, setStep] = useState<"credentials" | "otp">("credentials");
+    const [step, setStep] = useState<"credentials" | "otp" | "forgot" | "forgot_success">("credentials");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [otp, setOtp] = useState("");
@@ -105,6 +106,20 @@ const Login: React.FC = () => {
         }
     };
 
+    const handleForgotPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError("");
+        setLoading(true);
+        try {
+            await forgotPasswordApi({ email });
+            setStep("forgot_success");
+        } catch (err: any) {
+            setError(err?.response?.data?.error || "Failed to request password reset link");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="flex h-screen">
             <div className="hidden md:flex md:w-2/3 bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-slate-50/30 items-center justify-center p-12 relative border-r border-slate-100">
@@ -131,7 +146,7 @@ const Login: React.FC = () => {
             <div className="w-full md:w-1/3 flex flex-col justify-between px-12 py-10 bg-white">
                 <div className="flex flex-col justify-center flex-1">
 
-                    {step === "credentials" ? (
+                    {step === "credentials" && (
                         <>
                             <h2 className="text-2xl font-semibold text-gray-800 mb-2">Login to DayOff</h2>
                             <p className="text-sm text-gray-400 mb-8">Enter your credentials to continue</p>
@@ -149,7 +164,16 @@ const Login: React.FC = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-sm text-gray-600 mb-1 block">Password</label>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label className="text-sm text-gray-600 block">Password</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setStep("forgot"); setError(""); }}
+                                            className="text-xs text-primary hover:underline font-medium focus:outline-none"
+                                        >
+                                            Forgot password?
+                                        </button>
+                                    </div>
                                     <input
                                         type="password"
                                         placeholder="••••••••"
@@ -171,11 +195,13 @@ const Login: React.FC = () => {
                                 </button>
                             </form>
                         </>
-                    ) : (
+                    )}
+
+                    {step === "otp" && (
                         <>
                             <button
                                 onClick={() => { setStep("credentials"); setError(""); setOtp(""); }}
-                                className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 mb-8 w-fit"
+                                className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 mb-8 w-fit transition-colors"
                             >
                                 ← Back
                             </button>
@@ -190,7 +216,6 @@ const Login: React.FC = () => {
                                 maxLength={6}
                                 value={otp}
                                 onChange={setOtp}
-                                onComplete={handleVerifyOtp}
                                 render={({ slots }) => (
                                     <div className="flex gap-2 mb-6">
                                         {slots.map((slot, i) => <OtpSlot key={i} {...slot} />)}
@@ -221,6 +246,66 @@ const Login: React.FC = () => {
                                 )}
                             </div>
                         </>
+                    )}
+
+                    {step === "forgot" && (
+                        <>
+                            <button
+                                onClick={() => { setStep("credentials"); setError(""); }}
+                                className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 mb-8 w-fit transition-colors"
+                            >
+                                ← Back to Login
+                            </button>
+
+                            <h2 className="text-2xl font-semibold text-gray-800 mb-2">Reset Password</h2>
+                            <p className="text-sm text-gray-400 mb-8">
+                                Enter your email below to receive a secure link to choose a new password.
+                            </p>
+
+                            <form onSubmit={handleForgotPassword} className="flex flex-col gap-5">
+                                <div>
+                                    <label className="text-sm text-gray-600 mb-1 block">Email Address</label>
+                                    <input
+                                        type="email"
+                                        placeholder="you@company.com"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-primary"
+                                        required
+                                    />
+                                </div>
+
+                                {error && <p className="text-red-500 text-sm">{error}</p>}
+
+                                <button
+                                    type="submit"
+                                    disabled={loading || !email}
+                                    className="w-full py-3 rounded-xl text-white text-sm font-bold mt-2 disabled:opacity-50 bg-primary hover:bg-primary-dark shadow-md shadow-blue-50 transition-all"
+                                >
+                                    {loading ? "Sending link…" : "Send Reset Link"}
+                                </button>
+                            </form>
+                        </>
+                    )}
+
+                    {step === "forgot_success" && (
+                        <div className="flex flex-col items-center text-center">
+                            <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center text-green-500 mb-6 border border-green-100">
+                                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h2 className="text-2xl font-semibold text-gray-800 mb-2">Check your email</h2>
+                            <p className="text-sm text-gray-400 max-w-sm mb-8 leading-relaxed">
+                                If an account exists for <span className="font-semibold text-gray-600">{email}</span>, we have sent a secure password reset link to your inbox.
+                            </p>
+                            <button
+                                onClick={() => { setStep("credentials"); setError(""); }}
+                                className="w-full py-3 rounded-xl text-white text-sm font-bold bg-primary hover:bg-primary-dark shadow-md transition-all"
+                            >
+                                Return to Login
+                            </button>
+                        </div>
                     )}
                 </div>
 

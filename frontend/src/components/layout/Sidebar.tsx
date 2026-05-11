@@ -37,7 +37,7 @@ const Sidebar: React.FC = () => {
         { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard, show: !isAdmin },
         { path: "/management", label: "Overview", icon: LayoutDashboard, show: hasPage("admin_dashboard") },
         { path: "/approvals", label: "Approvals", icon: CheckCircle, show: !!user?.has_reportees || hasPage("approvals") },
-        { path: "/employees", label: "Employees", icon: UsersRound, show: hasPage("team_access") || hasPage("manage_employees") },
+        { path: "/employees", label: "Employees", icon: UsersRound, show: hasPage("manage_employees") },
         { path: "/management/invitations", label: "Invites", icon: Mail, show: hasPage("manage_invitations") },
         { path: "/management/leave-types", label: "Leave Types", icon: CalendarDays, show: hasPage("manage_leave_types") },
         { path: "/management/policies", label: "Policies", icon: BookOpen, show: hasPage("manage_policies") },

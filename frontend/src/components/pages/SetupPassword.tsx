@@ -10,7 +10,7 @@ const PASSWORD_RULES = [
     { label: "One special character", test: (p: string) => /[!@#$%^&*()_\-+={}[\];':"\\|,.<>/?]/.test(p) },
 ];
 
-const AcceptInvitation: React.FC = () => {
+const SetupPassword: React.FC = () => {
     const { token } = useParams<{ token: string }>();
     const navigate = useNavigate();
     const [invitation, setInvitation] = useState<any>(null);
@@ -104,9 +104,19 @@ const AcceptInvitation: React.FC = () => {
                     
                     {/* Header */}
                     <div className="flex flex-col gap-1">
-                        <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Activate Account</h2>
+                        <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                            {invitation.type === "reset" ? "Reset Password" : "Activate Account"}
+                        </h2>
                         <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
-                            Welcome, <span className="font-bold text-indigo-600">{invitation.name}</span>! Set up a secure password to complete your organization setup.
+                            {invitation.type === "reset" ? (
+                                <>
+                                    Hello, <span className="font-bold text-indigo-600">{invitation.name}</span>. Please choose a strong, new secure password for your account.
+                                </>
+                            ) : (
+                                <>
+                                    Welcome, <span className="font-bold text-indigo-600">{invitation.name}</span>! Set up a secure password to complete your organization setup.
+                                </>
+                            )}
                         </p>
                     </div>
 
@@ -173,7 +183,11 @@ const AcceptInvitation: React.FC = () => {
                             disabled={loading}
                             className="w-full py-3 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-md shadow-blue-50 hover:shadow-blue-100 hover:translate-y-[-1px] active:translate-y-[1px] transition-all"
                         >
-                            {loading ? "Completing Setup..." : "Activate Account & Sign In"}
+                            {loading ? (
+                                invitation.type === "reset" ? "Resetting Password..." : "Completing Setup..."
+                            ) : (
+                                invitation.type === "reset" ? "Reset Password & Sign In" : "Activate Account & Sign In"
+                            )}
                         </button>
                     </form>
                 </div>
@@ -182,4 +196,4 @@ const AcceptInvitation: React.FC = () => {
     );
 };
 
-export default AcceptInvitation;
+export default SetupPassword;

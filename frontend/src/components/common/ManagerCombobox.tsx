@@ -22,7 +22,7 @@ export function ManagerCombobox({ value, onChange, managers, placeholder = "No m
     const filtered = managers.filter((m) => {
         if (!query) return true;
         const q = query.toLowerCase();
-        return m.name.toLowerCase().includes(q) || (m.department ?? "").toLowerCase().includes(q);
+        return m.name.toLowerCase().includes(q) || (m.role ?? "").toLowerCase().includes(q);
     });
 
     const select = (id: number | "") => {
@@ -44,7 +44,7 @@ export function ManagerCombobox({ value, onChange, managers, placeholder = "No m
                     onChange={(e) => setQuery(e.target.value)}
                     onFocus={() => { setOpen(true); setQuery(""); }}
                     onBlur={() => { setOpen(false); setQuery(""); }}
-                    placeholder={open ? "Search by name or department…" : placeholder}
+                    placeholder={open ? "Search by name or role…" : placeholder}
                     className="flex-1 outline-none bg-transparent text-sm min-w-0 placeholder:text-gray-400"
                     readOnly={!open}
                 />
@@ -86,7 +86,7 @@ export function ManagerCombobox({ value, onChange, managers, placeholder = "No m
                                     )}
                                 >
                                     <span className="font-medium truncate">{m.name}</span>
-                                    <span className="text-xs text-gray-400 shrink-0">{m.department || m.role}</span>
+                                    <span className="text-xs text-gray-400 shrink-0 capitalize">{m.role || m.department}</span>
                                 </button>
                             ))
                         )}

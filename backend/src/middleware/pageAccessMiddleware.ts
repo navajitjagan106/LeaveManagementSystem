@@ -106,6 +106,28 @@ export const requirePageAccess = (pageKey: string, action: Action) => {
     };
 };
 
+export const requireAnyPageAccess = (checks: { pageKey: string; action: Action }[]) => {
+    return async (req: Request, res: Response, next: NextFunction) => {
+        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+        if (req.user.role_id === 1) return next();
+
+        for (const check of checks) {
+            const perm = await getCachedPagePerm(req.user.role_id, check.pageKey);
+            if (perm) {
+                const allowed = check.action === "view" ? perm.can_view
+                    : check.action === "edit" ? perm.can_edit
+                        : perm.can_delete;
+                if (allowed) {
+                    return next();
+                }
+            }
+        }
+
+        return res.status(403).json({ error: "Access denied" });
+    };
+};
+
 export const authorizeTeamAccess = () => {
     return async (req: Request, res: Response, next: NextFunction) => {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
@@ -115,7 +137,7 @@ export const authorizeTeamAccess = () => {
             return next();
         }
 
-        const perm = await getCachedPagePerm(req.user.role_id, "team_access");
+        const perm = await getCachedPagePerm(req.user.role_id, "manage_employees");
 
         if (perm && perm.can_view) {
             (req as any).directoryScope = perm.scope || "sub";

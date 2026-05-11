@@ -41,7 +41,6 @@ const ACTIONS: { key: "can_view" | "can_edit" | "can_delete"; label: string }[] 
 
 const SUPPORTED_ACTIONS: Record<string, ("can_view" | "can_edit" | "can_delete")[]> = {
     approvals: ["can_view", "can_edit"],
-    team_access: ["can_view"],
     manage_employees: ["can_view", "can_edit", "can_delete"],
     manage_invitations: ["can_view", "can_edit", "can_delete"],
     manage_leave_types: ["can_view", "can_edit", "can_delete"],
@@ -367,7 +366,7 @@ const ManagePermissionsPage = () => {
                                             <div>
                                                 <p className="text-sm font-semibold text-gray-800">{page.label}</p>
                                                 <p className="text-xs text-gray-400 font-medium mt-0.5 leading-relaxed">{page.description}</p>
-                                                {(page.key === "approvals" || page.key === "team_access") && perm.can_view && (
+                                                {(page.key === "approvals" || page.key === "manage_employees") && perm.can_view && (
                                                     <div className="mt-2.5 flex items-center gap-3 bg-primary-light/40 border border-primary-light/60 rounded-xl p-2.5 w-max">
                                                         <span className="text-[10px] font-extrabold text-primary uppercase tracking-widest px-1">Target Scope:</span>
                                                         <NativeSelect

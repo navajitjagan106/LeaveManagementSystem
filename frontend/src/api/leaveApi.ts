@@ -56,6 +56,9 @@ export const cancelLeave = (id: number) =>
 export const getNotifications = () =>
     API.get("/leaves/notifications");
 
+export const getNotificationCount = () =>
+    API.get("/leaves/notifications/count");
+
 export const markNotificationsRead = () =>
     API.patch("/leaves/notifications/read");
 

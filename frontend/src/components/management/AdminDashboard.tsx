@@ -154,7 +154,7 @@ const AdminDashboard = () => {
             <div>
                 <p className="text-sm font-semibold text-gray-600 mb-3">Quick Actions</p>
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                    {(hasPage("team_access") || hasPage("manage_employees")) && (
+                    {hasPage("manage_employees") && (
                         <ShortcutCard icon={Users} label="Manage Employees" desc="View, edit or remove employees" to="/employees" color="bg-primary" />
                     )}
                     {hasPage("manage_invitations") && (

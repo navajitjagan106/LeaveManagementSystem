@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { getBalance, updateUserProfile } from "../../api/leaveApi";
-import { getMe } from "../../api/authApi";
+import { getMe, changePasswordApi } from "../../api/authApi";
 import { User } from "../../types";
 import {
     Mail, Building2, Users, BookOpen, Shield,
@@ -80,6 +80,43 @@ const Profile: React.FC = () => {
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({ phone: "", gender: "", date_of_birth: "", location: "" });
+    
+    // Change Password Form State
+    const [pwdForm, setPwdForm] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
+    const [showPwdForm, setShowPwdForm] = useState(false);
+    const [updatingPwd, setUpdatingPwd] = useState(false);
+
+    const handleUpdatePassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!pwdForm.oldPassword || !pwdForm.newPassword || !pwdForm.confirmPassword) {
+            toast.error("Please fill in all password fields");
+            return;
+        }
+        if (pwdForm.newPassword !== pwdForm.confirmPassword) {
+            toast.error("New passwords do not match");
+            return;
+        }
+        if (pwdForm.newPassword.length < 6) {
+            toast.error("New password must be at least 6 characters");
+            return;
+        }
+
+        setUpdatingPwd(true);
+        try {
+            await changePasswordApi({
+                oldPassword: pwdForm.oldPassword,
+                newPassword: pwdForm.newPassword,
+            });
+            toast.success("Password updated successfully");
+            setPwdForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+            setShowPwdForm(false);
+        } catch (err: any) {
+            const errMsg = err?.response?.data?.error || "Failed to update password";
+            toast.error(errMsg);
+        } finally {
+            setUpdatingPwd(false);
+        }
+    };
 
     useEffect(() => {
         Promise.all([getMe(), getBalance()])
@@ -268,6 +305,74 @@ const Profile: React.FC = () => {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+
+                        {/* Change Password Collapsible Section */}
+                        <div className="mt-6 pt-5 border-t border-gray-100">
+                            <button
+                                type="button"
+                                onClick={() => setShowPwdForm(!showPwdForm)}
+                                className="flex items-center justify-between w-full text-left text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-600 transition-colors"
+                            >
+                                <span>Security / Change Password</span>
+                                <span className="text-sm font-bold text-gray-400">
+                                    {showPwdForm ? "—" : "+"}
+                                </span>
+                            </button>
+
+                            {showPwdForm && (
+                                <form onSubmit={handleUpdatePassword} className="flex flex-col gap-3 mt-4">
+                                    <div>
+                                        <label className="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">
+                                            Current Password
+                                        </label>
+                                        <input
+                                            type="password"
+                                            placeholder="••••••••"
+                                            value={pwdForm.oldPassword}
+                                            onChange={(e) => setPwdForm(p => ({ ...p, oldPassword: e.target.value }))}
+                                            className="w-full text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-primary"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">
+                                            New Password
+                                        </label>
+                                        <input
+                                            type="password"
+                                            placeholder="Min 6 characters"
+                                            value={pwdForm.newPassword}
+                                            onChange={(e) => setPwdForm(p => ({ ...p, newPassword: e.target.value }))}
+                                            className="w-full text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-primary"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">
+                                            Confirm New Password
+                                        </label>
+                                        <input
+                                            type="password"
+                                            placeholder="••••••••"
+                                            value={pwdForm.confirmPassword}
+                                            onChange={(e) => setPwdForm(p => ({ ...p, confirmPassword: e.target.value }))}
+                                            className="w-full text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-primary"
+                                            required
+                                        />
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={updatingPwd || !pwdForm.oldPassword || !pwdForm.newPassword || !pwdForm.confirmPassword}
+                                        className="w-full mt-1.5 py-2 rounded-lg text-white text-xs font-semibold disabled:opacity-50 bg-primary hover:bg-primary-dark transition-all shadow-sm"
+                                    >
+                                        {updatingPwd ? "Updating…" : "Update Password"}
+                                    </button>
+                                </form>
+                            )}
                         </div>
                     </CardContent>
                 </Card>

@@ -13,7 +13,7 @@ import Profile from "./components/pages/Profile";
 import EmployeeDirectory from "./components/pages/EmployeeDirectory";
 import EmployeeProfile from "./components/pages/EmployeeProfile";
 import RedirectHandler from "./components/common/ReDirectHandler";
-import AcceptInvitation from "./components/pages/AcceptInvitation";
+import SetupPassword from "./components/pages/SetupPassword";
 import HolidaysPage from "./components/pages/HolidaysPage";
 import { ToastProvider } from "./components/common/ToastContext";
 
@@ -32,7 +32,7 @@ const App: React.FC = () => {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
+          <Route path="/setup-password/:token" element={<SetupPassword />} />
 
           <Route
             element={
@@ -90,7 +90,7 @@ const App: React.FC = () => {
             <Route
               path="employees"
               element={
-                <ProtectedRoute requiredPage="team_access">
+                <ProtectedRoute requiredPages={["manage_employees"]}>
                   <EmployeeDirectory />
                 </ProtectedRoute>
               }
@@ -98,7 +98,7 @@ const App: React.FC = () => {
             <Route
               path="employees/:id"
               element={
-                <ProtectedRoute requiredPage="team_access">
+                <ProtectedRoute requiredPages={["manage_employees"]}>
                   <EmployeeProfile />
                 </ProtectedRoute>
               }

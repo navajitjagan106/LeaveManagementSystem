@@ -26,8 +26,9 @@ type RawLeave = {
 };
 
 type CalendarEvent = {
-    title: string;
-    start: string;
+    title?: string;
+    start?: string;
+    daysOfWeek?: number[];
     backgroundColor?: string;
     borderColor?: string;
     classNames?: string[];
@@ -57,11 +58,10 @@ const CalendarPage: React.FC = () => {
 
     // Filter toggle states
     const [filterSelf, setFilterSelf] = useState(true);
-    const [filterReports, setFilterReports] = useState(true);
-    const [filterSiblings, setFilterSiblings] = useState(true);
+    const [filterTeammates, setFilterTeammates] = useState(true);
     const [filterHolidays, setFilterHolidays] = useState(true);
 
-    const hasTeamAccess = role === "admin" || !!user?.permissions?.['team_access']?.can_view;
+    const hasTeamAccess = role === "admin" || !!user?.permissions?.['manage_employees']?.can_view;
 
     const holidayDates = useMemo(
         () => holidays.map((h: any) => toYMD(new Date(h.date))),
@@ -109,15 +109,23 @@ const CalendarPage: React.FC = () => {
             });
         }
 
-        // 2. Add Categorized Leaves
-        rawLeaves.forEach((leave) => {
-            const isSelf = Number(leave.user_id) === Number(user?.id);//me
-            const isReport = !isSelf && Number(leave.manager_id) === Number(user?.id); //with my if i fetch sub
-            const isSibling = !isSelf && !isReport && Number(leave.manager_id) === Number(user?.manager_id); //with my managerid i get my teammates
+        // 2. Add Week Offs (Saturdays & Sundays)
+        events.push({
+            daysOfWeek: [0, 6], // 0 = Sunday, 6 = Saturday
+            display: "background",
+            backgroundColor: "#f8fafc",
+            classNames: ["week-off-day"],
+        });
 
-            if (isSelf && !filterSelf) return;
-            if (isReport && !filterReports) return;
-            if (isSibling && !filterSiblings) return;
+        // 3. Add Categorized Leaves
+        rawLeaves.forEach((leave) => {
+            const isSelf = Number(leave.user_id) === Number(user?.id);
+
+            if (isSelf) {
+                if (!filterSelf) return;
+            } else {
+                if (!filterTeammates) return;
+            }
 
             const isHalf = leave.duration_type === "half";
             let cur = new Date(leave.from_date);
@@ -145,11 +153,7 @@ const CalendarPage: React.FC = () => {
                             border = "#4f46e5";
                             text = "white";
                         }
-                    } else if (isReport) {
-                        bg = "#06b6d4";
-                        border = "#06b6d4";
-                        text = "white";
-                    } else if (isSibling) {
+                    } else {
                         bg = "#f97316";
                         border = "#f97316";
                         text = "white";
@@ -170,12 +174,12 @@ const CalendarPage: React.FC = () => {
         });
 
         return events;
-    }, [rawLeaves, holidays, filterSelf, filterReports, filterSiblings, filterHolidays, user, holidayDates]);
+    }, [rawLeaves, holidays, filterSelf, filterTeammates, filterHolidays, user, holidayDates]);
 
     // Count states
     const selfCount = useMemo(() => new Set(rawLeaves.filter(l => Number(l.user_id) === Number(user?.id)).map(l => l.id)).size, [rawLeaves, user]);
+    const teammatesCount = useMemo(() => new Set(rawLeaves.filter(l => Number(l.user_id) !== Number(user?.id)).map(l => l.id)).size, [rawLeaves, user]);
     const reportsCount = useMemo(() => new Set(rawLeaves.filter(l => Number(l.manager_id) === Number(user?.id) && Number(l.user_id) !== Number(user?.id)).map(l => l.id)).size, [rawLeaves, user]);
-    const siblingsCount = useMemo(() => new Set(rawLeaves.filter(l => Number(l.manager_id) === Number(user?.manager_id) && Number(l.user_id) !== Number(user?.id) && Number(l.manager_id) !== Number(user?.id)).map(l => l.id)).size, [rawLeaves, user]);
 
     const todayStr = toYMD(new Date());
     const onLeaveToday = useMemo(() => {
@@ -215,7 +219,6 @@ const CalendarPage: React.FC = () => {
             textColor: "text-emerald-600",
         },
     ];
-
     if (loading) return <div className="flex justify-center items-center h-64"><Loader /></div>;
 
     return (
@@ -298,43 +301,22 @@ const CalendarPage: React.FC = () => {
                                 <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{selfCount}</span>
                             </button>
 
-                            {/* Reports Toggle (Only show if user has direct reports, or is admin) */}
-                            {(reportsCount > 0 || role === "admin" || !!user?.permissions?.["manage_employees"]?.can_view) && (
-                                <button
-                                    onClick={() => setFilterReports(!filterReports)}
-                                    className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${filterReports ? "bg-cyan-50/40 border-cyan-200" : "bg-white border-gray-100 opacity-60 hover:opacity-90"}`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded bg-cyan-500 flex items-center justify-center text-white">
-                                            {filterReports && <Check size={12} strokeWidth={3} />}
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-bold text-gray-800">Direct Reports</p>
-                                            <p className="text-[10px] text-gray-400">Directly reporting to you</p>
-                                        </div>
+                            {/* Teammates Toggle */}
+                            <button
+                                onClick={() => setFilterTeammates(!filterTeammates)}
+                                className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${filterTeammates ? "bg-orange-50/40 border-orange-200" : "bg-white border-gray-100 opacity-60 hover:opacity-90"}`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-5 h-5 rounded bg-orange-500 flex items-center justify-center text-white shrink-0">
+                                        {filterTeammates && <Check size={12} strokeWidth={3} />}
                                     </div>
-                                    <span className="bg-cyan-100 text-cyan-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{reportsCount}</span>
-                                </button>
-                            )}
-
-                            {/* Siblings Toggle */}
-                            {(!user?.manager_id && role !== "admin") ? null : (
-                                <button
-                                    onClick={() => setFilterSiblings(!filterSiblings)}
-                                    className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${filterSiblings ? "bg-orange-50/40 border-orange-200" : "bg-white border-gray-100 opacity-60 hover:opacity-90"}`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded bg-orange-500 flex items-center justify-center text-white">
-                                            {filterSiblings && <Check size={12} strokeWidth={3} />}
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-bold text-gray-800">Teammates</p>
-                                            <p className="text-[10px] text-gray-400">Your peer colleagues</p>
-                                        </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-gray-800">Teammates on Leave</p>
+                                        <p className="text-[10px] text-gray-400">All other employee leaves</p>
                                     </div>
-                                    <span className="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{siblingsCount}</span>
-                                </button>
-                            )}
+                                </div>
+                                <span className="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">{teammatesCount}</span>
+                            </button>
 
                             {/* Holidays Toggle */}
                             <button
@@ -440,7 +422,7 @@ const CalendarPage: React.FC = () => {
                                             <span
                                                 style={{ color: arg.event.textColor }}
                                                 className="text-[11px] font-bold truncate"
-                                            >
+                                              >
                                                 {arg.event.title}
                                             </span>
                                         </div>
@@ -448,20 +430,29 @@ const CalendarPage: React.FC = () => {
                                 }}
                                 dayCellClassNames={(arg) => {
                                     const day = arg.date.getDay();
-                                    const inMonth = arg.date.getMonth() === arg.view.currentStart.getMonth();
-                                    return (day === 0 || day === 6) && inMonth ? ["bg-amber-50/10"] : [];
+                                    return (day === 0 || day === 6) ? ["bg-slate-50/50"] : [];
                                 }}
-                                dayCellContent={(arg) => (
-                                    <div className="flex justify-end pr-1.5 pt-1.5">
-                                        <span className={
-                                            arg.isToday
-                                                ? "bg-indigo-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold shadow-sm"
-                                                : "text-sm text-gray-500 font-medium"
-                                        }>
-                                            {arg.dayNumberText}
-                                        </span>
-                                    </div>
-                                )}
+                                dayCellContent={(arg) => {
+                                    const isWeekend = arg.date.getDay() === 0 || arg.date.getDay() === 6;
+                                    return (
+                                        <div className="flex flex-col h-full justify-between items-stretch p-1 min-h-[50px]">
+                                            <div className="flex justify-end">
+                                                <span className={
+                                                    arg.isToday
+                                                        ? "bg-indigo-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold shadow-sm"
+                                                        : "text-xs text-gray-500 font-medium"
+                                                }>
+                                                    {arg.dayNumberText}
+                                                </span>
+                                            </div>
+                                            {isWeekend && (
+                                                <div className="text-[9px] text-gray-400 font-bold tracking-tight bg-slate-100/50 border border-slate-200/50 rounded px-1 py-0.5 text-center mt-1 select-none">
+                                                    Week Off
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                }}
                             />
                         </CardContent>
                     </Card>

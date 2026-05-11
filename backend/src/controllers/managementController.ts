@@ -315,7 +315,7 @@ export const getUserLeaveBalance = async (req: Request, res: Response) => {
         const targetUserId = Number(req.params.id);
 
         const permResult = await pool.query(
-            "SELECT scope FROM role_permissions WHERE role_id = $1 AND page_key IN ('manage_employees', 'team_access') LIMIT 1",
+            "SELECT scope FROM role_permissions WHERE role_id = $1 AND page_key = 'manage_employees' LIMIT 1",
             [req.user.role_id]
         );
         const scope = permResult.rows.length > 0 ? permResult.rows[0].scope : 'sub';

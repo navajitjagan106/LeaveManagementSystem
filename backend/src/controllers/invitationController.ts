@@ -171,19 +171,42 @@ export const getInvitationByToken = async (req: Request, res: Response) => {
     try {
         const { token } = req.params;
 
+        // Try querying invitations first
         const result = await pool.query(
             `SELECT * FROM invitations 
             WHERE token=$1 AND status='pending' AND expires_at > NOW()`,
             [token]
         );
 
-        if (result.rows.length === 0)
-            return res.status(404).json({ error: "Invitation not found or expired" });
+        if (result.rows.length > 0) {
+            return res.json({ success: true, data: { ...result.rows[0], type: "invitation" } });
+        }
 
-        res.json({ success: true, data: result.rows[0] });
+        // If not found, check if it's a password reset JWT
+        try {
+            const decoded = jwt.verify(token as string, process.env.JWT_SECRET as string) as any;
+            if (decoded && decoded.purpose === "password_reset") {
+                const userRes = await pool.query("SELECT id, name, email FROM users WHERE id = $1", [decoded.id]);
+                if (userRes.rows.length > 0) {
+                    return res.json({
+                        success: true,
+                        data: {
+                            id: userRes.rows[0].id,
+                            name: userRes.rows[0].name,
+                            email: userRes.rows[0].email,
+                            type: "reset"
+                        }
+                    });
+                }
+            }
+        } catch (jwtErr) {
+            // Decoded error, link was invalid or expired
+        }
+
+        return res.status(404).json({ error: "This link is invalid or has expired." });
 
     } catch {
-        res.status(500).json({ error: "Failed to fetch invitation" });
+        res.status(500).json({ error: "Failed to fetch details" });
     }
 };
 
@@ -195,6 +218,57 @@ export const acceptInvitation = async (req: Request, res: Response) => {
         if (!password)
             return res.status(400).json({ error: "Password is required" });
 
+        // Try to decode as JWT first
+        let isReset = false;
+        let userId: number | null = null;
+        try {
+            const decoded = jwt.verify(token as string, process.env.JWT_SECRET as string) as any;
+            if (decoded && decoded.purpose === "password_reset") {
+                isReset = true;
+                userId = decoded.id;
+            }
+        } catch (jwtErr) {
+            // Ignore, proceed to check invitations
+        }
+
+        if (isReset && userId) {
+            // It is a password reset!
+            const hashedPassword = await bcrypt.hash(password, 10);
+            await pool.query("UPDATE users SET password = $1 WHERE id = $2", [hashedPassword, userId]);
+
+            // Auto-login the user
+            const dbUserResult = await pool.query(
+                `SELECT u.*, r.id as role_id, r.name as role FROM users u 
+                 JOIN roles r ON u.role_id = r.id 
+                 WHERE u.id = $1`, 
+                [userId]
+            );
+            const dbUser = dbUserResult.rows[0];
+            const tokenForUser = jwt.sign(
+                { 
+                    id: dbUser.id, 
+                    role_id: dbUser.role_id, 
+                    name: dbUser.name, 
+                    email: dbUser.email,
+                    manager_id: dbUser.manager_id,
+                    department: dbUser.department
+                },
+                process.env.JWT_SECRET as string,
+                { expiresIn: process.env.JWT_EXPIRES_IN as any }
+            );
+
+            const permissions = await fetchUserPermissions(dbUser.id, dbUser.role_id);
+            const userData = {
+                id: dbUser.id, name: dbUser.name, email: dbUser.email,
+                role: dbUser.role, manager_id: dbUser.manager_id, department: dbUser.department,
+                permissions,
+            };
+
+            setAuthCookies(res, tokenForUser);
+            return res.json({ success: true, user: userData, type: "reset" });
+        }
+
+        // If not a reset token, proceed with original accept invitation logic
         const inv = await pool.query(
             `SELECT * FROM invitations 
             WHERE token=$1 AND status='pending' AND expires_at > NOW()`,
@@ -222,7 +296,7 @@ export const acceptInvitation = async (req: Request, res: Response) => {
             ]
         );
 
-        const userId = user.rows[0].id;
+        const createdUserId = user.rows[0].id;
 
         if (invitation.policy_id) {
             const rules = await pool.query(
@@ -234,14 +308,14 @@ export const acceptInvitation = async (req: Request, res: Response) => {
                 await pool.query(
                     `INSERT INTO leave_balances (user_id, leave_type_id, total_allocated, used) 
                     VALUES ($1, $2, $3, 0)`,
-                    [userId, rule.leave_type_id, rule.total_allocated]
+                    [createdUserId, rule.leave_type_id, rule.total_allocated]
                 );
             }
 
             await pool.query(
                 `INSERT INTO leave_balances (user_id, leave_type_id, total_allocated, used) 
                 VALUES ($1, 7, 0, 0)`,
-                [userId]
+                [createdUserId]
             );
         }
 
@@ -252,14 +326,12 @@ export const acceptInvitation = async (req: Request, res: Response) => {
             [invitation.id]
         );
 
-
-
         // Update other invitations waiting on this user to be their manager
         await pool.query(
             `UPDATE invitations 
             SET manager_id = $1, temp_manager_email = NULL 
             WHERE temp_manager_email = $2`,
-            [userId, invitation.email]
+            [createdUserId, invitation.email]
         );
 
         // Auto-login the user
@@ -267,7 +339,7 @@ export const acceptInvitation = async (req: Request, res: Response) => {
             `SELECT u.*, r.id as role_id, r.name as role FROM users u 
              JOIN roles r ON u.role_id = r.id 
              WHERE u.id = $1`, 
-            [user.rows[0].id]
+            [createdUserId]
         );
         const dbUser = dbUserResult.rows[0];
         const tokenForUser = jwt.sign(
@@ -292,8 +364,7 @@ export const acceptInvitation = async (req: Request, res: Response) => {
         };
 
         setAuthCookies(res, tokenForUser);
-
-        res.json({ success: true, user: userData });
+        res.json({ success: true, user: userData, type: "invitation" });
 
     } catch (err) {
         console.error(err);

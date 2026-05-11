@@ -134,7 +134,7 @@ export async function sendInvitationEmail(params: {
     email: string; name: string; token: string; role: string; department?: string; inviterName?: string;
 }) {
     const baseUrl = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/+$/, "");
-    const acceptUrl = `${baseUrl}/accept-invitation/${params.token}`;
+    const acceptUrl = `${baseUrl}/setup-password/${params.token}`;
     const html = emailWrapper(`
         <h2 style="margin-top: 0; font-size: 20px; color: ${BRAND_COLOR};">Welcome to DayOff!</h2>
         <p>Hello <strong>${params.name}</strong>,</p>
@@ -144,4 +144,19 @@ export async function sendInvitationEmail(params: {
         </div>
     `);
 await sendMail({ to: params.email, subject: `Welcome to DayOff: Set up your account`, html, throwOnFailure: false });
+}
+
+export async function sendForgotPasswordEmail(params: { email: string; name: string; token: string }) {
+    const baseUrl = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/+$/, "");
+    const resetUrl = `${baseUrl}/setup-password/${params.token}`;
+    const html = emailWrapper(`
+        <h2 style="margin-top: 0; font-size: 20px; color: ${BRAND_COLOR};">Reset Your Password</h2>
+        <p>Hello <strong>${params.name}</strong>,</p>
+        <p>You requested a password reset for your DayOff account. Click the button below to choose a new password. This link is valid for 1 hour.</p>
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="background: ${BRAND_COLOR}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Reset Password</a>
+        </div>
+        <p style="font-size: 13px; color: #64748b;">If you did not make this request, you can safely ignore this email.</p>
+    `);
+    await sendMail({ to: params.email, subject: `Reset your DayOff password`, html, throwOnFailure: true });
 }

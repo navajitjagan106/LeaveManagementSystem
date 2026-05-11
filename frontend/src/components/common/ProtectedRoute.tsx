@@ -9,10 +9,11 @@ type Props = {
     children: React.ReactNode;
     allowedRoles?: string[];
     requiredPage?: string;
+    requiredPages?: string[];
     blockAdmin?: boolean;
 };
 
-const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles, requiredPage, blockAdmin }) => {
+const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles, requiredPage, requiredPages, blockAdmin }) => {
     const dispatch = useDispatch<AppDispatch>();
     const { user, loading, initialized } = useSelector((state: RootState) => state.auth);
 
@@ -42,7 +43,7 @@ const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles, requiredPage,
     if (user.role_id === 1) return <>{children}</>;
 
     // If still loading fresh permissions for a specific page check
-    if (loading && requiredPage) {
+    if (loading && (requiredPage || requiredPages)) {
         return (
             <div className="flex items-center justify-center h-full">
                 <Loader />
@@ -51,9 +52,14 @@ const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles, requiredPage,
     }
 
     // If restrictions are specified, at least one must grant access
-    if (allowedRoles || requiredPage) {
+    if (allowedRoles || requiredPage || requiredPages) {
         const roleGrants = allowedRoles?.includes(user.role) ?? false;
         let permGrants = requiredPage ? (user.permissions?.[requiredPage]?.can_view ?? false) : false;
+        
+        if (requiredPages && requiredPages.length > 0) {
+            permGrants = requiredPages.some(page => user.permissions?.[page]?.can_view ?? false);
+        }
+
         if (requiredPage === "approvals" && user.has_reportees) {
             permGrants = true;
         }

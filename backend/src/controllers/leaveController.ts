@@ -389,7 +389,7 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
         }
 
         const permRes = await pool.query(
-            "SELECT can_view, scope FROM role_permissions WHERE role_id = $1 AND page_key = 'team_access'",
+            "SELECT can_view, scope FROM role_permissions WHERE role_id = $1 AND page_key = 'manage_employees'",
             [req.user.role_id]
         );
         let scope = 'sub';
@@ -805,6 +805,21 @@ export const getNotifications = async (req: Request, res: Response) => {
     }
 };
 
+export const getNotificationCount = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+        const result = await pool.query(
+            "SELECT COUNT(*)::int AS count FROM notifications WHERE user_id = $1 AND is_read = false",
+            [req.user.id]
+        );
+
+        res.json({ success: true, count: result.rows[0].count });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch notification count" });
+    }
+};
+
 export const markNotificationsRead = async (req: Request, res: Response) => {
     try {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
@@ -828,7 +843,7 @@ export const getTeamOnLeave = async (req: Request, res: Response) => {
         if (!from_date || !to_date) return res.json({ data: [] });
 
         const permRes = await pool.query(
-            "SELECT scope FROM role_permissions WHERE role_id = $1 AND page_key = 'team_access'",
+            "SELECT scope FROM role_permissions WHERE role_id = $1 AND page_key = 'manage_employees'",
             [req.user.role_id]
         );
         let scope = 'sub';
@@ -877,6 +892,7 @@ export const getTeamMembers = async (req: Request, res: Response) => {
                 result = await pool.query(
                     `SELECT u.id, u.name, u.email, r.name AS role, u.department,
                             u.phone, u.gender, u.date_of_birth, u.location,
+                            u.manager_id, u.policy_id,
                             m.name AS manager_name, p.name AS policy_name
                     FROM users u
                     JOIN roles r ON u.role_id = r.id
@@ -889,6 +905,7 @@ export const getTeamMembers = async (req: Request, res: Response) => {
                 result = await pool.query(
                     `SELECT u.id, u.name, u.email, r.name AS role, u.department,
                             u.phone, u.gender, u.date_of_birth, u.location,
+                            u.manager_id, u.policy_id,
                             m.name AS manager_name, p.name AS policy_name
                     FROM users u
                     JOIN roles r ON u.role_id = r.id
@@ -901,6 +918,7 @@ export const getTeamMembers = async (req: Request, res: Response) => {
             result = await pool.query(
                 `SELECT u.id, u.name, u.email, r.name AS role, u.department,
                         u.phone, u.gender, u.date_of_birth, u.location,
+                        u.manager_id, u.policy_id,
                         m.name AS manager_name, p.name AS policy_name
                 FROM users u
                 JOIN roles r ON u.role_id = r.id

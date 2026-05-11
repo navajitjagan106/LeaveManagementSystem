@@ -2,13 +2,13 @@ import { Request, Response } from "express";
 import { pool } from "../config/db";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { sendOTPEmail } from "../utils/emailService";
+import { sendOTPEmail, sendForgotPasswordEmail } from "../utils/emailService";
 import crypto from "crypto";
 import redis from "../config/redis";
 import { setAuthCookies } from "../utils/authUtils";
 import { fetchUserPermissions } from "../utils/permissionUtils";
 
-const OTP_TTL = 600; 
+const OTP_TTL = 600; // reload trigger to clear cache
 
 
 
@@ -181,4 +181,98 @@ export const getMe = async (req: Request, res: Response) => {
 export const logout = (req: Request, res: Response) => {
     res.clearCookie("token", { path: "/", httpOnly: true, sameSite: "lax" });
     res.json({ success: true });
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ error: "Email is required" });
+        }
+
+        const userRes = await pool.query("SELECT id, name, email FROM users WHERE email = $1", [email]);
+        if (userRes.rows.length === 0) {
+            // Return success anyway for security / timing-attack mitigation, but don't send email
+            return res.json({ success: true, message: "If that email exists, a password reset link has been sent." });
+        }
+
+        const user = userRes.rows[0];
+        const token = jwt.sign(
+            { id: user.id, email: user.email, purpose: "password_reset" },
+            process.env.JWT_SECRET as string,
+            { expiresIn: "1h" }
+        );
+
+        await sendForgotPasswordEmail({ email: user.email, name: user.name, token });
+
+        res.json({ success: true, message: "A password reset link has been sent to your email." });
+    } catch (err) {
+        console.error("FORGOT PASSWORD ERROR:", err);
+        res.status(500).json({ error: "Failed to process forgot password request" });
+    }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+    try {
+        const { token, password } = req.body;
+        if (!token || !password) {
+            return res.status(400).json({ error: "Token and password are required" });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({ error: "Password must be at least 6 characters long" });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
+        if (!decoded || decoded.purpose !== "password_reset") {
+            return res.status(400).json({ error: "Invalid or expired password reset link" });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await pool.query("UPDATE users SET password = $1 WHERE id = $2", [hashedPassword, decoded.id]);
+
+        res.json({ success: true, message: "Your password has been reset successfully." });
+    } catch (err: any) {
+        if (err?.name === "TokenExpiredError") {
+            return res.status(400).json({ error: "Your password reset link has expired" });
+        }
+        console.error("RESET PASSWORD ERROR:", err);
+        res.status(400).json({ error: "Invalid or expired password reset link" });
+    }
+};
+
+export const changePassword = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        const { oldPassword, newPassword } = req.body;
+        if (!oldPassword || !newPassword) {
+            return res.status(400).json({ error: "Old password and new password are required" });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ error: "New password must be at least 6 characters long" });
+        }
+
+        const userRes = await pool.query("SELECT password FROM users WHERE id = $1", [req.user.id]);
+        if (userRes.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const dbUser = userRes.rows[0];
+        const isMatch = await bcrypt.compare(oldPassword, dbUser.password);
+        if (!isMatch) {
+            return res.status(400).json({ error: "Incorrect current password" });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await pool.query("UPDATE users SET password = $1 WHERE id = $2", [hashedPassword, req.user.id]);
+
+        res.json({ success: true, message: "Your password has been changed successfully." });
+    } catch (err) {
+        console.error("CHANGE PASSWORD ERROR:", err);
+        res.status(500).json({ error: "Failed to change password" });
+    }
 };

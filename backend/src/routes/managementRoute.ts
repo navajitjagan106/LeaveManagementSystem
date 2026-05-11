@@ -1,7 +1,7 @@
 import express from "express";
 import { authenticate } from "../middleware/authMiddleware";
 import { authorizeRoles } from "../middleware/roleMiddleware";
-import { requirePageAccess } from "../middleware/pageAccessMiddleware";
+import { requirePageAccess, requireAnyPageAccess } from "../middleware/pageAccessMiddleware";
 import {
     getAllEmployees, updateEmployee, deleteEmployee,
     updateManager, createLeaveType, updateLeaveType, deleteLeaveType, addHoliday,
@@ -43,7 +43,7 @@ router.patch("/leave-types/:id", requirePageAccess("manage_leave_types", "edit")
 router.delete("/leave-types/:id", requirePageAccess("manage_leave_types", "edit"), deleteLeaveType);
 
 // ── Policies 
-router.get("/policies", requirePageAccess("manage_policies", "view"), getPolicies);
+router.get("/policies", requireAnyPageAccess([{ pageKey: "manage_policies", action: "view" }, { pageKey: "manage_employees", action: "view" }]), getPolicies);
 router.post("/policies", requirePageAccess("manage_policies", "edit"), createPolicy);
 router.patch("/policies/:id", requirePageAccess("manage_policies", "edit"), updatePolicy);
 router.delete("/policies/:id", requirePageAccess("manage_policies", "delete"), deletePolicy);
@@ -56,7 +56,7 @@ router.delete("/holidays/:id", requirePageAccess("manage_holidays", "delete"), d
 
 // ── Leaves / balance / export (admin-only, no delegation needed) 
 router.get("/leaves", requirePageAccess("manage_leave_records", "view"), getAllLeaves);
-router.get("/user-balance/:id", requirePageAccess("manage_leave_records", "view"), getUserLeaveBalance);
+router.get("/user-balance/:id", requireAnyPageAccess([{ pageKey: "manage_leave_records", action: "view" }, { pageKey: "manage_employees", action: "view" }]), getUserLeaveBalance);
 router.patch("/user-balance", requirePageAccess("manage_leave_records", "edit"), updateLeaveBalance);
 router.get("/export", requirePageAccess("manage_leave_records", "view"), exportLeaves);
 router.get("/dashboard-stats", requirePageAccess("admin_dashboard", "view"), getAdminDashboardStats);

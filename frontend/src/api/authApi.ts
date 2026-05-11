@@ -14,3 +14,12 @@ export const acceptInvitation = (token: string, data: { password: string }) =>
 
 export const logoutApi = () => API.post("/auth/logout");
 export const getMe = () => API.get("/auth/me");
+
+export const forgotPasswordApi = (data: { email: string }) =>
+    API.post("/auth/forgot-password", data);
+
+export const resetPasswordApi = (data: { token: string; password: string }) =>
+    API.post("/auth/reset-password", data);
+
+export const changePasswordApi = (data: { oldPassword: string; newPassword: string }) =>
+    API.post("/auth/change-password", data);

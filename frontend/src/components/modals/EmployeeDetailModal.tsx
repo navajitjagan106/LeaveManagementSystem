@@ -1,21 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
 import {
     deleteEmployee, getuserBalance, getEmployees, getPolicies,
-    reassignPolicy, resetLeaveBalance, updateManager, updateEmployee
+    reassignPolicy, resetLeaveBalance, updateEmployee
 } from "../../api/managementApi";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { useToast } from "../common/ToastContext";
 import { ManagerCombobox } from "../common/ManagerCombobox";
 import {
-    Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
-} from "../ui/sheet";
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "../ui/dialog";
 import { getAvailableRoles } from "../../api/permissionsApi";
 
 const getRoleColor = (role: string) => {
     const r = role.toLowerCase().trim();
-    
-    // Dynamic deterministic palette for rich, harmonious role colors
     const colors = [
         "bg-primary-light text-primary-dark",
         "bg-blue-100 text-blue-700",
@@ -32,7 +35,6 @@ const getRoleColor = (role: string) => {
         "bg-orange-100 text-orange-700",
         "bg-amber-100 text-amber-700"
     ];
-    
     let hash = 0;
     for (let i = 0; i < r.length; i++) {
         hash = r.charCodeAt(i) + ((hash << 5) - hash);
@@ -61,7 +63,9 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
     const isAdmin = currentUser?.role_id === 1;
     const canEdit = isAdmin || !!currentUser?.permissions?.['manage_employees']?.can_edit;
     const canDelete = isAdmin || !!currentUser?.permissions?.['manage_employees']?.can_delete;
-    const canViewBalance = isAdmin || !!currentUser?.permissions?.["manage_leave_records"]?.can_view;
+    const canViewBalance = isAdmin || 
+        !!currentUser?.permissions?.["manage_leave_records"]?.can_view ||
+        !!currentUser?.permissions?.["manage_employees"]?.can_view;
     const toast = useToast();
 
     const [balances, setBalances] = useState<any[]>([]);
@@ -69,24 +73,34 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
     const [managers, setManagers] = useState<any[]>([]);
     const [policies, setPolicies] = useState<any[]>([]);
 
-    const [selectedPolicy, setSelectedPolicy] = useState<number | "">(user.policy_id || "");
-    const [selectedManager, setSelectedManager] = useState<number | "">(user.manager_id || "");
-    const [selectedRole, setSelectedRole] = useState<string>(user.role);
-    const [selectedDept, setSelectedDept] = useState<string>(user.department || "");
-    const [roles, setRoles] = useState<any[]>([user.role]);
+    const [selectedPolicy, setSelectedPolicy] = useState<number | "">("");
+    const [selectedManager, setSelectedManager] = useState<number | "">("");
+    const [selectedRole, setSelectedRole] = useState<string>("");
+    const [selectedDept, setSelectedDept] = useState<string>("");
+    const [roles, setRoles] = useState<any[]>([]);
 
-    const [savingPolicy, setSavingPolicy] = useState(false);
-    const [savingManager, setSavingManager] = useState(false);
-    const [savingProfile, setSavingProfile] = useState(false);
+    const [saving, setSaving] = useState(false);
     const [resetting, setResetting] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
+
+    // Sync state when user prop updates
+    useEffect(() => {
+        if (user) {
+            setSelectedPolicy(user.policy_id || "");
+            setSelectedManager(user.manager_id || "");
+            setSelectedRole(user.role || "");
+            setSelectedDept(user.department || "");
+            setRoles([user.role || ""]);
+        }
+    }, [user]);
 
     const policyChanged = selectedPolicy !== (user.policy_id || "");
     const managerChanged = selectedManager !== (user.manager_id || "");
     const roleChanged = selectedRole !== user.role;
     const deptChanged = selectedDept !== (user.department || "");
     const profileChanged = roleChanged || deptChanged;
+    const anythingChanged = policyChanged || managerChanged || profileChanged;
 
     const fetchManagers = useCallback(async () => {
         try {
@@ -95,10 +109,10 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
             const filtered = list.filter((u: any) => {
                 if (u.id === user.id) return false;
                 
-                // Prevent circular manager loops (if u reports up to user.id, u cannot be user.id's manager)
+                // Prevent circular manager loops
                 let tempId = u.manager_id;
                 while (tempId) {
-                    if (tempId === user.id) return false; // reports to user, filter out
+                    if (tempId === user.id) return false;
                     const currentSearchId = tempId;
                     const parent = list.find((e: any) => e.id === currentSearchId);
                     tempId = parent ? parent.manager_id : null;
@@ -160,47 +174,33 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
         }
     }, [canViewBalance, fetchBalance]);
 
-    const handleSavePolicy = async () => {
-        setSavingPolicy(true);
+    const handleSaveChanges = async () => {
+        if (!anythingChanged) return;
+        setSaving(true);
         try {
-            await reassignPolicy(user.id, selectedPolicy === "" ? null : Number(selectedPolicy));
-            toast.success("Policy updated — balances reset");
-            fetchBalance();
-            onSuccess();
-        } catch {
-            toast.error("Failed to update policy");
-        } finally {
-            setSavingPolicy(false);
-        }
-    };
+            // 1. Save Profile/Role/Manager details if any have changed
+            if (profileChanged || managerChanged) {
+                await updateEmployee(user.id, {
+                    role: selectedRole,
+                    department: selectedDept === "" ? null : selectedDept,
+                    manager_id: selectedManager === "" ? null : Number(selectedManager),
+                });
+            }
 
-    const handleSaveProfile = async () => {
-        setSavingProfile(true);
-        try {
-            await updateEmployee(user.id, {
-                role: selectedRole,
-                department: selectedDept === "" ? null : selectedDept,
-                manager_id: selectedManager === "" ? null : Number(selectedManager),
-            });
-            toast.success("Profile details updated successfully");
-            onSuccess();
-        } catch {
-            toast.error("Failed to update profile details");
-        } finally {
-            setSavingProfile(false);
-        }
-    };
+            // 2. Save Policy if policy has changed
+            if (policyChanged) {
+                await reassignPolicy(user.id, selectedPolicy === "" ? null : Number(selectedPolicy));
+            }
 
-    const handleSaveManager = async () => {
-        setSavingManager(true);
-        try {
-            await updateManager(user.id, selectedManager === "" ? null : Number(selectedManager));
-            toast.success("Manager updated");
+            toast.success("Employee details updated successfully");
             onSuccess();
-        } catch {
-            toast.error("Failed to update manager");
+            if (policyChanged) {
+                fetchBalance();
+            }
+        } catch (err: any) {
+            toast.error(err.response?.data?.error || "Failed to save changes");
         } finally {
-            setSavingManager(false);
+            setSaving(false);
         }
     };
 
@@ -230,30 +230,30 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
     };
 
     return (
-        <Sheet open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
-            <SheetContent className="overflow-y-auto sm:max-w-[540px] w-full p-0 flex flex-col border-l-0 shadow-2xl">
+        <Dialog open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+            <DialogContent className="max-w-xl w-full bg-white p-0 rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col border-0">
                 {/* ── Header ── */}
-                <div className="px-6 py-6 border-b border-gray-100 bg-white sticky top-0 z-10">
-                    <SheetHeader className="text-left">
+                <div className="px-6 py-5 border-b border-gray-100 bg-white flex-shrink-0">
+                    <DialogHeader className="text-left">
                         <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-primary-light flex-shrink-0">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-primary-light flex-shrink-0">
                                 {initials(user.name)}
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                    <SheetTitle className="text-lg font-bold text-gray-900">{user.name}</SheetTitle>
+                                    <DialogTitle className="text-base font-bold text-gray-900">{user.name}</DialogTitle>
                                     <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${getRoleColor(user.role)}`}>
                                         {user.role}
                                     </span>
                                 </div>
-                                <SheetDescription className="text-sm text-gray-500 font-medium mt-0.5">{user.email}</SheetDescription>
+                                <DialogDescription className="text-xs text-gray-500 font-medium mt-0.5">{user.email}</DialogDescription>
                             </div>
                         </div>
-                    </SheetHeader>
+                    </DialogHeader>
                 </div>
 
-                <div className="flex flex-col gap-8 px-8 py-8 flex-1 bg-white">
-
+                {/* ── Scrollable Body ── */}
+                <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 bg-white">
                     {/* ── Profile ── */}
                     <div>
                         <SectionLabel>Profile & Role</SectionLabel>
@@ -261,11 +261,11 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                             <div className="space-y-3">
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1.5">Role</p>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Role</p>
                                         <select
                                             value={selectedRole}
                                             onChange={(e) => setSelectedRole(e.target.value)}
-                                            className="w-full border border-gray-200 px-3 py-2.5 rounded-xl text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-light transition-colors capitalize"
+                                            className="w-full border border-gray-200 px-3 py-2 rounded-xl text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-light transition-colors capitalize"
                                         >
                                             {roles.map((r) => {
                                                 const rVal = typeof r === "string" ? r : r.name;
@@ -281,28 +281,21 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                                         </select>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1.5">Department</p>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Department</p>
                                         <input
                                             type="text"
                                             placeholder="e.g. Engineering"
                                             value={selectedDept}
                                             onChange={(e) => setSelectedDept(e.target.value)}
-                                            className="w-full border border-gray-200 px-3 py-2.5 rounded-xl text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-light transition-colors"
+                                            className="w-full border border-gray-200 px-3 py-2 rounded-xl text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-light transition-colors"
                                         />
                                     </div>
                                 </div>
-                                <div className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-xl mt-2 text-xs text-gray-500">
+                                <div className="flex justify-between items-center bg-gray-50 px-3 py-1.5 rounded-xl text-[11px] text-gray-500">
                                     <span>Joined: {user.created_at
                                         ? new Date(user.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" })
                                         : "—"}
                                     </span>
-                                    <button
-                                        onClick={handleSaveProfile}
-                                        disabled={savingProfile || !profileChanged}
-                                        className="px-4 py-1.5 bg-primary text-white rounded-lg font-semibold disabled:opacity-40 hover:bg-primary-dark transition-colors text-xs shadow-sm hover:shadow-primary-light"
-                                    >
-                                        {savingProfile ? "Updating…" : "Update Details"}
-                                    </button>
                                 </div>
                             </div>
                         ) : (
@@ -317,9 +310,9 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                                             : "—"
                                     },
                                 ].map(({ label, value }) => (
-                                    <div key={label} className="bg-gray-50 rounded-xl px-3 py-2.5">
-                                        <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-                                        <p className="text-sm font-medium text-gray-800 capitalize">{value}</p>
+                                    <div key={label} className="bg-gray-50 rounded-xl px-3 py-2">
+                                        <p className="text-[10px] text-gray-400 mb-0.5">{label}</p>
+                                        <p className="text-xs font-semibold text-gray-800 capitalize">{value}</p>
                                     </div>
                                 ))}
                             </div>
@@ -332,8 +325,8 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                     <div>
                         <SectionLabel>Manager</SectionLabel>
                         {user.manager_name && (
-                            <p className="text-xs text-gray-500 mb-2">
-                                Currently: <span className="font-medium text-gray-700">{user.manager_name}</span>
+                            <p className="text-[11px] text-gray-500 mb-1.5">
+                                Currently: <span className="font-semibold text-gray-700">{user.manager_name}</span>
                             </p>
                         )}
                         {canEdit ? (
@@ -345,13 +338,6 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                                     changed={managerChanged}
                                     className="flex-1"
                                 />
-                                <button
-                                    onClick={handleSaveManager}
-                                    disabled={savingManager || !managerChanged}
-                                    className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-primary-dark transition-colors"
-                                >
-                                    {savingManager ? "Saving…" : "Update"}
-                                </button>
                             </div>
                         ) : (
                             !user.manager_name && (
@@ -366,8 +352,8 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                     <div>
                         <SectionLabel>Leave Policy</SectionLabel>
                         {user.policy_name && (
-                            <p className="text-xs text-gray-500 mb-2">
-                                Currently: <span className="font-medium text-gray-700">{user.policy_name}</span>
+                            <p className="text-[11px] text-gray-500 mb-1.5">
+                                Currently: <span className="font-semibold text-gray-700">{user.policy_name}</span>
                             </p>
                         )}
                         {canEdit ? (
@@ -383,16 +369,9 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                                             <option key={p.id} value={p.id}>{p.name}</option>
                                         ))}
                                     </select>
-                                    <button
-                                        onClick={handleSavePolicy}
-                                        disabled={savingPolicy || !policyChanged}
-                                        className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-40 hover:bg-primary-dark transition-colors"
-                                    >
-                                        {savingPolicy ? "Saving…" : "Update"}
-                                    </button>
                                 </div>
                                 {policyChanged && (
-                                    <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                                    <p className="text-[11px] text-amber-600 mt-1.5 flex items-center gap-1 font-medium">
                                         <span>⚠</span> Updating will reset all leave balances to the new policy
                                     </p>
                                 )}
@@ -414,7 +393,7 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                                 <button
                                     onClick={handleResetBalance}
                                     disabled={resetting || balancesLoading || balances.length === 0}
-                                    className="text-xs text-orange-600 border border-orange-200 bg-orange-50 px-3 py-1 rounded-lg hover:bg-orange-100 disabled:opacity-40 transition-colors font-medium"
+                                    className="text-[10px] text-orange-600 border border-orange-200 bg-orange-50 px-2.5 py-1 rounded-lg hover:bg-orange-100 disabled:opacity-40 transition-colors font-bold cursor-pointer"
                                 >
                                     {resetting ? "Resetting…" : "Reset Used to 0"}
                                 </button>
@@ -422,13 +401,13 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                         </div>
 
                         {balancesLoading ? (
-                            <div className="space-y-3">
-                                {[1, 2, 3].map((i) => (
-                                    <div key={i} className="bg-gray-100 rounded-xl h-16 animate-pulse" />
+                            <div className="space-y-2">
+                                {[1, 2].map((i) => (
+                                    <div key={i} className="bg-gray-100 rounded-xl h-12 animate-pulse" />
                                 ))}
                             </div>
                         ) : balances.length === 0 ? (
-                            <div className="text-center py-8 text-sm text-gray-400 bg-gray-50 rounded-xl">
+                            <div className="text-center py-6 text-xs text-gray-400 bg-gray-50 rounded-xl font-medium">
                                 No leave balances — assign a policy first
                             </div>
                         ) : (
@@ -438,19 +417,19 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                                         ? Math.min(100, Math.round((b.used / b.total_allocated) * 100))
                                         : 0;
                                     return (
-                                        <div key={b.leave_type_id} className="bg-gray-50 rounded-xl px-4 py-3">
-                                            <div className="flex justify-between items-baseline mb-2">
-                                                <p className="text-sm font-medium text-gray-800">{b.type}</p>
-                                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                        <div key={b.leave_type_id} className="bg-gray-50 rounded-xl px-3.5 py-2.5">
+                                            <div className="flex justify-between items-baseline mb-1.5">
+                                                <p className="text-xs font-semibold text-gray-800">{b.type}</p>
+                                                <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-medium">
                                                     <span className="text-gray-400">{b.used} used</span>
                                                     <span>·</span>
-                                                    <span className="font-medium text-gray-700">{b.remaining} left</span>
+                                                    <span className="font-bold text-gray-700">{b.remaining} left</span>
                                                     <span className="text-gray-300">/ {b.total_allocated}</span>
                                                 </div>
                                             </div>
-                                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                            <div className="w-full bg-gray-200 rounded-full h-1">
                                                 <div
-                                                    className={`h-1.5 rounded-full transition-all ${barColor(pct)}`}
+                                                    className={`h-1 rounded-full transition-all ${barColor(pct)}`}
                                                     style={{ width: `${pct}%` }}
                                                 />
                                             </div>
@@ -460,47 +439,68 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                             </div>
                         )}
                     </div>
+                </div>
 
-                    <Divider />
-
-                    {/* ── Danger Zone ── */}
-                    {canDelete && (
-                        <div className="pb-2">
-                            <SectionLabel>Danger Zone</SectionLabel>
+                {/* ── Footer Actions ── */}
+                <DialogFooter className="px-6 py-4 border-t border-gray-150 bg-gray-50/50 flex items-center justify-between gap-3 w-full sm:justify-between flex-shrink-0">
+                    {/* Delete button on the left (if authorized) */}
+                    {canDelete ? (
+                        <div className="flex-shrink-0">
                             {!confirmDelete ? (
                                 <button
                                     onClick={() => setConfirmDelete(true)}
-                                    className="w-full py-2.5 rounded-xl bg-red-50 text-red-600 text-sm font-medium border border-red-100 hover:bg-red-100 transition-colors"
+                                    className="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs font-bold border border-red-200 transition-all cursor-pointer"
                                 >
                                     Delete Employee
                                 </button>
                             ) : (
-                                <div className="border border-red-200 bg-red-50 rounded-xl p-4 space-y-3">
-                                    <p className="text-sm text-red-700 font-medium">Delete {user.name}?</p>
-                                    <p className="text-xs text-red-500">This will permanently remove the employee and all their data. This cannot be undone.</p>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={handleDelete}
-                                            disabled={deleting}
-                                            className="flex-1 py-2 rounded-lg bg-red-600 text-white text-sm font-medium disabled:opacity-60 hover:bg-red-700 transition-colors"
-                                        >
-                                            {deleting ? "Deleting…" : "Yes, Delete"}
-                                        </button>
-                                        <button
-                                            onClick={() => setConfirmDelete(false)}
-                                            className="flex-1 py-2 rounded-lg bg-white border border-gray-200 text-gray-600 text-sm hover:bg-gray-50 transition-colors"
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-red-600 font-extrabold uppercase">Confirm?</span>
+                                    <button
+                                        onClick={handleDelete}
+                                        disabled={deleting}
+                                        className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-extrabold transition-all cursor-pointer"
+                                    >
+                                        {deleting ? "…" : "Yes"}
+                                    </button>
+                                    <button
+                                        onClick={() => setConfirmDelete(false)}
+                                        className="px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer"
+                                    >
+                                        No
+                                    </button>
                                 </div>
                             )}
                         </div>
+                    ) : (
+                        <div />
                     )}
 
-                </div>
-            </SheetContent>
-        </Sheet>
+                    {/* Actions on the right */}
+                    <div className="flex items-center gap-2 ml-auto">
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                        >
+                            Close
+                        </button>
+                        {canEdit && (
+                            <button
+                                onClick={handleSaveChanges}
+                                disabled={saving || !anythingChanged}
+                                className={`px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-white ${
+                                    anythingChanged
+                                        ? "bg-primary hover:bg-primary-dark shadow-md shadow-primary-light"
+                                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                }`}
+                            >
+                                {saving ? "Saving..." : anythingChanged ? "Save Changes" : "No Changes"}
+                            </button>
+                        )}
+                    </div>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 };
 
