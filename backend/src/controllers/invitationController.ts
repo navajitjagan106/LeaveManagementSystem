@@ -210,7 +210,7 @@ export const acceptInvitation = async (req: Request, res: Response) => {
         const user = await pool.query(
             `INSERT INTO users 
             (name, email, password, role_id, department, manager_id, policy_id, email_verified)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true) RETURNING *`,
+            VALUES ($1,$2,$3,$4,$5,$6,$7,true) RETURNING *`,
             [
                 invitation.name,
                 invitation.email,
