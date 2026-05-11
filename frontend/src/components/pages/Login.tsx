@@ -107,9 +107,7 @@ const Login: React.FC = () => {
 
     return (
         <div className="flex h-screen">
-            {/* ── Left Pane: Soft Blue-Tinted Welcome Panel (2/3 Width on Desktop) ── */}
             <div className="hidden md:flex md:w-2/3 bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-slate-50/30 items-center justify-center p-12 relative border-r border-slate-100">
-                {/* Clean, subtle geometric elements in matching light tints */}
                 <div className="absolute top-20 left-20 w-72 h-72 rounded-full bg-blue-100/20 blur-3xl" />
                 <div className="absolute bottom-20 right-20 w-72 h-72 rounded-full bg-indigo-100/20 blur-3xl" />
                 
@@ -135,7 +133,7 @@ const Login: React.FC = () => {
 
                     {step === "credentials" ? (
                         <>
-                            <h2 className="text-2xl font-semibold text-gray-800 mb-2">Login to LeaveMS</h2>
+                            <h2 className="text-2xl font-semibold text-gray-800 mb-2">Login to DayOff</h2>
                             <p className="text-sm text-gray-400 mb-8">Enter your credentials to continue</p>
 
                             <form onSubmit={handleLogin} className="flex flex-col gap-4">

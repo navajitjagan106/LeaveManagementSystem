@@ -21,7 +21,6 @@ export const getDashboardData = async (req: Request, res: Response) => {
             teamLeaves
         ] = await Promise.all([
 
-
             pool.query(
                 `SELECT
                 lt.name, lb.total_allocated, lb.used,
@@ -87,39 +86,22 @@ export const getLeaveInitData = async (req: Request, res: Response) => {
 
         const user_id = req.user.id;
 
-        const [managerRes, leaveDataRes, holidaysRes] = await Promise.all([
-            pool.query(
-                `SELECT u.id, u.name, u.email 
-                FROM users u
-                JOIN users emp ON emp.manager_id = u.id
-                WHERE emp.id = $1`,
-                [user_id]
-            ),
-
-
-            pool.query(
-                `SELECT lt.id, lt.name, lt.description, 
+        const leaveDataRes = await pool.query(
+            `SELECT lt.id, lt.name, lt.description, 
             lt.is_unlimited, lb.leave_type_id, lb.total_allocated, 
             lb.used, (lb.total_allocated - lb.used) AS remaining
             FROM leave_balances lb
             JOIN leave_types lt ON lt.id = lb.leave_type_id
             WHERE lb.user_id = $1
             ORDER BY lt.id`,
-                [user_id]
-            ),
-
-            pool.query(
-                `SELECT name, date FROM holidays ORDER BY date`
-            )
-        ]);
+            [user_id]
+        );
 
         res.json({
             success: true,
             data: {
-                manager: managerRes.rows[0] || null,
                 leaveTypes: leaveDataRes.rows.map(r => ({ id: r.id, name: r.name, description: r.description, is_unlimited: r.is_unlimited })),
                 balances: leaveDataRes.rows.map(r => ({ leave_type_id: r.leave_type_id, type: r.name, total_allocated: r.total_allocated, used: r.used, remaining: r.remaining })),
-                holidays: holidaysRes.rows.map(r => ({ name: r.name, date: r.date }))
             }
         });
 
@@ -131,7 +113,7 @@ export const getLeaveInitData = async (req: Request, res: Response) => {
 
 export const applyLeave = async (req: Request, res: Response) => {
     try {
-        const { leave_type_id, from_date, to_date, reason, duration_type } = req.body;
+        const { leave_type_id, from_date, to_date, reason, duration_type, manager_id: clientManagerId } = req.body;
 
         if (!req.user) {
             return res.status(401).json({ error: "Unauthorized" });
@@ -145,39 +127,43 @@ export const applyLeave = async (req: Request, res: Response) => {
 
         const holidays = await getHolidaysinRange(from_date, to_date, pool);
 
-        const data = await pool.query(
-            `SELECT
-            u.manager_id,
-            lb.total_allocated,
-            lb.used,
-            m.email AS manager_email,
-            m.name  AS manager_name,
-            lt.name AS leave_type_name,
-            lt.is_unlimited
-            FROM users u
-            JOIN leave_balances lb ON lb.user_id = u.id AND lb.leave_type_id = $2
-            LEFT JOIN users m ON m.id = u.manager_id
-            JOIN leave_types lt ON lt.id = $2
-            WHERE u.id = $1`,
+        // 1. Leave balance + type (single indexed query)
+        const balanceRes = await pool.query(
+            `SELECT lb.total_allocated, lb.used, lt.name AS leave_type_name, lt.is_unlimited
+            FROM leave_balances lb
+            JOIN leave_types lt ON lt.id = lb.leave_type_id
+            WHERE lb.user_id = $1 AND lb.leave_type_id = $2`,
             [user_id, leave_type_id]
         );
 
-        if (data.rows.length === 0) {
-            return res.status(404).json({ error: "Data not found" });
+        if (balanceRes.rows.length === 0) {
+            return res.status(404).json({ error: "Leave balance not found" });
         }
 
-        const { manager_id, total_allocated, used, manager_email, manager_name, leave_type_name, is_unlimited } = data.rows[0];
+        const { total_allocated, used, leave_type_name, is_unlimited } = balanceRes.rows[0];
         const remaining = total_allocated - used;
 
-        let finalManagerId = manager_id;
-        let finalManagerEmail = manager_email;
-        let finalManagerName = manager_name;
+        // 2. Resolve manager — use the ID from the frontend, fallback to admin
+        let finalManagerId = clientManagerId || null;
+        let finalManagerEmail = "";
+        let finalManagerName = "";
+
+        if (finalManagerId) {
+            const mgrRes = await pool.query(
+                `SELECT name, email FROM users WHERE id = $1`,
+                [finalManagerId]
+            );
+            if (mgrRes.rows.length > 0) {
+                finalManagerEmail = mgrRes.rows[0].email;
+                finalManagerName = mgrRes.rows[0].name;
+            }
+        }
 
         if (!finalManagerId) {
             const adminRes = await pool.query(
                 `SELECT u.id, u.email, u.name FROM users u
-                 JOIN roles r ON u.role_id = r.id
-                 WHERE r.name = 'admin' LIMIT 1`
+                JOIN roles r ON u.role_id = r.id
+                WHERE r.name = 'admin' LIMIT 1`
             );
             if (adminRes.rows.length > 0) {
                 finalManagerId = adminRes.rows[0].id;
@@ -376,7 +362,7 @@ export const getLeaveTypes = async (req: Request, res: Response) => {
         console.error(err);
         res.status(500).json({ error: "Failed to fetch leave types" });
     }
-};
+};//
 
 export const getTeamLeaves = async (req: Request, res: Response) => {
     try {
@@ -434,6 +420,7 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
         let index = 2;
 
         if (scope === 'sub') {
+            //my teammates data , if am a maanger my sub data and my data
             query += ` AND (u.manager_id = $1 OR u.manager_id = $${index} OR l.user_id = $1)`;
             values.push(manager_id);
         }
@@ -744,8 +731,6 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
     }
 };
 
-
-
 export const getHolidays = async (req: Request, res: Response) => {
     try {
         const result = await pool.query("SELECT id, date, name FROM holidays ORDER BY date")
@@ -757,8 +742,6 @@ export const getHolidays = async (req: Request, res: Response) => {
         res.status(500).json({ error: "Failed to fetch holidays" })
     }
 }
-
-
 
 export const calculateDays = async (req: Request, res: Response) => {
     try {
@@ -829,7 +812,6 @@ export const markNotificationsRead = async (req: Request, res: Response) => {
     }
 };
 
-
 export const getTeamOnLeave = async (req: Request, res: Response) => {
     try {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
@@ -889,7 +871,7 @@ export const getTeamMembers = async (req: Request, res: Response) => {
                             u.phone, u.gender, u.date_of_birth, u.location,
                             m.name AS manager_name, p.name AS policy_name
                     FROM users u
-                    JOIN roles r ON u.role = r.name
+                    JOIN roles r ON u.role_id = r.id
                     LEFT JOIN users m ON u.manager_id = m.id
                     LEFT JOIN leave_policies p ON u.policy_id = p.id
                     WHERE r.name <> 'admin'
@@ -901,7 +883,7 @@ export const getTeamMembers = async (req: Request, res: Response) => {
                             u.phone, u.gender, u.date_of_birth, u.location,
                             m.name AS manager_name, p.name AS policy_name
                     FROM users u
-                    JOIN roles r ON u.role = r.name
+                    JOIN roles r ON u.role_id = r.id
                     LEFT JOIN users m ON u.manager_id = m.id
                     LEFT JOIN leave_policies p ON u.policy_id = p.id
                     ORDER BY u.name`
@@ -913,7 +895,7 @@ export const getTeamMembers = async (req: Request, res: Response) => {
                         u.phone, u.gender, u.date_of_birth, u.location,
                         m.name AS manager_name, p.name AS policy_name
                 FROM users u
-                JOIN roles r ON u.role = r.name
+                JOIN roles r ON u.role_id = r.id
                 LEFT JOIN users m ON u.manager_id = m.id
                 LEFT JOIN leave_policies p ON u.policy_id = p.id
                 WHERE u.manager_id = $1 ORDER BY u.name`,
@@ -927,56 +909,7 @@ export const getTeamMembers = async (req: Request, res: Response) => {
     }
 };
 
-export const getTeamMemberBalance = async (req: Request, res: Response) => {
-    try {
-        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-        const { id: userId, role } = req.user;
-        const targetId = Number(req.params.id);
-        const scope = (req as any).directoryScope;
 
-        if (scope === "sub") {
-            const check = await pool.query(
-                "SELECT id FROM users WHERE id = $1 AND manager_id = $2",
-                [targetId, userId]
-            );
-            if (check.rows.length === 0)
-                return res.status(403).json({ error: "Not your team member" });
-        }
-
-        const [balanceResult, empResult] = await Promise.all([
-            pool.query(
-                `SELECT lb.leave_type_id, lt.name AS type,
-                        lb.total_allocated, lb.used,
-                        (lb.total_allocated - lb.used) AS remaining
-                FROM leave_balances lb
-                JOIN leave_types lt ON lb.leave_type_id = lt.id
-                WHERE lb.user_id = $1
-                ORDER BY lb.leave_type_id`,
-                [targetId]
-            ),
-            pool.query(
-                `SELECT u.name, u.email, u.department, r.name AS role 
-                 FROM users u 
-                 JOIN roles r ON u.role = r.name 
-                 WHERE u.id = $1`,
-                [targetId]
-            ),
-        ]);
-
-        res.json({
-            success: true,
-            data: balanceResult.rows.map(r => ({
-                ...r,
-                total_allocated: Number(r.total_allocated),
-                used: Number(r.used),
-                remaining: Number(r.remaining),
-            })),
-            employee: empResult.rows[0] || null,
-        });
-    } catch (err) {
-        res.status(500).json({ error: "Failed to fetch balance" });
-    }
-};
 
 export const getLeaveTrendByType = async (req: Request, res: Response) => {
     try {
@@ -988,7 +921,6 @@ export const getLeaveTrendByType = async (req: Request, res: Response) => {
         const months = Number(req.query.months) || 12;
         const scope = (req as any).directoryScope;
 
-        // Date expansion, grouping, and employee aggregation done entirely in Postgres
         let query = `
         SELECT
             d::date AS date,
@@ -996,11 +928,15 @@ export const getLeaveTrendByType = async (req: Request, res: Response) => {
             COUNT(*)::int AS count,
             ARRAY_AGG(DISTINCT u.name) AS employees
         FROM leaves l
-        CROSS JOIN LATERAL generate_series(l.from_date, l.to_date, '1 day'::interval) AS d
+        CROSS JOIN LATERAL generate_series(
+            GREATEST(l.from_date, (NOW() - CAST($1 || ' months' AS INTERVAL))::date),
+            l.to_date,
+            '1 day'::interval
+        ) AS d
         LEFT JOIN leave_types lt ON l.leave_type_id = lt.id
         JOIN users u ON l.user_id = u.id
         WHERE l.status = 'approved'
-          AND l.to_date >= NOW() - CAST($1 || ' months' AS INTERVAL)
+        AND l.to_date >= (NOW() - CAST($1 || ' months' AS INTERVAL))::date
         `;
 
         const values: any[] = [`${months}`];
@@ -1035,42 +971,7 @@ export const getLeaveTrendByType = async (req: Request, res: Response) => {
     }
 };
 
-export const getTeamMemberMonthly = async (req: Request, res: Response) => {
-    try {
-        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-        const { id: userId, role } = req.user;
-        const targetId = Number(req.params.id);
 
-        const scope = (req as any).directoryScope;
-
-        if (scope === "sub") {
-            const check = await pool.query(
-                "SELECT id FROM users WHERE id = $1 AND manager_id = $2",
-                [targetId, userId]
-            );
-            if (check.rows.length === 0)
-                return res.status(403).json({ error: "Not your team member" });
-        }
-
-        const result = await pool.query(
-            `SELECT
-                TO_CHAR(DATE_TRUNC('month', from_date), 'Mon') AS month,
-                DATE_TRUNC('month', from_date) AS month_date,
-                SUM(total_days) AS days
-            FROM leaves
-            WHERE status = 'approved'
-            AND user_id = $1
-            AND from_date >= DATE_TRUNC('month', NOW()) - INTERVAL '11 months'
-            GROUP BY DATE_TRUNC('month', from_date)
-            ORDER BY month_date`,
-            [targetId]
-        );
-
-        res.json({ success: true, data: result.rows });
-    } catch (err) {
-        res.status(500).json({ error: "Failed to fetch monthly leave data" });
-    }
-};
 
 export const getTeamBalanceSummary = async (req: Request, res: Response) => {
     try {
@@ -1132,7 +1033,7 @@ export const updateUserProfile = async (req: Request, res: Response) => {
         const updatedUser = await pool.query(
             `SELECT u.id, u.name, u.email, r.id AS role_id, u.role, u.department, u.phone, u.gender, u.date_of_birth, u.location
              FROM users u
-             JOIN roles r ON u.role = r.name
+             JOIN roles r ON u.role_id = r.id
              WHERE u.id = $1`,
             [user_id]
         );
@@ -1141,5 +1042,82 @@ export const updateUserProfile = async (req: Request, res: Response) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Failed to update profile" });
+    }
+};
+
+export const getTeamMemberProfileData = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+        const { id: userId } = req.user;
+        const targetId = Number(req.params.id);
+        const scope = (req as any).directoryScope;
+
+        if (scope === "sub") {
+            const check = await pool.query(
+                "SELECT id FROM users WHERE id = $1 AND manager_id = $2",
+                [targetId, userId]
+            );
+            if (check.rows.length === 0)
+                return res.status(403).json({ error: "Not your team member" });
+        }
+
+        const [empResult, balanceResult, monthlyResult] = await Promise.all([
+            pool.query(
+                `SELECT u.id, u.name, u.email, r.name AS role, u.department,
+                        u.phone, u.gender, u.date_of_birth, u.location,
+                        m.name AS manager_name, p.name AS policy_name
+                FROM users u
+                JOIN roles r ON u.role_id = r.id
+                LEFT JOIN users m ON u.manager_id = m.id
+                LEFT JOIN leave_policies p ON u.policy_id = p.id
+                WHERE u.id = $1`,
+                [targetId]
+            ),
+            pool.query(
+                `SELECT lb.leave_type_id, lt.name AS type,
+                        lb.total_allocated, lb.used,
+                        (lb.total_allocated - lb.used) AS remaining
+                FROM leave_balances lb
+                JOIN leave_types lt ON lb.leave_type_id = lt.id
+                WHERE lb.user_id = $1
+                ORDER BY lb.leave_type_id`,
+                [targetId]
+            ),
+            pool.query(
+                `SELECT
+                    TO_CHAR(DATE_TRUNC('month', from_date), 'Mon') AS month,
+                    DATE_TRUNC('month', from_date) AS month_date,
+                    SUM(total_days) AS days
+                FROM leaves
+                WHERE status = 'approved'
+                AND user_id = $1
+                AND from_date >= DATE_TRUNC('month', NOW()) - INTERVAL '11 months'
+                GROUP BY DATE_TRUNC('month', from_date)
+                ORDER BY month_date`,
+                [targetId]
+            ),
+        ]);
+
+        if (empResult.rows.length === 0) {
+            return res.status(404).json({ error: "Employee not found" });
+        }
+
+        res.json({
+            success: true,
+            employee: empResult.rows[0],
+            balances: balanceResult.rows.map(r => ({
+                ...r,
+                total_allocated: Number(r.total_allocated),
+                used: Number(r.used),
+                remaining: Number(r.remaining),
+            })),
+            monthly: monthlyResult.rows.map(r => ({
+                month: r.month,
+                days: Number(r.days)
+            }))
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch team member profile data" });
     }
 };

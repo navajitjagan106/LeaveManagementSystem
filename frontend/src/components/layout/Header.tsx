@@ -13,6 +13,13 @@ type Notification = {
     created_at: string;
 };
 
+const getGreeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 17) return "Good afternoon";
+    return "Good evening";
+};
+
 const Header: React.FC = () => {
     const { user } = useSelector((state: RootState) => state.auth);
     const navigate = useNavigate();
@@ -25,6 +32,13 @@ const Header: React.FC = () => {
     const profileRef = useRef<HTMLDivElement>(null);
 
     const unreadCount = notifications.filter(n => !n.is_read).length;
+
+    const today = new Date().toLocaleDateString("en-GB", {
+        weekday: "long",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+    });
 
     const fetchNotifications = async () => {
         try {
@@ -65,14 +79,18 @@ const Header: React.FC = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    const firstName = user?.name?.split(" ")[0] || "there";
+
     return (
         <div className="h-14 bg-primary flex items-center justify-between px-6 text-white sticky top-0 z-50 shadow-md">
-            <div className="flex items-center gap-4">
-                <span className="font-semibold">Lumel Technologies</span>
-                <input
-                    className="bg-white text-black px-3 py-1 rounded-md text-sm w-72"
-                    placeholder="Search..."
-                />
+            {/* Left: Greeting + date */}
+            <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold">
+                    {getGreeting()}, {firstName}
+                </span>
+                <span className="hidden sm:inline-block text-[11px] text-white/50 font-medium border-l border-white/20 pl-3">
+                    {today}
+                </span>
             </div>
 
             <div className="flex items-center gap-6 relative">
@@ -112,7 +130,7 @@ const Header: React.FC = () => {
 
                 <div className="relative" ref={profileRef}>
                     <div
-                        className="w-8 h-8 rounded-full bg-white text-primary flex items-center justify-center cursor-pointer"
+                        className="w-8 h-8 rounded-full bg-white text-primary flex items-center justify-center cursor-pointer font-bold text-sm"
                         onClick={(e) => { e.stopPropagation(); setShowProfile(!showProfile); }}
                     >
                         {user?.name?.charAt(0)?.toUpperCase() || "U"}
@@ -122,15 +140,16 @@ const Header: React.FC = () => {
                         <div className="absolute right-0 mt-2 w-48 bg-white text-black rounded-lg shadow-lg p-3 z-50"
                             onClick={(e) => e.stopPropagation()}>
                             <p className="font-semibold">{user?.name}</p>
+                            <p className="text-xs text-gray-400 mb-2 capitalize">{user?.role}</p>
                             <button
                                 onClick={() => { navigate("/profile"); setShowProfile(false); }}
-                                className="w-full text-left hover:bg-gray-100 px-2 py-1 rounded"
+                                className="w-full text-left hover:bg-gray-100 px-2 py-1 rounded text-sm"
                             >
                                 Profile
                             </button>
                             <button
                                 onClick={logout}
-                                className="w-full text-left text-red-500 hover:bg-gray-100 px-2 py-1 rounded"
+                                className="w-full text-left text-red-500 hover:bg-gray-100 px-2 py-1 rounded text-sm"
                             >
                                 Logout
                             </button>

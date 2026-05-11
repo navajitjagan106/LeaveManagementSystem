@@ -98,7 +98,6 @@ const LeaveBalance: React.FC = () => {
     const leaveBalances: LeaveBalanceType[] = data?.leaveBalances || [];
     const weeklyData = data?.weeklyPattern || [];
 
-    // For unlimited types (LOP): remaining is meaningless — show used so the segment always appears
     const chartDatarem = leaveBalances.map((lb, i) => ({
         name: lb.type,
         value: lb.is_unlimited ? Math.max(Number(lb.used), 0.5) : Math.max(Number(lb.remaining), 0),

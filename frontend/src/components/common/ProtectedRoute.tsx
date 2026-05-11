@@ -3,14 +3,16 @@ import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
 import { fetchMe } from "../../store/slices/authSlice";
+import Loader from "./Loader";
 
 type Props = {
     children: React.ReactNode;
     allowedRoles?: string[];
     requiredPage?: string;
+    blockAdmin?: boolean;
 };
 
-const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles, requiredPage }) => {
+const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles, requiredPage, blockAdmin }) => {
     const dispatch = useDispatch<AppDispatch>();
     const { user, loading, initialized } = useSelector((state: RootState) => state.auth);
 
@@ -20,27 +22,30 @@ const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles, requiredPage 
         }
     }, [dispatch, initialized, user]);
 
-    // Show a global spinner while we fetch the user session on boot
     if (loading && !initialized) {
         return (
             <div className="flex items-center justify-center h-screen bg-gray-50">
-                <div className="w-8 h-8 border-primary border-primary border-t-transparent rounded-full animate-spin" />
+                <Loader />
             </div>
         );
     }
 
     if (!user && initialized) return <Navigate to="/login" />;
 
-    if (!user) return null; // Wait for initialization
+    if (!user) return null;
 
-    // Admin bypasses all restrictions
+    if (blockAdmin && user.role === "admin") {
+        return <Navigate to="/management" replace />;
+    }
+
+    // Admin bypasses all other restrictions
     if (user.role === "admin") return <>{children}</>;
 
     // If still loading fresh permissions for a specific page check
     if (loading && requiredPage) {
         return (
             <div className="flex items-center justify-center h-full">
-                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <Loader />
             </div>
         );
     }

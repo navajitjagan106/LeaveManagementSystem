@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { getTeamMemberBalance, getTeamMemberMonthly, getTeamMembers } from '../../api/leaveApi';
+import { getTeamMemberProfileData } from '../../api/leaveApi';
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 import {
     ChartContainer, ChartTooltip, ChartTooltipContent,
@@ -14,12 +14,12 @@ import {
 import Loader from '../common/Loader';
 import { Building2, Mail, Shield, Users, BookOpen, Phone, MapPin, UserRound, CalendarDays } from 'lucide-react';
 
-const PALETTE       = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899", "#14b8a6", "#f97316"];
+const PALETTE = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899", "#14b8a6", "#f97316"];
 const LIGHT_PALETTE = ["#eef2ff", "#d1fae5", "#fef3c7", "#fee2e2", "#dbeafe", "#fce7f3", "#ccfbf1", "#ffedd5"];
 
 const ROLE_STYLE: Record<string, { bg: string; text: string }> = {
-    admin:    { bg: '#fee2e2', text: '#ef4444' },
-    manager:  { bg: '#ede9fe', text: '#5746AF' },
+    admin: { bg: '#fee2e2', text: '#ef4444' },
+    manager: { bg: '#ede9fe', text: '#5746AF' },
     employee: { bg: '#dbeafe', text: '#3b82f6' },
 };
 
@@ -51,7 +51,7 @@ type EmployeeData = {
 };
 
 const balanceChartConfig = {
-    used:      { label: "Used",      color: "#f59e0b" },
+    used: { label: "Used", color: "#f59e0b" },
     remaining: { label: "Remaining", color: "#5746AF" },
 };
 const monthlyChartConfig = {
@@ -65,53 +65,47 @@ const EmployeeProfile: React.FC = () => {
 
     const stateEmployee = (location.state as { employee?: EmployeeData } | null)?.employee;
     const [employee, setEmployee] = useState<EmployeeData | null>(stateEmployee ?? null);
-    const [balance, setBalance]   = useState<BalanceItem[]>([]);
+    const [balance, setBalance] = useState<BalanceItem[]>([]);
     const [monthlyData, setMonthlyData] = useState<{ month: string; days: number }[]>([]);
-    const [loading, setLoading]   = useState(true);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (!id) return;
         const numId = Number(id);
-        const calls: Promise<any>[] = [
-            getTeamMemberBalance(numId),
-            getTeamMemberMonthly(numId),
-            ...(!stateEmployee ? [getTeamMembers()] : []),
-        ];
-        Promise.all(calls)
-            .then(([balanceRes, monthlyRes, membersRes]) => {
-                setBalance(balanceRes.data.data || []);
+        setLoading(true);
+        getTeamMemberProfileData(numId)
+            .then((res) => {
+                const { employee: empData, balances: balData, monthly: monData } = res.data;
+                setEmployee(empData);
+                setBalance(balData || []);
+
                 const months = getLast12Months();
                 const dataMap = new Map<string, number>();
-                (monthlyRes.data.data || []).forEach((d: { month: string; days: string }) => {
-                    dataMap.set(d.month, Number(d.days));
+                (monData || []).forEach((d: { month: string; days: number }) => {
+                    dataMap.set(d.month, d.days);
                 });
                 setMonthlyData(months.map(m => ({ month: m, days: dataMap.get(m) ?? 0 })));
-                if (membersRes) {
-                    const emp = (membersRes.data.data || []).find((e: EmployeeData) => e.id === numId);
-                    if (emp) setEmployee(emp);
-                }
             })
             .catch(console.error)
             .finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     if (loading) return <div className="flex justify-center items-center h-full"><Loader /></div>;
     if (!employee) return <div className="text-center py-16 text-gray-400">Employee not found</div>;
 
-    const roleStyle        = ROLE_STYLE[employee.role] ?? ROLE_STYLE.employee;
-    const color            = avatarColor(employee.name);
+    const roleStyle = ROLE_STYLE[employee.role] ?? ROLE_STYLE.employee;
+    const color = avatarColor(employee.name);
     const balanceChartData = balance.map(b => ({ name: b.type, used: b.used, remaining: b.remaining }));
-    const hasMonthly       = monthlyData.some(d => d.days > 0);
+    const hasMonthly = monthlyData.some(d => d.days > 0);
 
     const profileDetails = [
-        { icon: Mail,      label: "Email",        value: employee.email,                         cls: "break-all" },
-        { icon: Shield,    label: "Role",          value: employee.role,                          cls: "capitalize" },
-        { icon: Building2, label: "Department",    value: employee.department || "—",             cls: "" },
-        { icon: Users,     label: "Reports To",    value: employee.manager_name || "—",           cls: "" },
-        ...(employee.policy_name ? [{ icon: BookOpen,     label: "Leave Policy", value: employee.policy_name, cls: "" }] : []),
-        ...(employee.phone        ? [{ icon: Phone,        label: "Phone",        value: employee.phone,       cls: "" }] : []),
-        ...(employee.gender       ? [{ icon: UserRound,     label: "Gender",       value: employee.gender,      cls: "" }] : []),
+        { icon: Mail, label: "Email", value: employee.email, cls: "break-all" },
+        { icon: Shield, label: "Role", value: employee.role, cls: "capitalize" },
+        { icon: Building2, label: "Department", value: employee.department || "—", cls: "" },
+        { icon: Users, label: "Reports To", value: employee.manager_name || "—", cls: "" },
+        ...(employee.policy_name ? [{ icon: BookOpen, label: "Leave Policy", value: employee.policy_name, cls: "" }] : []),
+        ...(employee.phone ? [{ icon: Phone, label: "Phone", value: employee.phone, cls: "" }] : []),
+        ...(employee.gender ? [{ icon: UserRound, label: "Gender", value: employee.gender, cls: "" }] : []),
         ...(employee.date_of_birth ? [{
             icon: CalendarDays,
             label: "Date of Birth",
@@ -119,7 +113,7 @@ const EmployeeProfile: React.FC = () => {
                 + " " + calcAge(employee.date_of_birth),
             cls: "",
         }] : []),
-        ...(employee.location     ? [{ icon: MapPin,       label: "Location",     value: employee.location,    cls: "" }] : []),
+        ...(employee.location ? [{ icon: MapPin, label: "Location", value: employee.location, cls: "" }] : []),
     ];
 
     return (
@@ -195,8 +189,8 @@ const EmployeeProfile: React.FC = () => {
                             <p className="text-sm font-semibold text-gray-700 mb-2">Leave Balance</p>
                             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
                                 {balance.map((item, i) => {
-                                    const pct   = item.total_allocated > 0 ? Math.round((item.used / item.total_allocated) * 100) : 0;
-                                    const col   = PALETTE[i % PALETTE.length];
+                                    const pct = item.total_allocated > 0 ? Math.round((item.used / item.total_allocated) * 100) : 0;
+                                    const col = PALETTE[i % PALETTE.length];
                                     const light = LIGHT_PALETTE[i % LIGHT_PALETTE.length];
                                     return (
                                         <div
@@ -245,8 +239,8 @@ const EmployeeProfile: React.FC = () => {
                                             />
                                             <ChartTooltip content={<ChartTooltipContent className="w-40" />} />
                                             <ChartLegend content={<ChartLegendContent />} />
-                                            <Bar dataKey="used"      fill={balanceChartConfig.used.color}      radius={[3,3,0,0]} maxBarSize={32} />
-                                            <Bar dataKey="remaining" fill={balanceChartConfig.remaining.color} radius={[3,3,0,0]} maxBarSize={32} />
+                                            <Bar dataKey="used" fill={balanceChartConfig.used.color} radius={[3, 3, 0, 0]} maxBarSize={32} />
+                                            <Bar dataKey="remaining" fill={balanceChartConfig.remaining.color} radius={[3, 3, 0, 0]} maxBarSize={32} />
                                         </BarChart>
                                     </ChartContainer>
                                 </CardContent>
@@ -262,18 +256,18 @@ const EmployeeProfile: React.FC = () => {
                             <CardContent className="flex-1 min-h-0 px-2 pb-4">
                                 <div className="relative h-full w-full">
                                     <ChartContainer config={monthlyChartConfig} className="h-full w-full">
-                                        <BarChart 
-                                            data={hasMonthly ? monthlyData : monthlyData.map(d => ({ ...d, days: 0.15 }))} 
+                                        <BarChart
+                                            data={hasMonthly ? monthlyData : monthlyData.map(d => ({ ...d, days: 0.15 }))}
                                             margin={{ left: 0, right: 8, top: 4, bottom: 4 }}
                                         >
                                             <CartesianGrid vertical={false} stroke="#f0f0f0" />
                                             <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
                                             {hasMonthly && <ChartTooltip content={<ChartTooltipContent className="w-36" />} />}
-                                            <Bar 
-                                                dataKey="days" 
-                                                fill={hasMonthly ? monthlyChartConfig.days.color : "#E2E8F0"} 
-                                                radius={[3,3,0,0]} 
-                                                maxBarSize={28} 
+                                            <Bar
+                                                dataKey="days"
+                                                fill={hasMonthly ? monthlyChartConfig.days.color : "#E2E8F0"}
+                                                radius={[3, 3, 0, 0]}
+                                                maxBarSize={28}
                                             />
                                         </BarChart>
                                     </ChartContainer>

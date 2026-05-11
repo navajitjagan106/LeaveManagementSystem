@@ -1,3 +1,5 @@
+import { LeaveType } from "./leave";
+
 export interface PagePermission {
     can_view: boolean;
     can_edit: boolean;
@@ -20,4 +22,5 @@ export interface User {
     location?: string | null;
     permissions?: Record<string, PagePermission>;
     has_reportees?: boolean;
+    leave_types?: LeaveType[];
 }

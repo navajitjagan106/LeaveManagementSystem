@@ -55,8 +55,14 @@ const Sidebar: React.FC = () => {
     return (
         <div className={`${w} bg-sidebar text-white h-screen fixed flex flex-col transition-all duration-300 z-40`}>
             {/* Logo */}
-            <div className="w-full h-14 bg-sidebar flex items-center justify-center text-white text-sm font-bold tracking-wide border-b border-black/10 flex-shrink-0">
-                {collapsed ? "L" : "LeaveMS"}
+            <div className="w-full h-14 bg-[#E2E8ED] flex items-center justify-center text-white text-sm font-bold tracking-wide border-b border-black/10 flex-shrink-0 px-2">
+                {collapsed ? (
+                    <img src="/logo/logo.png" className="w-12 h-12 object-contain rounded-lg" alt="logo" />
+                ) : (
+                    <div className="flex items-center gap-1.5">
+                        <img src="/logo/logo.png" className="w-12 h-12 object-contain rounded-md" alt="logo" />
+                    </div>
+                )}
             </div>
 
             {/* Scrollable nav area */}

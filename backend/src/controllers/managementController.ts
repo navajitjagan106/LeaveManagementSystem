@@ -13,7 +13,7 @@ export const getAllEmployees = async (req: Request, res: Response) => {
             result = await pool.query(`
                 SELECT u.*, r.id AS role_id, m.name AS manager_name, p.name AS policy_name
                 FROM users u
-                JOIN roles r ON u.role = r.name
+                JOIN roles r ON u.role_id = r.id
                 LEFT JOIN users m ON u.manager_id = m.id
                 LEFT JOIN leave_policies p ON u.policy_id = p.id
                 WHERE r.name <> 'admin'
@@ -22,7 +22,7 @@ export const getAllEmployees = async (req: Request, res: Response) => {
             result = await pool.query(`
                 SELECT u.*, r.id AS role_id, m.name AS manager_name, p.name AS policy_name
                 FROM users u
-                JOIN roles r ON u.role = r.name
+                JOIN roles r ON u.role_id = r.id
                 LEFT JOIN users m ON u.manager_id = m.id
                 LEFT JOIN leave_policies p ON u.policy_id = p.id
             `);
@@ -32,7 +32,6 @@ export const getAllEmployees = async (req: Request, res: Response) => {
         res.status(500).json({ error: "Failed to fetch employees" });
     }
 };
-
 
 export const updateEmployee = async (req: Request, res: Response) => {
     try {
@@ -78,7 +77,7 @@ export const updateEmployee = async (req: Request, res: Response) => {
 
         const userRes = await pool.query(
             `SELECT u.*, r.id as role_id FROM users u 
-             JOIN roles r ON u.role = r.name 
+             JOIN roles r ON u.role_id = r.id 
              WHERE u.id = $1`, 
             [id]
         );
@@ -464,6 +463,44 @@ export const exportLeaves = async (req: Request, res: Response) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to export leaves' });
+    }
+};
+
+export const getAdminDashboardStats = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+        const [
+            empCountResult,
+            invCountResult,
+            leaveCountResult,
+            holCountResult,
+            leavesResult,
+        ] = await Promise.all([
+            pool.query("SELECT COUNT(*)::int AS count FROM users"),
+            pool.query("SELECT COUNT(*)::int AS count FROM invitations WHERE status = 'pending'"),
+            pool.query("SELECT COUNT(*)::int AS count FROM leaves WHERE status = 'pending'"),
+            pool.query("SELECT COUNT(*)::int AS count FROM holidays WHERE date >= CURRENT_DATE"),
+            pool.query(`
+                SELECT l.id, l.from_date, l.status
+                FROM leaves l
+                WHERE l.status = 'approved'
+            `),
+        ]);
+
+        res.json({
+            success: true,
+            stats: {
+                employees: empCountResult.rows[0]?.count || 0,
+                pendingInvites: invCountResult.rows[0]?.count || 0,
+                pendingLeaves: leaveCountResult.rows[0]?.count || 0,
+                holidays: holCountResult.rows[0]?.count || 0,
+            },
+            leaves: leavesResult.rows,
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch admin dashboard statistics" });
     }
 };
 

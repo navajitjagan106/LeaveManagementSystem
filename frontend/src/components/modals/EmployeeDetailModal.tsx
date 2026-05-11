@@ -23,14 +23,14 @@ const getRoleColor = (role: string) => {
     const colors = [
         "bg-red-100 text-red-700",
         "bg-orange-100 text-orange-700",
-        "bg-primarymber-100 text-primarymber-700",
-        "bg-primary-lightmerald-100 text-emerald-700",
+        "bg-amber-100 text-amber-700",
+        "bg-emerald-100 text-emerald-700",
         "bg-teal-100 text-teal-700",
         "bg-cyan-100 text-cyan-700",
         "bg-sky-100 text-sky-700",
         "bg-indigo-100 text-indigo-700",
         "bg-violet-100 text-violet-700",
-        "bg-primaryuchsia-100 text-primaryuchsia-700",
+        "bg-fuchsia-100 text-fuchsia-700",
         "bg-rose-100 text-rose-700"
     ];
     let hash = 0;
@@ -43,8 +43,8 @@ const getRoleColor = (role: string) => {
 
 const barColor = (pct: number) => {
     if (pct >= 80) return "bg-red-400";
-    if (pct >= 50) return "bg-primarymber-400";
-    return "bg-primary-lightmerald-400";
+    if (pct >= 50) return "bg-amber-400";
+    return "bg-emerald-400";
 };
 
 const initials = (name: string) =>
@@ -392,7 +392,7 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                                     </button>
                                 </div>
                                 {policyChanged && (
-                                    <p className="text-xs text-primarymber-600 mt-2 flex items-center gap-1">
+                                    <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
                                         <span>⚠</span> Updating will reset all leave balances to the new policy
                                     </p>
                                 )}

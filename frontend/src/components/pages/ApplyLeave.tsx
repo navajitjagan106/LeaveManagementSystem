@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store';
 import DateRangePicker from '../common/forms/DateRangePicker';
 import { applyLeave, getLeaveInitData, getTeamOnLeave } from "../../api/leaveApi";
 import { LeaveBalance, LeaveType } from "../../types";
 import PageHeader from '../common/PageHeader';
 import { useToast } from '../common/ToastContext';
 import { calculateWorkingDays } from "../../utils/calculateWorkingDays";
-
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
@@ -25,6 +27,10 @@ const LEAVE_ICONS: Record<string, React.ReactNode> = {
 };
 
 const ApplyLeave: React.FC = () => {
+    const { user } = useSelector((state: RootState) => state.auth);
+    const { holidays: rawHolidays } = useOutletContext<{ holidays: any[] }>();
+    const holidays = useMemo(() => rawHolidays.map(h => h.date.slice(0, 10)), [rawHolidays]);
+
     const [formData, setFormData] = useState({
         leaveType: '1',
         durationType: 'full',
@@ -32,11 +38,9 @@ const ApplyLeave: React.FC = () => {
         toDate: '',
         reason: '',
     });
-    const [manager, setManager] = useState<{ id: string; name: string } | null>(null);
     const [totalDays, setTotalDays] = useState(0);
     const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
     const [balances, setBalances] = useState<LeaveBalance[]>([]);
-    const [holidays, setHolidays] = useState<string[]>([]);
     const [teamOnLeave, setTeamOnLeave] = useState<any[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const toast = useToast();
@@ -44,11 +48,8 @@ const ApplyLeave: React.FC = () => {
     useEffect(() => {
         getLeaveInitData()
             .then(res => {
-                setManager(res.data.data.manager);
                 setLeaveTypes(res.data.data.leaveTypes);
                 setBalances(res.data.data.balances);
-                const hDates = res.data.data.holidays?.map((h: any) => h.date.slice(0, 10)) || [];
-                setHolidays(hDates);
                 if (res.data.data.leaveTypes?.[0]) {
                     setFormData(f => ({ ...f, leaveType: String(res.data.data.leaveTypes[0].id) }));
                 }
@@ -83,6 +84,7 @@ const ApplyLeave: React.FC = () => {
                 to_date: formData.toDate,
                 reason: formData.reason,
                 duration_type: formData.durationType,
+                manager_id: user?.manager_id || null,
             });
             toast.success('Leave applied successfully!');
             setFormData({ leaveType: String(leaveTypes[0]?.id || '1'), durationType: 'full', fromDate: '', toDate: '', reason: '' });
@@ -102,10 +104,8 @@ const ApplyLeave: React.FC = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-1">
 
-                {/* ── Left: Form ── */}
                 <form onSubmit={handleSubmit} className="lg:col-span-2 flex flex-col gap-5">
 
-                    {/* Leave Type — card grid (no dropdown, no overlay issues) */}
                     <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-semibold text-gray-700">Leave Type</label>
                         <div className="grid grid-cols-2 gap-2">
@@ -118,8 +118,8 @@ const ApplyLeave: React.FC = () => {
                                         type="button"
                                         onClick={() => setFormData(f => ({ ...f, leaveType: String(type.id) }))}
                                         className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${isSelected
-                                                ? 'border-primary bg-primary-light/50 shadow-sm'
-                                                : 'border-gray-200 bg-white hover:border-primary-light hover:bg-gray-50'
+                                            ? 'border-primary bg-primary-light/50 shadow-sm'
+                                            : 'border-gray-200 bg-white hover:border-primary-light hover:bg-gray-50'
                                             }`}
                                     >
                                         <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500'
@@ -155,8 +155,8 @@ const ApplyLeave: React.FC = () => {
                                     type="button"
                                     onClick={() => setFormData(f => ({ ...f, durationType: opt.value }))}
                                     className={`px-5 py-1.5 rounded-md text-sm font-medium transition-all ${formData.durationType === opt.value
-                                            ? 'bg-white text-primary shadow-sm border border-gray-200'
-                                            : 'text-gray-500 hover:text-gray-700'
+                                        ? 'bg-white text-primary shadow-sm border border-gray-200'
+                                        : 'text-gray-500 hover:text-gray-700'
                                         }`}
                                 >
                                     {opt.label}
@@ -254,13 +254,13 @@ const ApplyLeave: React.FC = () => {
                             </div>
                             <div className="min-w-0">
                                 <p className="text-[10px] text-gray-400 uppercase tracking-wider font-extrabold">Reporting Manager</p>
-                                <p className="text-sm font-bold text-slate-800 truncate">{manager?.name ?? 'Loading…'}</p>
+                                <p className="text-sm font-bold text-slate-800 truncate">{user?.manager_name ?? 'No manager assigned'}</p>
                             </div>
                         </div>
-                        <img 
-                            src="/Forms-cuate.svg" 
-                            className="w-32 h-32 object-contain select-none shrink-0 opacity-90 transform translate-x-1" 
-                            alt="Forms Illustration" 
+                        <img
+                            src="/Forms-cuate.svg"
+                            className="w-32 h-32 object-contain select-none shrink-0 opacity-90 transform translate-x-1"
+                            alt="Forms Illustration"
                         />
                     </Card>
 

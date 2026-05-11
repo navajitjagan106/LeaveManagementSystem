@@ -40,3 +40,5 @@ export const resendInvitation = (id: number) => API.post(`/management/invitation
 export const cancelInvitation = (id: number) => API.delete(`/management/invitations/${id}`);
 
 export const bulkUpload = (csvText: string) => API.post("/management/bulk-upload", { csvText });
+
+export const getAdminDashboardStats = () => API.get("/management/dashboard-stats");

@@ -19,7 +19,7 @@ const LayoutInner = ({ holidays }: { holidays: any[] }) => {
         style={{ marginLeft: collapsed ? 64 : 112 }}
       >
         <Header />
-        <div className="flex-1 p-4 md:p-5 overflow-y-auto min-h-0 flex flex-col relative">
+        <div className="flex-1 p-4 md:p-5 overflow-y-auto min-h-0 relative">
           <Outlet context={{ holidays }} />
         </div>
       </div>

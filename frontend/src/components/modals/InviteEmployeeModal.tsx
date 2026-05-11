@@ -372,7 +372,7 @@ const InviteEmployeeModal = ({ onClose, onSuccess }: any) => {
                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total</p>
                                     <p className="text-2xl font-extrabold text-gray-800 mt-1">{results.total}</p>
                                 </div>
-                                <div className="bg-primary-lightmerald-50/50 border border-emerald-100 p-4 rounded-xl">
+                                <div className="bg-emerald-50/50 border border-emerald-100 p-4 rounded-xl">
                                     <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Invited</p>
                                     <p className="text-2xl font-extrabold text-emerald-600 mt-1">{results.successCount}</p>
                                 </div>
@@ -438,7 +438,7 @@ const InviteEmployeeModal = ({ onClose, onSuccess }: any) => {
                                                     <td className="px-4 py-2.5 capitalize">{r.role}</td>
                                                     <td className="px-4 py-2.5">
                                                         {r.status === "invited" ? (
-                                                            <span className="text-emerald-600 font-semibold bg-primary-lightmerald-50 px-2 py-0.5 rounded-full">Invited</span>
+                                                            <span className="text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full">Invited</span>
                                                         ) : (
                                                             <span className="text-red-500 font-semibold bg-red-50 px-2 py-0.5 rounded-full">Failed</span>
                                                         )}

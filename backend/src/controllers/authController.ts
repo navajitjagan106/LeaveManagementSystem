@@ -2,14 +2,13 @@ import { Request, Response } from "express";
 import { pool } from "../config/db";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { validatePassword } from "../utils/passwordValidator";
 import { sendOTPEmail } from "../utils/emailService";
 import crypto from "crypto";
 import redis from "../config/redis";
 import { setAuthCookies } from "../utils/authUtils";
 import { fetchUserPermissions } from "../utils/permissionUtils";
 
-const OTP_TTL = 600; // 10 minutes in seconds
+const OTP_TTL = 600; 
 
 
 
@@ -35,7 +34,6 @@ export const login = async (req: Request, res: Response) => {
             return res.status(403).json({ error: "You have a pending invitation. Please accept it via the email link before logging in." });
 
         const code = crypto.randomInt(100000, 999999).toString();
-        // Overwrites any existing OTP for this user; expires automatically after 10 min
         await redis.setex(`otp:${dbUser.id}`, OTP_TTL, code);
 
         await sendOTPEmail({ email: dbUser.email, name: dbUser.name, code });
@@ -54,8 +52,8 @@ export const verifyOtp = async (req: Request, res: Response) => {
 
         const userResult = await pool.query(
             `SELECT u.*, r.id as role_id FROM users u 
-             JOIN roles r ON u.role = r.name 
-             WHERE u.email = $1`, 
+            JOIN roles r ON u.role_id = r.id 
+            WHERE u.email = $1`, 
             [email]
         );
         if (userResult.rows.length === 0)
@@ -65,8 +63,6 @@ export const verifyOtp = async (req: Request, res: Response) => {
 
         const storedCode = await redis.get(`otp:${dbUser.id}`);
         
-        console.log(`VERIFYING OTP: user=${dbUser.email}, provided=${code}, stored=${storedCode}`);
-
         if (!storedCode || storedCode.toString().trim() !== code.toString().trim()) {
             console.warn(`OTP VERIFICATION FAILED: user=${dbUser.email}`);
             return res.status(400).json({ error: "Invalid or expired OTP" });
@@ -88,12 +84,28 @@ export const verifyOtp = async (req: Request, res: Response) => {
             { expiresIn: process.env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] }
         );
 
-        const permissions = await fetchUserPermissions(dbUser.id, dbUser.role_id);
+        const permissionsPromise = fetchUserPermissions(dbUser.id, dbUser.role_id);
 
-        const reporteesCheck = await pool.query(
+        const reporteesCheckPromise = pool.query(
             "SELECT EXISTS (SELECT 1 FROM users WHERE manager_id = $1) AS has_reportees",
             [dbUser.id]
         );
+
+        const leaveTypesPromise = pool.query(
+            `SELECT lt.id, lt.name, lt.description, lt.is_unlimited
+            FROM leave_balances lb
+            JOIN leave_types lt ON lt.id = lb.leave_type_id
+            WHERE lb.user_id = $1
+            ORDER BY lt.id`,
+            [dbUser.id]
+        );
+
+        const [permissions, reporteesCheck, leaveTypesRes] = await Promise.all([
+            permissionsPromise,
+            reporteesCheckPromise,
+            leaveTypesPromise
+        ]);
+
         const hasReportees = reporteesCheck.rows[0]?.has_reportees === true;
 
         const user = {
@@ -101,6 +113,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
             role_id: dbUser.role_id, role: dbUser.role, manager_id: dbUser.manager_id, department: dbUser.department,
             permissions,
             has_reportees: hasReportees,
+            leave_types: leaveTypesRes.rows
         };
 
         setAuthCookies(res, token);
@@ -117,13 +130,13 @@ export const getMe = async (req: Request, res: Response) => {
         
         const userResult = await pool.query(
             `SELECT u.id, u.name, u.email, r.id AS role_id, u.role, u.department, u.phone, u.gender, u.date_of_birth, u.location,
-             m.name AS manager_name, p.name AS policy_name,
-             EXISTS (SELECT 1 FROM users WHERE manager_id = u.id) AS has_reportees
-             FROM users u
-             JOIN roles r ON u.role = r.name
-             LEFT JOIN users m ON u.manager_id = m.id
-             LEFT JOIN leave_policies p ON u.policy_id = p.id
-             WHERE u.id = $1`,
+            m.name AS manager_name, p.name AS policy_name,
+            EXISTS (SELECT 1 FROM users WHERE manager_id = u.id) AS has_reportees
+            FROM users u
+            JOIN roles r ON u.role_id = r.id
+            LEFT JOIN users m ON u.manager_id = m.id
+            LEFT JOIN leave_policies p ON u.policy_id = p.id
+            WHERE u.id = $1`,
             [req.user.id]
         );
 
@@ -146,8 +159,22 @@ export const getMe = async (req: Request, res: Response) => {
 
         setAuthCookies(res, newToken);
 
-        const permissions = await fetchUserPermissions(req.user.id, req.user.role_id);
-        res.json({ success: true, data: { ...dbUser, permissions } });
+        const permissionsPromise = fetchUserPermissions(req.user.id, req.user.role_id);
+        const leaveTypesPromise = pool.query(
+            `SELECT lt.id, lt.name, lt.description, lt.is_unlimited
+            FROM leave_balances lb
+            JOIN leave_types lt ON lt.id = lb.leave_type_id
+            WHERE lb.user_id = $1
+            ORDER BY lt.id`,
+            [req.user.id]
+        );
+
+        const [permissions, leaveTypesRes] = await Promise.all([
+            permissionsPromise,
+            leaveTypesPromise
+        ]);
+
+        res.json({ success: true, data: { ...dbUser, permissions, leave_types: leaveTypesRes.rows } });
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch user data" });
     }

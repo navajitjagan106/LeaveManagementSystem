@@ -13,3 +13,13 @@ export const authorizeRoles = (...roles: string[]) => {
         next();
     };
 };
+
+export const restrictAdmin = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    if (req.user.role === "admin") {
+        return res.status(403).json({ error: "Administrators do not have leave entitlements or dashboard operations." });
+    }
+    next();
+};

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { cancelLeave, getHistory, getLeaveInitData } from '../../api/leaveApi';
-import { LeaveType, LeaveHistory as Leave } from '../../types';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store';
+import { cancelLeave, getHistory } from '../../api/leaveApi';
+import { LeaveHistory as Leave } from '../../types';
 import PageHeader from '../common/PageHeader';
 import Loader from '../common/Loader';
 import { MoreVertical, X } from 'lucide-react';
@@ -58,8 +60,9 @@ const StatusBadge = ({ status }: { status: Status }) => (
 );
 
 const LeaveHistory: React.FC = () => {
+    const { user } = useSelector((state: RootState) => state.auth);
     const [filters, setFilters] = useState({ leaveType: '', status: '', search: '' });
-    const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
+    const leaveTypes = user?.leave_types || [];
     const [leaveHistory, setLeaveHistory] = useState<Leave[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
@@ -67,12 +70,6 @@ const LeaveHistory: React.FC = () => {
     const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
     const [cancelling, setCancelling] = useState(false);
     const toast = useToast();
-
-    useEffect(() => {
-        getLeaveInitData()
-            .then((res) => setLeaveTypes(res.data.data.leaveTypes))
-            .catch((err) => console.error('Failed to fetch leave types', err));
-    }, []);
 
     useEffect(() => {
         const fetchLeaveHistory = async () => {
@@ -173,10 +170,10 @@ const LeaveHistory: React.FC = () => {
                     <div className="text-center py-8"><Loader /></div>
                 ) : leaveHistory.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
-                        <img 
-                            src="/empty.svg" 
-                            className="w-40 h-40 mb-4 object-contain opacity-80 select-none" 
-                            alt="No leave history" 
+                        <img
+                            src="/empty.svg"
+                            className="w-40 h-40 mb-4 object-contain opacity-80 select-none"
+                            alt="No leave history"
                         />
                         <p className="font-bold text-slate-800 text-lg">No leave history yet</p>
                         <p className="text-sm text-slate-400 mt-1 max-w-sm leading-relaxed">Your past requests, approved leaves, and balances will appear here once submitted.</p>

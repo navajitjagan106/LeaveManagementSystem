@@ -1,10 +1,5 @@
 import { pool } from "../config/db";
 
-/**
- * Simple in-memory cache for role permissions.
- * Keyed by roleId, stores the full permissions object.
- * Auto-expires entries after TTL_MS.
- */
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const permCache = new Map<number, { data: any; expires: number }>();
 
@@ -22,9 +17,8 @@ const setCache = (roleId: number, data: any) => {
 export const fetchUserPermissions = async (userId: number, roleId?: number) => {
     let userRoleId = roleId;
 
-    // 1. Resolve role_id if not passed
     if (!userRoleId) {
-        const userRes = await pool.query("SELECT r.id as role_id FROM users u JOIN roles r ON u.role = r.name WHERE u.id = $1", [userId]);
+        const userRes = await pool.query("SELECT role_id FROM users WHERE id = $1", [userId]);
         if (userRes.rows.length > 0) {
             userRoleId = userRes.rows[0].role_id;
         }

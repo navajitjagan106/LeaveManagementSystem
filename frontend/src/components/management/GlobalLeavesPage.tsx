@@ -34,6 +34,25 @@ const STATUS_BADGE = {
     rejected: "bg-rose-50 text-rose-700 border-rose-200",
 };
 
+const getAvatarBg = (name: string) => {
+    const colors = [
+        "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm shadow-blue-100",
+        "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-100",
+        "bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm shadow-violet-100",
+        "bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-sm shadow-amber-100",
+        "bg-gradient-to-br from-rose-500 to-pink-600 text-white shadow-sm shadow-rose-100",
+        "bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-sm shadow-cyan-100",
+        "bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white shadow-sm shadow-fuchsia-100",
+    ];
+    let hash = 0;
+    const cleanName = name || "";
+    for (let i = 0; i < cleanName.length; i++) {
+        hash = cleanName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+};
+
 const GlobalLeavesPage: React.FC = () => {
     const toast = useToast();
     const { data, LoadingScreen, execute: fetchAllData } = useAsync(getAllLeaves, true);
@@ -44,11 +63,16 @@ const GlobalLeavesPage: React.FC = () => {
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 8;
+    const [pageInputVal, setPageInputVal] = useState("1");
+    const itemsPerPage = 10;
 
     useEffect(() => {
         fetchAllData();
     }, [fetchAllData]);
+
+    useEffect(() => {
+        setPageInputVal(currentPage.toString());
+    }, [currentPage]);
 
     const allRecords = useMemo<LeaveRecord[]>(() => {
         return data?.data || [];
@@ -148,7 +172,7 @@ const GlobalLeavesPage: React.FC = () => {
             key: "employee_name",
             render: (rec) => (
                 <div className="flex items-center gap-2 font-bold text-gray-900">
-                    <div className="w-7 h-7 rounded-full bg-primary-light text-primary-dark flex items-center justify-center font-bold text-[10px]">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-extrabold text-[11px] ${getAvatarBg(rec.employee_name)}`}>
                         {rec.employee_name?.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
                     </div>
                     <span>{rec.employee_name}</span>
@@ -240,7 +264,7 @@ const GlobalLeavesPage: React.FC = () => {
     ];
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6 relative min-h-[400px]">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6 relative w-full max-w-full flex flex-col mb-12">
             <LoadingScreen />
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -381,13 +405,13 @@ const GlobalLeavesPage: React.FC = () => {
                     </div>
 
                     {/* Pagination */}
-                    {totalPages > 1 && (
+                    {filteredRecords.length > 0 && (
                         <div className="flex items-center justify-between px-5 py-4 bg-gray-50/50 border-t border-gray-100 flex-wrap gap-4 select-none">
                             <span className="text-[11px] font-medium text-gray-400">
-                                Showing Page <span className="font-bold text-gray-700">{currentPage}</span> of <span className="font-bold text-gray-700">{totalPages}</span> ({filteredRecords.length} records total)
+                                Showing <span className="font-bold text-gray-700">{paginatedRecords.length}</span> of <span className="font-bold text-gray-700">{filteredRecords.length}</span> records
                             </span>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-4">
                                 <button
                                     type="button"
                                     disabled={currentPage === 1}
@@ -398,24 +422,34 @@ const GlobalLeavesPage: React.FC = () => {
                                     <span>Prev</span>
                                 </button>
 
-                                <div className="flex items-center gap-1">
-                                    {Array.from({ length: totalPages }).map((_, idx) => {
-                                        const pageNum = idx + 1;
-                                        const isCurrent = currentPage === pageNum;
-                                        return (
-                                            <button
-                                                key={pageNum}
-                                                type="button"
-                                                onClick={() => setCurrentPage(pageNum)}
-                                                className={`h-8 w-8 rounded-lg text-xs font-bold transition-all cursor-pointer
-                                                    ${isCurrent
-                                                        ? "bg-gradient-to-r from-primary to-primary-dark text-white shadow-sm"
-                                                        : "border border-gray-100 bg-white text-gray-600 hover:bg-gray-50"}`}
-                                            >
-                                                {pageNum}
-                                            </button>
-                                        );
-                                    })}
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-xs text-gray-500 font-medium">Page</span>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={totalPages}
+                                        value={pageInputVal}
+                                        onChange={(e) => setPageInputVal(e.target.value)}
+                                        onBlur={() => {
+                                            let num = parseInt(pageInputVal);
+                                            if (isNaN(num) || num < 1) num = 1;
+                                            if (num > totalPages) num = totalPages;
+                                            setPageInputVal(num.toString());
+                                            setCurrentPage(num);
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                                let num = parseInt(pageInputVal);
+                                                if (isNaN(num) || num < 1) num = 1;
+                                                if (num > totalPages) num = totalPages;
+                                                setPageInputVal(num.toString());
+                                                setCurrentPage(num);
+                                            }
+                                        }}
+                                        disabled={totalPages <= 1}
+                                        className="w-12 h-8 text-center border border-gray-200 rounded-lg text-xs font-bold focus:border-primary outline-none focus:ring-1 focus:ring-primary shadow-inner bg-white text-gray-800 disabled:opacity-50 disabled:bg-gray-50"
+                                    />
+                                    <span className="text-xs text-gray-400 font-medium">of {totalPages}</span>
                                 </div>
 
                                 <button

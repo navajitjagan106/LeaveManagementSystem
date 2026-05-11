@@ -166,13 +166,13 @@ const Profile: React.FC = () => {
         },
         {
             icon: CalendarDays, label: "Date of Birth",
-            iconCls: "text-primarymber-500", bgCls: "bg-primarymber-50",
+            iconCls: "text-amber-500", bgCls: "bg-amber-50",
             view: user.date_of_birth ? `${fmtDob(user.date_of_birth)} ${calcAge(user.date_of_birth)}` : "—",
             edit: <Input type="date" value={form.date_of_birth} onChange={e => setForm(f => ({ ...f, date_of_birth: e.target.value }))} className="h-7 text-sm px-2" />,
         },
         {
             icon: MapPin, label: "Location",
-            iconCls: "text-emerald-500", bgCls: "bg-primary-lightmerald-50",
+            iconCls: "text-emerald-500", bgCls: "bg-emerald-50",
             view: user.location || "—",
             edit: <Input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="City, State" className="h-7 text-sm px-2" />,
         },

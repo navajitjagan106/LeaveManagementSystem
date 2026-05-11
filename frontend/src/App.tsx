@@ -42,11 +42,39 @@ const App: React.FC = () => {
             }
           >
             {/* ── Employee / Manager pages  */}
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="apply-leave" element={<ApplyLeave />} />
-            <Route path="leave-history" element={<LeaveHistory />} />
+            <Route
+              path="dashboard"
+              element={
+                <ProtectedRoute blockAdmin={true}>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="apply-leave"
+              element={
+                <ProtectedRoute blockAdmin={true}>
+                  <ApplyLeave />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="leave-history"
+              element={
+                <ProtectedRoute blockAdmin={true}>
+                  <LeaveHistory />
+                </ProtectedRoute>
+              }
+            />
             <Route path="profile" element={<Profile />} />
-            <Route path="leave-balance" element={<LeaveBalance />} />
+            <Route
+              path="leave-balance"
+              element={
+                <ProtectedRoute blockAdmin={true}>
+                  <LeaveBalance />
+                </ProtectedRoute>
+              }
+            />
             <Route path="calendar" element={<CalendarPage />} />
             <Route path="team-view" element={<Navigate to="/calendar" replace />} />
             <Route path="holidays" element={<HolidaysPage />} />

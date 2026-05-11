@@ -65,14 +65,11 @@ export const getTeamOnLeave = (from_date: string, to_date: string) =>
 export const getTeamMembers = () =>
     API.get("/leaves/team-members");
 
-export const getTeamMemberBalance = (id: number) =>
-    API.get(`/leaves/team-member-balance/${id}`);
-
 export const getTeamBalanceSummary = () =>
     API.get("/leaves/team-balance-summary");
 
-export const getLeaveTrend = () =>
-  API.get("/leaves/leave-trend");
+export const getLeaveTrend = (months: number = 6) =>
+  API.get(`/leaves/leave-trend?months=${months}`);
 
-export const getTeamMemberMonthly = (id: number) =>
-  API.get(`/leaves/team-member-monthly/${id}`);
+export const getTeamMemberProfileData = (id: number) =>
+  API.get(`/leaves/team-member-profile/${id}`);

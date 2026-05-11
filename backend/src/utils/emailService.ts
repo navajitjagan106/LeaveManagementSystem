@@ -1,5 +1,4 @@
-import dotenv from "dotenv";
-// Redundant dotenv.config() removed (handled in app.ts)
+
 
 function formatDate(date: Date | string): string {
     return new Date(date).toLocaleDateString("en-GB", {
@@ -15,14 +14,14 @@ function emailWrapper(content: string) {
         <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; line-height: 1.6; color: #1a1a1a; background-color: ${BG_COLOR}; padding: 40px 20px;">
             <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                 <div style="background: linear-gradient(135deg, ${BRAND_COLOR} 0%, #7c3aed 100%); padding: 32px; text-align: center;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.025em;">LeaveMS</h1>
+                    <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.025em;">DayOff</h1>
                 </div>
                 <div style="padding: 40px;">
                     ${content}
                 </div>
                 <div style="padding: 24px; text-align: center; background-color: #f9fafb; border-top: 1px solid #f1f5f9;">
                     <p style="margin: 0; font-size: 12px; color: #94a3b8;">
-                        This is an automated message from LeaveMS. Please do not reply to this email.
+                        This is an automated message from DayOff. Please do not reply to this email.
                     </p>
                 </div>
             </div>
@@ -53,7 +52,7 @@ async function sendMail(options: { to: string; subject: string; html: string; ot
             },
             body: JSON.stringify({
                 personalizations: [{ to: [{ email: options.to }] }],
-                from: { email: sender, name: "LeaveMS" },
+                from: { email: sender, name: "DayOff" },
                 subject: options.subject,
                 content: [{ type: "text/html", value: options.html }],
             }),
@@ -137,12 +136,12 @@ export async function sendInvitationEmail(params: {
     const baseUrl = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/+$/, "");
     const acceptUrl = `${baseUrl}/accept-invitation/${params.token}`;
     const html = emailWrapper(`
-        <h2 style="margin-top: 0; font-size: 20px; color: ${BRAND_COLOR};">Welcome to LeaveMS!</h2>
+        <h2 style="margin-top: 0; font-size: 20px; color: ${BRAND_COLOR};">Welcome to DayOff!</h2>
         <p>Hello <strong>${params.name}</strong>,</p>
         <p>You have been invited by <strong>${params.inviterName || "an Administrator"}</strong> to join as a <strong>${params.role}</strong>.</p>
         <div style="text-align: center; margin: 30px 0;">
             <a href="${acceptUrl}" style="background: ${BRAND_COLOR}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px;">Set Up Your Account</a>
         </div>
     `);
-await sendMail({ to: params.email, subject: `Welcome to LeaveMS: Set up your account`, html, throwOnFailure: false });
+await sendMail({ to: params.email, subject: `Welcome to DayOff: Set up your account`, html, throwOnFailure: false });
 }

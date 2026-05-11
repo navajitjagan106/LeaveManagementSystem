@@ -104,18 +104,17 @@ const CalendarPage: React.FC = () => {
                     borderColor: "#eab308",
                     textColor: "#854d0e",
                     display: "block",
-                    classNames: ["holiday-event", "border", "border-primarymber-400"],
+                    classNames: ["holiday-event", "border", "border-amber-400"],
                 });
             });
         }
 
         // 2. Add Categorized Leaves
         rawLeaves.forEach((leave) => {
-            const isSelf = Number(leave.user_id) === Number(user?.id);
-            const isReport = !isSelf && Number(leave.manager_id) === Number(user?.id);
-            const isSibling = !isSelf && !isReport && Number(leave.manager_id) === Number(user?.manager_id);
+            const isSelf = Number(leave.user_id) === Number(user?.id);//me
+            const isReport = !isSelf && Number(leave.manager_id) === Number(user?.id); //with my if i fetch sub
+            const isSibling = !isSelf && !isReport && Number(leave.manager_id) === Number(user?.manager_id); //with my managerid i get my teammates
 
-            // Filter out by active toggles
             if (isSelf && !filterSelf) return;
             if (isReport && !filterReports) return;
             if (isSibling && !filterSiblings) return;
@@ -212,7 +211,7 @@ const CalendarPage: React.FC = () => {
             unit: "employees total",
             icon: Sunrise,
             gradient: "from-emerald-500 to-teal-600",
-            lightBg: "bg-primary-lightmerald-50",
+            lightBg: "bg-emerald-50",
             textColor: "text-emerald-600",
         },
     ];
@@ -340,10 +339,10 @@ const CalendarPage: React.FC = () => {
                             {/* Holidays Toggle */}
                             <button
                                 onClick={() => setFilterHolidays(!filterHolidays)}
-                                className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${filterHolidays ? "bg-primarymber-50/40 border-primarymber-200" : "bg-white border-gray-100 opacity-60 hover:opacity-90"}`}
+                                className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${filterHolidays ? "bg-amber-50/40 border-amber-200" : "bg-white border-gray-100 opacity-60 hover:opacity-90"}`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className="w-5 h-5 rounded bg-primarymber-500 flex items-center justify-center text-white">
+                                    <div className="w-5 h-5 rounded bg-amber-500 flex items-center justify-center text-white">
                                         {filterHolidays && <Check size={12} strokeWidth={3} />}
                                     </div>
                                     <div>
@@ -351,7 +350,7 @@ const CalendarPage: React.FC = () => {
                                         <p className="text-[10px] text-gray-400">Public company holidays</p>
                                     </div>
                                 </div>
-                                <span className="bg-primarymber-100 text-primarymber-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{holidays.length}</span>
+                                <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{holidays.length}</span>
                             </button>
 
                         </CardContent>
@@ -437,7 +436,7 @@ const CalendarPage: React.FC = () => {
                                     const isHoliday = arg.event.classNames.includes("holiday-event");
                                     return (
                                         <div className="flex items-center gap-1 px-1.5 py-0.5 w-full cursor-pointer">
-                                            {isHoliday && <Palmtree size={11} className="text-primarymber-700" />}
+                                            {isHoliday && <Palmtree size={11} className="text-amber-700" />}
                                             <span
                                                 style={{ color: arg.event.textColor }}
                                                 className="text-[11px] font-bold truncate"
@@ -450,7 +449,7 @@ const CalendarPage: React.FC = () => {
                                 dayCellClassNames={(arg) => {
                                     const day = arg.date.getDay();
                                     const inMonth = arg.date.getMonth() === arg.view.currentStart.getMonth();
-                                    return (day === 0 || day === 6) && inMonth ? ["bg-primarymber-50/10"] : [];
+                                    return (day === 0 || day === 6) && inMonth ? ["bg-amber-50/10"] : [];
                                 }}
                                 dayCellContent={(arg) => (
                                     <div className="flex justify-end pr-1.5 pt-1.5">

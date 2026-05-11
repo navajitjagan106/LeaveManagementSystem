@@ -68,9 +68,7 @@ const DashBoard: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">
             <PageHeader title="Dashboard" subtitle="Overview of your leave activity" divider />
 
-            {/* Welcome Banner */}
             <div className="bg-gradient-to-r from-primary to-primary-dark text-white px-6 py-5 rounded-2xl flex items-center justify-between relative overflow-hidden min-h-[130px]">
-                {/* Subtle ambient light glow */}
                 <div className="absolute top-0 right-0 w-64 h-full bg-white/5 rounded-full blur-2xl transform translate-x-20 pointer-events-none" />
                 
                 <div className="z-10 max-w-[65%] sm:max-w-[75%]">
@@ -87,7 +85,6 @@ const DashBoard: React.FC = () => {
                     </p>
                 </div>
 
-                {/* Floating Dashboard Illustration SVG (Desktop Only) */}
                 <div className="absolute right-4 bottom-0 top-0 hidden md:flex items-center justify-center w-44 z-10 pointer-events-none">
                     <img 
                         src="/Dashboard.svg" 
@@ -105,7 +102,6 @@ const DashBoard: React.FC = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
 
-                {/* Leave Balance — 3 cols */}
                 <div className="lg:col-span-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
                     <div className="flex items-center justify-between mb-3">
                         <h3 className="text-sm font-semibold text-gray-800">Leave Balance</h3>
@@ -114,7 +110,6 @@ const DashBoard: React.FC = () => {
                         </span>
                     </div>
 
-                    {/* Donut left, bars right — side-by-side */}
                     <div className="flex items-center gap-4">
                         <ChartContainer
                             config={donutConfig}
@@ -159,7 +154,6 @@ const DashBoard: React.FC = () => {
                             </PieChart>
                         </ChartContainer>
 
-                        {/* Breakdown bars */}
                         <div className="flex-1 space-y-2">
                             {data.leave_balance.map((item, i) => {
                                 const color = COLORS[i % COLORS.length];
@@ -197,9 +191,7 @@ const DashBoard: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Right col — 2 cols */}
                 <div className="lg:col-span-2 flex flex-col gap-3">
-                    {/* Apply Leave CTA */}
                     <div
                         className="rounded-2xl p-4 flex flex-col justify-between cursor-pointer group bg-gradient-to-r from-primary to-primary-dark"
                         style={{ minHeight: 110 }}
@@ -217,7 +209,6 @@ const DashBoard: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Upcoming Holidays */}
                     <div className="bg-gray-50 rounded-xl p-4 flex-1 border border-gray-100">
                         <div className="flex items-center justify-between mb-3">
                             <h3 className="text-sm font-semibold text-gray-800">Upcoming Holidays</h3>
@@ -255,8 +246,8 @@ const DashBoard: React.FC = () => {
             <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                 <h3 className="text-sm font-semibold text-gray-800 mb-3">Team Members on Leave</h3>
                 {todayHoliday ? (
-                    <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-primarymber-50 border border-primarymber-100">
-                        <p className="text-sm font-medium text-primarymber-700">Today is a holiday — {todayHoliday.name}</p>
+                    <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-100">
+                        <p className="text-sm font-medium text-amber-700">Today is a holiday — {todayHoliday.name}</p>
                     </div>
                 ) : data.team_on_leave.length === 0 ? (
                     <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-green-50 border border-green-100">

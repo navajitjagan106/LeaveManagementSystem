@@ -2,8 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
-import { getAllLeaves, getEmployees, getInvitations } from "../../api/managementApi";
-import { getHolidays } from "../../api/leaveApi";
+import { getAdminDashboardStats } from "../../api/managementApi";
 import PageHeader from "../common/PageHeader";
 import { useAsync } from "../../hooks/useAsync";
 import {
@@ -57,18 +56,8 @@ const processChartData = (leaves: any[]) => {
 };
 
 const fetchDashboardData = async () => {
-    const [emp, inv, leaves, hols] = await Promise.all([
-        getEmployees(),
-        getInvitations("pending"),
-        getAllLeaves(),
-        getHolidays(),
-    ]);
-    return {
-        employees: emp.data.data || [],
-        invitations: inv.data.data || [],
-        leaves: leaves.data.data || [],
-        holidays: hols.data || []
-    };
+    const res = await getAdminDashboardStats();
+    return res.data;
 };
 
 const AdminDashboard = () => {
@@ -84,19 +73,11 @@ const AdminDashboard = () => {
 
     // Derived stats from api payload
     const stats = useMemo(() => {
-        const empList = data?.employees || [];
-        const invList = data?.invitations || [];
-        const leaveList = data?.leaves || [];
-        const holidayList = data?.holidays || [];
-
-        const pendingLeavesCount = leaveList.filter((l: any) => l.status === "pending").length;
-        const activeHolsCount = holidayList.filter((h: any) => new Date(h.date) >= new Date()).length;
-
         return {
-            employees: empList.length,
-            pendingInvites: invList.length,
-            pendingLeaves: pendingLeavesCount,
-            holidays: activeHolsCount
+            employees: data?.stats?.employees ?? 0,
+            pendingInvites: data?.stats?.pendingInvites ?? 0,
+            pendingLeaves: data?.stats?.pendingLeaves ?? 0,
+            holidays: data?.stats?.holidays ?? 0
         };
     }, [data]);
 

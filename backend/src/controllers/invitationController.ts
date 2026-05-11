@@ -53,9 +53,9 @@ export const sendInvitation = async (req: Request, res: Response) => {
 
         const result = await pool.query(
             `INSERT INTO invitations 
-            (name, email, role, department, manager_id, policy_id, token, expires_at, invited_by)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-            [name, email, normalizedRole, department || null, manager_id || null, policy_id || null, token, expiresAt, invitedBy]
+            (name, email, role, role_id, department, manager_id, policy_id, token, expires_at, invited_by)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+            [name, email, normalizedRole, targetRoleId, department || null, manager_id || null, policy_id || null, token, expiresAt, invitedBy]
         );
 
         try {
@@ -209,13 +209,14 @@ export const acceptInvitation = async (req: Request, res: Response) => {
 
         const user = await pool.query(
             `INSERT INTO users 
-            (name, email, password, role, department, manager_id, policy_id, email_verified)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,true) RETURNING *`,
+            (name, email, password, role, role_id, department, manager_id, policy_id, email_verified)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,true) RETURNING *`,
             [
                 invitation.name,
                 invitation.email,
                 hashedPassword,
                 invitation.role,
+                invitation.role_id,
                 invitation.department,
                 invitation.manager_id,
                 invitation.policy_id
@@ -265,7 +266,7 @@ export const acceptInvitation = async (req: Request, res: Response) => {
         // Auto-login the user
         const dbUserResult = await pool.query(
             `SELECT u.*, r.id as role_id FROM users u 
-             JOIN roles r ON u.role = r.name 
+             JOIN roles r ON u.role_id = r.id 
              WHERE u.id = $1`, 
             [user.rows[0].id]
         );
@@ -479,14 +480,17 @@ export const bulkUpload = async (req: Request, res: Response) => {
                         const token = crypto.randomBytes(32).toString("hex");
                         const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
 
+                        const targetRoleId = roleMap.get(role.toLowerCase().trim()) || null;
+
                         await pool.query(
                             `INSERT INTO invitations 
-                            (name, email, role, department, manager_id, temp_manager_email, policy_id, token, expires_at, invited_by)
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                            (name, email, role, role_id, department, manager_id, temp_manager_email, policy_id, token, expires_at, invited_by)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
                             [
                                 name,
                                 email,
-                                role,
+                                role.toLowerCase().trim(),
+                                targetRoleId,
                                 department || null,
                                 manager_id,
                                 temp_manager_email,

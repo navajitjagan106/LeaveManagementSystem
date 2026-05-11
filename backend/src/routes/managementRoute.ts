@@ -6,6 +6,7 @@ import {
     getAllEmployees, updateEmployee, deleteEmployee,
     updateManager, createLeaveType, updateLeaveType, deleteLeaveType, addHoliday,
     deleteHoliday, getAllLeaves, getUserLeaveBalance, updateLeaveBalance, exportLeaves,
+    getAdminDashboardStats,
 } from "../controllers/managementController";
 import { sendInvitation, getInvitations, resendInvitation, cancelInvitation, bulkUpload } from "../controllers/invitationController";
 import { getPolicies, createPolicy, deletePolicy, getPolicyRules, setPolicyRules, reassignPolicy, resetLeaveBalance, updatePolicy } from "../controllers/leavePolicyController";
@@ -58,5 +59,6 @@ router.get("/leaves", requirePageAccess("manage_leave_records", "view"), getAllL
 router.get("/user-balance/:id", requirePageAccess("manage_leave_records", "view"), getUserLeaveBalance);
 router.patch("/user-balance", requirePageAccess("manage_leave_records", "edit"), updateLeaveBalance);
 router.get("/export", requirePageAccess("manage_leave_records", "view"), exportLeaves);
+router.get("/dashboard-stats", requirePageAccess("admin_dashboard", "view"), getAdminDashboardStats);
 
 export default router;
