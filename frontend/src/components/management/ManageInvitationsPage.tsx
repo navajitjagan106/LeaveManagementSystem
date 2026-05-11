@@ -140,7 +140,7 @@ const InvitationCard = ({ inv, onResend, onCancel, canEdit, canDelete }: any) =>
 const ManageInvitationsPage = () => {
     const toast = useToast();
     const { user } = useSelector((state: RootState) => state.auth);
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role_id === 1;
     const canEdit = isAdmin || user?.permissions?.['manage_invitations']?.can_edit === true;
     const canDelete = isAdmin || user?.permissions?.['manage_invitations']?.can_delete === true;
 

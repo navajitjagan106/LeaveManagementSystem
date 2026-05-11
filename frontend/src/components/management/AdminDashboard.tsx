@@ -62,7 +62,7 @@ const fetchDashboardData = async () => {
 
 const AdminDashboard = () => {
     const { user } = useSelector((state: RootState) => state.auth);
-    const isAdmin = user?.role === "admin";
+    const isAdmin = user?.role_id === 1;
     const hasPage = (key: string) => isAdmin || user?.permissions?.[key]?.can_view === true;
 
     const { data, LoadingScreen, execute: loadDashboard } = useAsync(fetchDashboardData, true);

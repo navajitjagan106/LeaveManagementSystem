@@ -40,7 +40,7 @@ const Login: React.FC = () => {
 
     useEffect(() => {
         if (initialized && user) {
-            navigate(user.role === "admin" ? "/management" : "/dashboard");
+            navigate(user.role_id === 1 ? "/management" : "/dashboard");
         }
     }, [initialized, user, navigate]);
 
@@ -78,9 +78,9 @@ const Login: React.FC = () => {
         setLoading(true);
         try {
             const res = await verifyOtp({ email, code: otp });
-            const role = res.data.user?.role;
+            const roleId = res.data.user?.role_id;
             setTimeout(() => {
-                window.location.href = role === "admin" ? "/management" : "/dashboard";
+                window.location.href = roleId === 1 ? "/management" : "/dashboard";
             }, 100);
         } catch (err: any) {
             setError(err?.response?.data?.error || "Invalid or expired OTP");

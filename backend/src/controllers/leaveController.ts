@@ -370,7 +370,9 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
             return res.status(401).json({ error: "Unauthorized" });
         }
         const user_id = req.user.id;
-        const role = req.user.role;
+        const { role_id } = req.user;
+        const roleRes = await pool.query("SELECT name FROM roles WHERE id = $1", [role_id]);
+        const role = roleRes.rows.length > 0 ? roleRes.rows[0].name : "employee";
         const userResult = await pool.query(
             "SELECT manager_id FROM users WHERE id = $1",
             [user_id]
@@ -386,7 +388,7 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
         );
         let scope = 'sub';
 
-        if (role === 'admin') {
+        if (role_id === 1) {
             scope = 'all';
         } else if (permRes.rows.length > 0 && permRes.rows[0].can_view) {
             scope = permRes.rows[0].scope || 'sub';
@@ -824,7 +826,7 @@ export const getTeamOnLeave = async (req: Request, res: Response) => {
             [req.user.role_id]
         );
         let scope = 'sub';
-        if (req.user.role === 'admin') {
+        if (req.user.role_id === 1) {
             scope = 'all';
         } else if (permRes.rows.length > 0 && permRes.rows[0].scope === 'all') {
             scope = 'all';
@@ -859,13 +861,13 @@ export const getTeamOnLeave = async (req: Request, res: Response) => {
 export const getTeamMembers = async (req: Request, res: Response) => {
     try {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-        const { id: userId, role_id: roleId, role } = req.user;
+        const { id: userId, role_id: roleId } = req.user;
 
         const scope = (req as any).directoryScope;
 
         let result;
         if (scope === "all") {
-            if (role !== "admin") {
+            if (roleId !== 1) {
                 result = await pool.query(
                     `SELECT u.id, u.name, u.email, r.name AS role, u.department,
                             u.phone, u.gender, u.date_of_birth, u.location,
@@ -976,7 +978,7 @@ export const getLeaveTrendByType = async (req: Request, res: Response) => {
 export const getTeamBalanceSummary = async (req: Request, res: Response) => {
     try {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-        const { id: userId, role } = req.user;
+        const { id: userId } = req.user;
 
         const scope = (req as any).directoryScope;
 
@@ -1031,7 +1033,7 @@ export const updateUserProfile = async (req: Request, res: Response) => {
         );
 
         const updatedUser = await pool.query(
-            `SELECT u.id, u.name, u.email, r.id AS role_id, u.role, u.department, u.phone, u.gender, u.date_of_birth, u.location
+            `SELECT u.id, u.name, u.email, r.id AS role_id, r.name AS role, u.department, u.phone, u.gender, u.date_of_birth, u.location
              FROM users u
              JOIN roles r ON u.role_id = r.id
              WHERE u.id = $1`,

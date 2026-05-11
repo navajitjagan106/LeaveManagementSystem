@@ -52,7 +52,7 @@ export const authorizeApprovals = (action: "view" | "edit") =>
     async (req: Request, res: Response, next: NextFunction) => {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
-        if (req.user.role === "admin") {
+        if (req.user.role_id === 1) {
             (req as any).fullApprovalAccess = true;
             return next();
         }
@@ -88,7 +88,7 @@ export const requirePageAccess = (pageKey: string, action: Action) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
-        if (req.user.role === "admin") return next();
+        if (req.user.role_id === 1) return next();
 
         const perm = await getCachedPagePerm(req.user.role_id, pageKey);
 
@@ -110,7 +110,7 @@ export const authorizeTeamAccess = () => {
     return async (req: Request, res: Response, next: NextFunction) => {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
-        if (req.user.role === "admin") {
+        if (req.user.role_id === 1) {
             (req as any).directoryScope = "all";
             return next();
         }

@@ -24,7 +24,7 @@ import { RootState } from "../../store";
 const ManageLeaveTypesPage = () => {
     const toast = useToast();
     const { user } = useSelector((state: RootState) => state.auth);
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role_id === 1;
     const canEdit = isAdmin || user?.permissions?.['manage_leave_types']?.can_edit === true;
 
     const { data: typesData, LoadingScreen, execute: fetchTypes } = useAsync(getLeaveTypes, true);

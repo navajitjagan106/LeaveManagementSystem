@@ -34,12 +34,12 @@ const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles, requiredPage,
 
     if (!user) return null;
 
-    if (blockAdmin && user.role === "admin") {
+    if (blockAdmin && user.role_id === 1) {
         return <Navigate to="/management" replace />;
     }
 
     // Admin bypasses all other restrictions
-    if (user.role === "admin") return <>{children}</>;
+    if (user.role_id === 1) return <>{children}</>;
 
     // If still loading fresh permissions for a specific page check
     if (loading && requiredPage) {

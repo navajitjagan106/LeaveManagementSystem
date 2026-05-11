@@ -6,12 +6,12 @@ import { pool } from "../config/db";
 export const getAllEmployees = async (req: Request, res: Response) => {
     try {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-        const { role } = req.user;
+        const { role_id } = req.user;
 
         let result;
-        if (role !== "admin") {
+        if (role_id !== 1) {
             result = await pool.query(`
-                SELECT u.*, r.id AS role_id, m.name AS manager_name, p.name AS policy_name
+                SELECT u.id, u.name, u.email, u.department, u.manager_id, u.policy_id, u.email_verified, u.phone, u.gender, u.date_of_birth, u.location, u.created_at, r.name AS role, r.id AS role_id, m.name AS manager_name, p.name AS policy_name
                 FROM users u
                 JOIN roles r ON u.role_id = r.id
                 LEFT JOIN users m ON u.manager_id = m.id
@@ -20,7 +20,7 @@ export const getAllEmployees = async (req: Request, res: Response) => {
             `);
         } else {
             result = await pool.query(`
-                SELECT u.*, r.id AS role_id, m.name AS manager_name, p.name AS policy_name
+                SELECT u.id, u.name, u.email, u.department, u.manager_id, u.policy_id, u.email_verified, u.phone, u.gender, u.date_of_birth, u.location, u.created_at, r.name AS role, r.id AS role_id, m.name AS manager_name, p.name AS policy_name
                 FROM users u
                 JOIN roles r ON u.role_id = r.id
                 LEFT JOIN users m ON u.manager_id = m.id
@@ -68,15 +68,23 @@ export const updateEmployee = async (req: Request, res: Response) => {
             }
         }
 
+        let targetRoleId = null;
+        if (normalizedRole) {
+            const roleRes = await pool.query("SELECT id FROM roles WHERE name = $1", [normalizedRole]);
+            if (roleRes.rows.length > 0) {
+                targetRoleId = roleRes.rows[0].id;
+            }
+        }
+
         await pool.query(
             `UPDATE users
-            SET role = COALESCE($1, role), manager_id = $2, department = $3
+            SET role_id = COALESCE($1, role_id), manager_id = $2, department = $3
             WHERE id = $4`,
-            [normalizedRole || null, manager_id, department, id]
+            [targetRoleId, manager_id, department, id]
         );
 
         const userRes = await pool.query(
-            `SELECT u.*, r.id as role_id FROM users u 
+            `SELECT u.id, u.name, u.email, u.department, u.manager_id, u.policy_id, u.email_verified, u.phone, u.gender, u.date_of_birth, u.location, u.created_at, r.id as role_id, r.name as role FROM users u 
              JOIN roles r ON u.role_id = r.id 
              WHERE u.id = $1`, 
             [id]
@@ -303,7 +311,7 @@ export const getUserLeaveBalance = async (req: Request, res: Response) => {
         }
 
         const requesterId = req.user.id;
-        const role = req.user.role;
+        const role_id = req.user.role_id;
         const targetUserId = Number(req.params.id);
 
         const permResult = await pool.query(
@@ -312,7 +320,7 @@ export const getUserLeaveBalance = async (req: Request, res: Response) => {
         );
         const scope = permResult.rows.length > 0 ? permResult.rows[0].scope : 'sub';
 
-        if (role !== "admin" && requesterId !== targetUserId && scope === "sub") {
+        if (role_id !== 1 && requesterId !== targetUserId && scope === "sub") {
             const check = await pool.query(
                 "SELECT id FROM users WHERE id = $1 AND manager_id = $2",
                 [targetUserId, requesterId]

@@ -13,17 +13,13 @@ import {
 import { getAvailableRoles } from "../../api/permissionsApi";
 
 const getRoleColor = (role: string) => {
-    const r = role.toLowerCase();
-    if (r === 'admin') return "bg-primary-light text-primary-dark";
-    if (r === 'manager') return "bg-blue-100 text-blue-700";
-    if (r === 'hr') return "bg-pink-100 text-pink-700";
-    if (r === 'employee') return "bg-gray-100 text-gray-600";
+    const r = role.toLowerCase().trim();
     
-    // Deterministic random color for custom roles
+    // Dynamic deterministic palette for rich, harmonious role colors
     const colors = [
-        "bg-red-100 text-red-700",
-        "bg-orange-100 text-orange-700",
-        "bg-amber-100 text-amber-700",
+        "bg-primary-light text-primary-dark",
+        "bg-blue-100 text-blue-700",
+        "bg-pink-100 text-pink-700",
         "bg-emerald-100 text-emerald-700",
         "bg-teal-100 text-teal-700",
         "bg-cyan-100 text-cyan-700",
@@ -31,11 +27,15 @@ const getRoleColor = (role: string) => {
         "bg-indigo-100 text-indigo-700",
         "bg-violet-100 text-violet-700",
         "bg-fuchsia-100 text-fuchsia-700",
-        "bg-rose-100 text-rose-700"
+        "bg-rose-100 text-rose-700",
+        "bg-red-100 text-red-700",
+        "bg-orange-100 text-orange-700",
+        "bg-amber-100 text-amber-700"
     ];
+    
     let hash = 0;
-    for (let i = 0; i < role.length; i++) {
-        hash = role.charCodeAt(i) + ((hash << 5) - hash);
+    for (let i = 0; i < r.length; i++) {
+        hash = r.charCodeAt(i) + ((hash << 5) - hash);
     }
     const index = Math.abs(hash) % colors.length;
     return colors[index];
@@ -58,7 +58,7 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 
 const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
     const { user: currentUser } = useSelector((state: RootState) => state.auth);
-    const isAdmin = currentUser?.role === "admin";
+    const isAdmin = currentUser?.role_id === 1;
     const canEdit = isAdmin || !!currentUser?.permissions?.['manage_employees']?.can_edit;
     const canDelete = isAdmin || !!currentUser?.permissions?.['manage_employees']?.can_delete;
     const canViewBalance = isAdmin || !!currentUser?.permissions?.["manage_leave_records"]?.can_view;

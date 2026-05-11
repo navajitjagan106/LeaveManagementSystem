@@ -3,7 +3,6 @@ declare module 'express-serve-static-core' {
     user?: {
       id: number;
       role_id: number;
-      role: string;
       name: string;
       email: string;
       manager_id?: number | null;

@@ -23,7 +23,7 @@ const RedirectHandler = () => {
     }
 
     if (!user) return <Navigate to="/login" replace />;
-    if (user.role === "admin" || !!user?.permissions?.['admin_dashboard']?.can_view) return <Navigate to="/management" replace />;
+    if (user.role_id === 1 || !!user?.permissions?.['admin_dashboard']?.can_view) return <Navigate to="/management" replace />;
 
     return <Navigate to="/dashboard" replace />;
 };

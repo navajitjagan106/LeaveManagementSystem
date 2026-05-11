@@ -12,6 +12,7 @@ export interface User {
     name: string;
     email: string;
     role: string;
+    role_id: number;
     manager_id: number | null;
     manager_name?: string;
     department?: string;

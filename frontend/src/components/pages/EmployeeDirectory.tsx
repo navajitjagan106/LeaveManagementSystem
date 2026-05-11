@@ -385,7 +385,7 @@ MonthlyLeaveChart.displayName = "MonthlyLeaveChart";
 const EmployeeDirectory: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useSelector((state: RootState) => state.auth);
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role_id === 1;
     const canEdit = isAdmin || !!user?.permissions?.['manage_employees']?.can_edit;
     const canDelete = isAdmin || !!user?.permissions?.['manage_employees']?.can_delete;
     const canInvite = isAdmin || !!user?.permissions?.['manage_invitations']?.can_edit;

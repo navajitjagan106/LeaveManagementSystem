@@ -209,13 +209,12 @@ export const acceptInvitation = async (req: Request, res: Response) => {
 
         const user = await pool.query(
             `INSERT INTO users 
-            (name, email, password, role, role_id, department, manager_id, policy_id, email_verified)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,true) RETURNING *`,
+            (name, email, password, role_id, department, manager_id, policy_id, email_verified)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true) RETURNING *`,
             [
                 invitation.name,
                 invitation.email,
                 hashedPassword,
-                invitation.role,
                 invitation.role_id,
                 invitation.department,
                 invitation.manager_id,
@@ -265,7 +264,7 @@ export const acceptInvitation = async (req: Request, res: Response) => {
 
         // Auto-login the user
         const dbUserResult = await pool.query(
-            `SELECT u.*, r.id as role_id FROM users u 
+            `SELECT u.*, r.id as role_id, r.name as role FROM users u 
              JOIN roles r ON u.role_id = r.id 
              WHERE u.id = $1`, 
             [user.rows[0].id]
@@ -275,7 +274,6 @@ export const acceptInvitation = async (req: Request, res: Response) => {
             { 
                 id: dbUser.id, 
                 role_id: dbUser.role_id, 
-                role: dbUser.role, 
                 name: dbUser.name, 
                 email: dbUser.email,
                 manager_id: dbUser.manager_id,

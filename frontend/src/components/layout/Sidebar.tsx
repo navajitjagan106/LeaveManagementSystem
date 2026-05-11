@@ -27,7 +27,7 @@ const Sidebar: React.FC = () => {
         window.location.href = "/login";
     };
 
-    const isAdmin = user?.role === "admin";
+    const isAdmin = user?.role_id === 1;
     const hasPage = (key: string) => isAdmin || user?.permissions?.[key]?.can_view === true;
     const canManageHolidays = isAdmin || 
         user?.permissions?.["manage_holidays"]?.can_edit === true || 

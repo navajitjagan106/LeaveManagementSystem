@@ -51,7 +51,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
         if (!email || !code) return res.status(400).json({ error: "Email and OTP are required" });
 
         const userResult = await pool.query(
-            `SELECT u.*, r.id as role_id FROM users u 
+            `SELECT u.*, r.id as role_id, r.name as role FROM users u 
             JOIN roles r ON u.role_id = r.id 
             WHERE u.email = $1`, 
             [email]
@@ -74,7 +74,6 @@ export const verifyOtp = async (req: Request, res: Response) => {
             { 
                 id: dbUser.id, 
                 role_id: dbUser.role_id, 
-                role: dbUser.role, 
                 name: dbUser.name, 
                 email: dbUser.email,
                 manager_id: dbUser.manager_id,
@@ -129,7 +128,7 @@ export const getMe = async (req: Request, res: Response) => {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
         
         const userResult = await pool.query(
-            `SELECT u.id, u.name, u.email, r.id AS role_id, u.role, u.department, u.phone, u.gender, u.date_of_birth, u.location,
+            `SELECT u.id, u.name, u.email, r.id AS role_id, r.name AS role, u.department, u.phone, u.gender, u.date_of_birth, u.location,
             m.name AS manager_name, p.name AS policy_name,
             EXISTS (SELECT 1 FROM users WHERE manager_id = u.id) AS has_reportees
             FROM users u
@@ -147,7 +146,6 @@ export const getMe = async (req: Request, res: Response) => {
             { 
                 id: dbUser.id, 
                 role_id: dbUser.role_id, 
-                role: dbUser.role, 
                 name: dbUser.name, 
                 email: dbUser.email,
                 manager_id: dbUser.manager_id,
