@@ -84,7 +84,6 @@ const ApplyLeave: React.FC = () => {
                 to_date: formData.toDate,
                 reason: formData.reason,
                 duration_type: formData.durationType,
-                manager_id: user?.manager_id || null,
             });
             toast.success('Leave applied successfully!');
             setFormData({ leaveType: String(leaveTypes[0]?.id || '1'), durationType: 'full', fromDate: '', toDate: '', reason: '' });

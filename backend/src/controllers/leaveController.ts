@@ -113,7 +113,7 @@ export const getLeaveInitData = async (req: Request, res: Response) => {
 
 export const applyLeave = async (req: Request, res: Response) => {
     try {
-        const { leave_type_id, from_date, to_date, reason, duration_type, manager_id: clientManagerId } = req.body;
+        const { leave_type_id, from_date, to_date, reason, duration_type } = req.body;
 
         if (!req.user) {
             return res.status(401).json({ error: "Unauthorized" });
@@ -143,8 +143,12 @@ export const applyLeave = async (req: Request, res: Response) => {
         const { total_allocated, used, leave_type_name, is_unlimited } = balanceRes.rows[0];
         const remaining = total_allocated - used;
 
-        // 2. Resolve manager — use the ID from the frontend, fallback to admin
-        let finalManagerId = clientManagerId || null;
+        // 2. Resolve manager — retrieve the applicant's assigned manager from DB, fallback to Admin
+        const applicantRes = await pool.query(
+            "SELECT manager_id FROM users WHERE id = $1",
+            [user_id]
+        );
+        let finalManagerId = applicantRes.rows[0]?.manager_id || null;
         let finalManagerEmail = "";
         let finalManagerName = "";
 
@@ -156,6 +160,8 @@ export const applyLeave = async (req: Request, res: Response) => {
             if (mgrRes.rows.length > 0) {
                 finalManagerEmail = mgrRes.rows[0].email;
                 finalManagerName = mgrRes.rows[0].name;
+            } else {
+                finalManagerId = null; // Reset if manager user is missing
             }
         }
 
@@ -170,7 +176,7 @@ export const applyLeave = async (req: Request, res: Response) => {
                 finalManagerEmail = adminRes.rows[0].email;
                 finalManagerName = adminRes.rows[0].name;
             } else {
-                return res.status(400).json({ error: "No manager or admin fallback available in the system" });
+                return res.status(400).json({ error: "No manager assigned, and no admin fallback available in the system" });
             }
         }
 
