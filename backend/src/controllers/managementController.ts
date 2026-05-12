@@ -121,7 +121,9 @@ export const deleteEmployee = async (req: Request, res: Response) => {
         await client.query("BEGIN");
 
         await client.query("DELETE FROM leave_balances WHERE user_id = $1", [id]);
-        await client.query("DELETE FROM leaves WHERE user_id = $1 OR applied_to = $1 OR approved_by = $1", [id]);
+        await client.query("UPDATE leaves SET applied_to = NULL WHERE applied_to = $1", [id]);
+        await client.query("UPDATE leaves SET approved_by = NULL WHERE approved_by = $1", [id]);
+        await client.query("DELETE FROM leaves WHERE user_id = $1", [id]);
         
         const deleteRes = await client.query("DELETE FROM users WHERE id = $1 RETURNING *", [id]);
         
@@ -174,6 +176,13 @@ export const getAllLeaves = async (req: Request, res: Response) => {
                 l.created_at,
                 u.name as employee_name,
                 COALESCE(lt.name, 'Unknown Leave Type') as leave_type
+        `;
+
+        if (page && limit) {
+            query += `, COUNT(*) OVER() AS total_count `;
+        }
+
+        query += `
             FROM leaves l
             JOIN users u ON l.user_id = u.id
             LEFT JOIN leave_types lt ON l.leave_type_id = lt.id
@@ -188,13 +197,15 @@ export const getAllLeaves = async (req: Request, res: Response) => {
             query += ` LIMIT $1 OFFSET $2`;
             values.push(limitNum, offset);
 
-            const countRes = await pool.query("SELECT COUNT(*) FROM leaves");
-            const total = parseInt(countRes.rows[0].count, 10);
-
             const result = await pool.query(query, values);
+            const total = result.rows.length > 0 ? parseInt(result.rows[0].total_count, 10) : 0;
+
             return res.json({
                 success: true,
-                data: result.rows,
+                data: result.rows.map(row => {
+                    const { total_count, ...rest } = row;
+                    return rest;
+                }),
                 pagination: {
                     total,
                     page: pageNum,

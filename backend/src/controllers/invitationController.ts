@@ -246,15 +246,7 @@ export const acceptInvitation = async (req: Request, res: Response) => {
             );
             const dbUser = dbUserResult.rows[0];
             const tokenForUser = jwt.sign(
-                { 
-                    id: dbUser.id, 
-                    role_id: dbUser.role_id, 
-                    role: dbUser.role,
-                    name: dbUser.name, 
-                    email: dbUser.email,
-                    manager_id: dbUser.manager_id,
-                    department: dbUser.department
-                },
+                { id: dbUser.id },
                 process.env.JWT_SECRET as string,
                 { expiresIn: process.env.JWT_EXPIRES_IN as any }
             );
@@ -345,15 +337,7 @@ export const acceptInvitation = async (req: Request, res: Response) => {
         );
         const dbUser = dbUserResult.rows[0];
         const tokenForUser = jwt.sign(
-            { 
-                id: dbUser.id, 
-                role_id: dbUser.role_id, 
-                role: dbUser.role,
-                name: dbUser.name, 
-                email: dbUser.email,
-                manager_id: dbUser.manager_id,
-                department: dbUser.department
-            },
+            { id: dbUser.id },
             process.env.JWT_SECRET as string,
             { expiresIn: process.env.JWT_EXPIRES_IN as any }
         );

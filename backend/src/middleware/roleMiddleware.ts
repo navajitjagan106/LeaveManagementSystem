@@ -7,11 +7,10 @@ export const authorizeRoles = (...roles: string[]) => {
             return res.status(401).json({ error: "Unauthorized" });
         }
 
-        const roleRes = await pool.query("SELECT name FROM roles WHERE id = $1", [req.user.role_id]);
-        if (roleRes.rows.length === 0) {
-            return res.status(403).json({ error: "Forbidden" });
+        const userRole = (req.user as any).role;
+        if (!userRole) {
+            return res.status(403).json({ error: "Forbidden: No role assigned in session" });
         }
-        const userRole = roleRes.rows[0].name;
 
         if (!roles.includes(userRole)) {
             return res.status(403).json({ error: "Forbidden" });

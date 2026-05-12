@@ -27,7 +27,7 @@ export const login = async (req: Request, res: Response) => {
         const isMatch = await bcrypt.compare(password, dbUser.password);
         if (!isMatch) {
             console.warn(`LOGIN ATTEMPT FAILED: Password mismatch - ${email}`);
-            return res.status(400).json({ error: "Invalid credentials" });
+            return res.status(400).json({ error: "Wrong password" });
         }
 
         if (!dbUser.email_verified)
@@ -71,52 +71,13 @@ export const verifyOtp = async (req: Request, res: Response) => {
         await redis.del(`otp:${dbUser.id}`);
 
         const token = jwt.sign(
-            {
-                id: dbUser.id,
-                role_id: dbUser.role_id,
-                name: dbUser.name,
-                email: dbUser.email,
-                manager_id: dbUser.manager_id,
-                department: dbUser.department
-            },
+            { id: dbUser.id },
             process.env.JWT_SECRET as string,
             { expiresIn: process.env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] }
         );
 
-        const permissionsPromise = fetchUserPermissions(dbUser.id, dbUser.role_id);
-
-        const reporteesCheckPromise = pool.query(
-            "SELECT EXISTS (SELECT 1 FROM users WHERE manager_id = $1) AS has_reportees",
-            [dbUser.id]
-        );
-
-        const leaveTypesPromise = pool.query(
-            `SELECT lt.id, lt.name, lt.description, lt.is_unlimited
-            FROM leave_balances lb
-            JOIN leave_types lt ON lt.id = lb.leave_type_id
-            WHERE lb.user_id = $1
-            ORDER BY lt.id`,
-            [dbUser.id]
-        );
-
-        const [permissions, reporteesCheck, leaveTypesRes] = await Promise.all([
-            permissionsPromise,
-            reporteesCheckPromise,
-            leaveTypesPromise
-        ]);
-
-        const hasReportees = reporteesCheck.rows[0]?.has_reportees === true;
-
-        const user = {
-            id: dbUser.id, name: dbUser.name, email: dbUser.email,
-            role_id: dbUser.role_id, role: dbUser.role, manager_id: dbUser.manager_id, department: dbUser.department,
-            permissions,
-            has_reportees: hasReportees,
-            leave_types: leaveTypesRes.rows
-        };
-
         setAuthCookies(res, token);
-        res.json({ success: true, user });
+        res.json({ success: true, user: { role_id: dbUser.role_id } });
     } catch (err) {
         console.error("OTP VERIFY ERROR:", err);
         res.status(500).json({ error: "OTP verification failed", details: err instanceof Error ? err.message : String(err) });
@@ -143,14 +104,7 @@ export const getMe = async (req: Request, res: Response) => {
 
         const dbUser = userResult.rows[0];
         const newToken = jwt.sign(
-            {
-                id: dbUser.id,
-                role_id: dbUser.role_id,
-                name: dbUser.name,
-                email: dbUser.email,
-                manager_id: dbUser.manager_id,
-                department: dbUser.department
-            },
+            { id: dbUser.id },
             process.env.JWT_SECRET as string,
             { expiresIn: process.env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] }
         );

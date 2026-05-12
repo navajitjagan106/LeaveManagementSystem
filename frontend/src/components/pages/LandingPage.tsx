@@ -1,13 +1,21 @@
 import { LogIn } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
-import { RootState } from "../../store";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../../store";
+import { fetchMe } from "../../store/slices/authSlice";
 
 const LandingPage: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
   const { user, initialized } = useSelector((state: RootState) => state.auth);
+
+  useEffect(() => {
+    if (!initialized) {
+      dispatch(fetchMe());
+    }
+  }, [dispatch, initialized]);
 
   useEffect(() => {
     if (initialized && user) {

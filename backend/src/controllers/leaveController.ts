@@ -3,7 +3,6 @@ import { pool } from "../config/db";
 import { calculateWorkingDays } from "../utils/calculateWorkingDays";
 import { getHolidaysinRange } from "../utils/getHolidaysinRange";
 import { sendLeaveApplicationEmail, sendLeaveStatusEmail } from "../utils/emailService";
-import { fetchUserPermissions } from "../utils/permissionUtils";
 
 export const getDashboardData = async (req: Request, res: Response) => {
     try {
@@ -12,7 +11,8 @@ export const getDashboardData = async (req: Request, res: Response) => {
         }
 
         const user_id = req.user.id;
-        const manager_id = req.user.manager_id;
+        const userManagerRes = await pool.query("SELECT manager_id FROM users WHERE id = $1", [user_id]);
+        const manager_id = userManagerRes.rows[0]?.manager_id || null;
 
         const [
             balanceResult,
@@ -150,7 +150,7 @@ export const applyLeave = async (req: Request, res: Response) => {
 
         // Resolve manager — retrieve the applicant's assigned manager in a single query by JOINing users m
         const applicantRes = await pool.query(
-            `SELECT m.id AS manager_id, m.name AS manager_name, m.email AS manager_email
+            `SELECT u.name AS applicant_name, m.id AS manager_id, m.name AS manager_name, m.email AS manager_email
              FROM users u
              LEFT JOIN users m ON u.manager_id = m.id
              WHERE u.id = $1`,
@@ -160,6 +160,8 @@ export const applyLeave = async (req: Request, res: Response) => {
         if (applicantRes.rows.length === 0) {
             return res.status(404).json({ error: "User not found" });
         }
+
+        const applicantName = applicantRes.rows[0].applicant_name || "";
 
         let finalManagerId = applicantRes.rows[0]?.manager_id || null;
         let finalManagerEmail = applicantRes.rows[0]?.manager_email || "";
@@ -227,19 +229,19 @@ export const applyLeave = async (req: Request, res: Response) => {
             RETURNING *`,
             [user_id, leave_type_id, from_date, to_date, total_days, reason, finalManagerId, duration_type]
         );
-        await pool.query(
+         await pool.query(
             `INSERT INTO notifications (user_id, message)
             VALUES ($1, $2)`,
             [
                 finalManagerId,
-                `${req.user.name} has applied for leave from ${new Date(from_date).toLocaleDateString("en-GB")} to ${new Date(to_date).toLocaleDateString("en-GB")} (${total_days} day${total_days === 1 ? "" : "s"}).`
+                `${applicantName} has applied for leave from ${new Date(from_date).toLocaleDateString("en-GB")} to ${new Date(to_date).toLocaleDateString("en-GB")} (${total_days} day${total_days === 1 ? "" : "s"}).`
             ]
         );
 
         void sendLeaveApplicationEmail({
             managerEmail: finalManagerEmail,
             managerName: finalManagerName,
-            employeeName: req.user.name,
+            employeeName: applicantName,
             leaveType: leave_type_name,
             fromDate: from_date,
             toDate: to_date,
