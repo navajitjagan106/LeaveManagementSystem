@@ -123,18 +123,23 @@ export const applyLeave = async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Missing required fields" });
         }
 
+        if (typeof reason !== "string" || reason.trim().length > 500) {
+            return res.status(400).json({ error: "Reason must be at most 500 characters." });
+        }
+
         const user_id = req.user.id;
 
-        const holidays = await getHolidaysinRange(from_date, to_date, pool);
-
-        // 1. Leave balance + type (single indexed query)
-        const balanceRes = await pool.query(
+        // Parallelize holiday check and leave balance fetch
+        const holidaysPromise = getHolidaysinRange(from_date, to_date, pool);
+        const balancePromise = pool.query(
             `SELECT lb.total_allocated, lb.used, lt.name AS leave_type_name, lt.is_unlimited
             FROM leave_balances lb
             JOIN leave_types lt ON lt.id = lb.leave_type_id
             WHERE lb.user_id = $1 AND lb.leave_type_id = $2`,
             [user_id, leave_type_id]
         );
+
+        const [holidays, balanceRes] = await Promise.all([holidaysPromise, balancePromise]);
 
         if (balanceRes.rows.length === 0) {
             return res.status(404).json({ error: "Leave balance not found" });
@@ -143,27 +148,22 @@ export const applyLeave = async (req: Request, res: Response) => {
         const { total_allocated, used, leave_type_name, is_unlimited } = balanceRes.rows[0];
         const remaining = total_allocated - used;
 
-        // 2. Resolve manager — retrieve the applicant's assigned manager from DB, fallback to Admin
+        // Resolve manager — retrieve the applicant's assigned manager in a single query by JOINing users m
         const applicantRes = await pool.query(
-            "SELECT manager_id FROM users WHERE id = $1",
+            `SELECT m.id AS manager_id, m.name AS manager_name, m.email AS manager_email
+             FROM users u
+             LEFT JOIN users m ON u.manager_id = m.id
+             WHERE u.id = $1`,
             [user_id]
         );
-        let finalManagerId = applicantRes.rows[0]?.manager_id || null;
-        let finalManagerEmail = "";
-        let finalManagerName = "";
 
-        if (finalManagerId) {
-            const mgrRes = await pool.query(
-                `SELECT name, email FROM users WHERE id = $1`,
-                [finalManagerId]
-            );
-            if (mgrRes.rows.length > 0) {
-                finalManagerEmail = mgrRes.rows[0].email;
-                finalManagerName = mgrRes.rows[0].name;
-            } else {
-                finalManagerId = null; // Reset if manager user is missing
-            }
+        if (applicantRes.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
         }
+
+        let finalManagerId = applicantRes.rows[0]?.manager_id || null;
+        let finalManagerEmail = applicantRes.rows[0]?.manager_email || "";
+        let finalManagerName = applicantRes.rows[0]?.manager_name || "";
 
         if (!finalManagerId) {
             const adminRes = await pool.query(
@@ -377,21 +377,21 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
         }
         const user_id = req.user.id;
         const { role_id } = req.user;
-        const roleRes = await pool.query("SELECT name FROM roles WHERE id = $1", [role_id]);
-        const role = roleRes.rows.length > 0 ? roleRes.rows[0].name : "employee";
-        const userResult = await pool.query(
-            "SELECT manager_id FROM users WHERE id = $1",
-            [user_id]
+
+        // Fetch manager_id and role permissions in parallel
+        const userPromise = pool.query("SELECT manager_id FROM users WHERE id = $1", [user_id]);
+        const permPromise = pool.query(
+            "SELECT can_view, scope FROM role_permissions WHERE role_id = $1 AND page_key = 'manage_employees'",
+            [role_id]
         );
+
+        const [userResult, permRes] = await Promise.all([userPromise, permPromise]);
 
         if (userResult.rows.length === 0) {
             return res.status(404).json({ error: "User not found" });
         }
 
-        const permRes = await pool.query(
-            "SELECT can_view, scope FROM role_permissions WHERE role_id = $1 AND page_key = 'manage_employees'",
-            [req.user.role_id]
-        );
+        const role = (req.user as any).role || "employee";
         let scope = 'sub';
 
         if (role_id === 1) {

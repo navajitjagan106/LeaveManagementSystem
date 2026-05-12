@@ -53,20 +53,20 @@ export const sendInvitation = async (req: Request, res: Response) => {
 
         const result = await pool.query(
             `INSERT INTO invitations 
-            (name, email, role, role_id, department, manager_id, policy_id, token, expires_at, invited_by)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-            [name, email, normalizedRole, targetRoleId, department || null, manager_id || null, policy_id || null, token, expiresAt, invitedBy]
+            (name, email, role_id, department, manager_id, policy_id, token, expires_at, invited_by)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+            [name, email, targetRoleId, department || null, manager_id || null, policy_id || null, token, expiresAt, invitedBy]
         );
 
         try {
-    await sendInvitationEmail({
-        name, email, token,
-        inviterName: (req.user as any)?.name || "Admin",
-        role, department: department || undefined
-    });
-} catch (emailErr) {
-    console.error("Invitation email failed, but invitation was saved. Admin can resend:", emailErr);
-}
+            await sendInvitationEmail({
+                name, email, token,
+                inviterName: (req.user as any)?.name || "Admin",
+                department: department || undefined
+            });
+        } catch (emailErr) {
+            console.error("Invitation email failed, but invitation was saved. Admin can resend:", emailErr);
+        }
 
         res.json({ success: true, data: result.rows[0] });
 
@@ -83,6 +83,7 @@ export const getInvitations = async (req: Request, res: Response) => {
 
         let query = `
             SELECT i.*,
+            r.name as role,
             u.name as inviter_name, u.email as inviter_email,
             m.name as manager_name, m.email as manager_email,
             p.name as policy_name,
@@ -91,6 +92,7 @@ export const getInvitations = async (req: Request, res: Response) => {
                 ELSE i.status
             END AS derived_status
             FROM invitations i
+            LEFT JOIN roles r ON i.role_id = r.id
             LEFT JOIN users u ON i.invited_by = u.id
             LEFT JOIN users m ON i.manager_id = m.id
             LEFT JOIN leave_policies p ON i.policy_id = p.id
@@ -140,7 +142,6 @@ export const resendInvitation = async (req: Request, res: Response) => {
             email: invitation.email,
             token: newToken,
             inviterName: (req.user as any)?.name || "Admin",
-            role: invitation.role,
             department: invitation.department
         });
 
@@ -248,6 +249,7 @@ export const acceptInvitation = async (req: Request, res: Response) => {
                 { 
                     id: dbUser.id, 
                     role_id: dbUser.role_id, 
+                    role: dbUser.role,
                     name: dbUser.name, 
                     email: dbUser.email,
                     manager_id: dbUser.manager_id,
@@ -346,6 +348,7 @@ export const acceptInvitation = async (req: Request, res: Response) => {
             { 
                 id: dbUser.id, 
                 role_id: dbUser.role_id, 
+                role: dbUser.role,
                 name: dbUser.name, 
                 email: dbUser.email,
                 manager_id: dbUser.manager_id,
@@ -553,12 +556,11 @@ export const bulkUpload = async (req: Request, res: Response) => {
 
                         await pool.query(
                             `INSERT INTO invitations 
-                            (name, email, role, role_id, department, manager_id, temp_manager_email, policy_id, token, expires_at, invited_by)
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+                            (name, email, role_id, department, manager_id, temp_manager_email, policy_id, token, expires_at, invited_by)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
                             [
                                 name,
                                 email,
-                                role.toLowerCase().trim(),
                                 targetRoleId,
                                 department || null,
                                 manager_id,
@@ -576,7 +578,6 @@ export const bulkUpload = async (req: Request, res: Response) => {
                             email,
                             token,
                             inviterName: (req.user as any)?.name || "HR Admin",
-                            role,
                             department: department || undefined
                         });
 

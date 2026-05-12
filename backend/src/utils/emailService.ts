@@ -131,14 +131,14 @@ await sendMail({ to: params.email, subject: `${params.code} is your verification
 }
 
 export async function sendInvitationEmail(params: {
-    email: string; name: string; token: string; role: string; department?: string; inviterName?: string;
+    email: string; name: string; token: string; department?: string; inviterName?: string;
 }) {
     const baseUrl = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/+$/, "");
     const acceptUrl = `${baseUrl}/setup-password/${params.token}`;
     const html = emailWrapper(`
         <h2 style="margin-top: 0; font-size: 20px; color: ${BRAND_COLOR};">Welcome to DayOff!</h2>
         <p>Hello <strong>${params.name}</strong>,</p>
-        <p>You have been invited by <strong>${params.inviterName || "an Administrator"}</strong> to join as a <strong>${params.role}</strong>.</p>
+        <p>You have been invited by <strong>${params.inviterName || "an Administrator"}</strong> to join the team.</p>
         <div style="text-align: center; margin: 30px 0;">
             <a href="${acceptUrl}" style="background: ${BRAND_COLOR}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px;">Set Up Your Account</a>
         </div>

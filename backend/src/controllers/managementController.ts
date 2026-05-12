@@ -97,12 +97,50 @@ export const updateEmployee = async (req: Request, res: Response) => {
 };
 
 export const deleteEmployee = async (req: Request, res: Response) => {
+    const client = await pool.connect();
     try {
         const { id } = req.params;
-        await pool.query(`DELETE FROM users WHERE id = $1`, [id]);
-        res.json({ success: true });
+
+        if (req.user && String(req.user.id) === String(id)) {
+            return res.status(400).json({ error: "You cannot delete your own account." });
+        }
+
+        // 1. Check if the user is a manager with active reportees
+        const reporteesCheck = await client.query(
+            "SELECT COUNT(*) FROM users WHERE manager_id = $1",
+            [id]
+        );
+        const reporteesCount = parseInt(reporteesCheck.rows[0].count, 10);
+        if (reporteesCount > 0) {
+            return res.status(400).json({
+                error: `This employee cannot be deleted because they are assigned as a manager to ${reporteesCount} active reportee(s). Please reassign their reportees first.`
+            });
+        }
+
+        // 2. Perform cascade cleanup in a transaction
+        await client.query("BEGIN");
+
+        await client.query("DELETE FROM leave_balances WHERE user_id = $1", [id]);
+        await client.query("DELETE FROM leaves WHERE user_id = $1 OR applied_to = $1 OR approved_by = $1", [id]);
+        
+        const deleteRes = await client.query("DELETE FROM users WHERE id = $1 RETURNING *", [id]);
+        
+        await client.query("COMMIT");
+
+        if (deleteRes.rows.length === 0) {
+            return res.status(404).json({ error: "Employee not found" });
+        }
+
+        res.json({ success: true, message: "Employee and all associated records deleted successfully." });
     } catch (err) {
-        res.status(500).json({ error: "Failed to delete employee" });
+        await client.query("ROLLBACK");
+        console.error("DELETE EMPLOYEE ERROR:", err);
+        res.status(500).json({ 
+            error: "Failed to delete employee", 
+            details: err instanceof Error ? err.message : String(err) 
+        });
+    } finally {
+        client.release();
     }
 };
 
@@ -124,7 +162,9 @@ export const createLeaveType = async (req: Request, res: Response) => {
 
 export const getAllLeaves = async (req: Request, res: Response) => {
     try {
-        const result = await pool.query(`
+        const { page, limit } = req.query;
+
+        let query = `
             SELECT 
                 l.id,
                 l.from_date,
@@ -138,8 +178,33 @@ export const getAllLeaves = async (req: Request, res: Response) => {
             JOIN users u ON l.user_id = u.id
             LEFT JOIN leave_types lt ON l.leave_type_id = lt.id
             ORDER BY l.created_at DESC
-        `);
+        `;
+        const values: any[] = [];
 
+        if (page && limit) {
+            const pageNum = parseInt(page as string, 10) || 1;
+            const limitNum = parseInt(limit as string, 10) || 10;
+            const offset = (pageNum - 1) * limitNum;
+            query += ` LIMIT $1 OFFSET $2`;
+            values.push(limitNum, offset);
+
+            const countRes = await pool.query("SELECT COUNT(*) FROM leaves");
+            const total = parseInt(countRes.rows[0].count, 10);
+
+            const result = await pool.query(query, values);
+            return res.json({
+                success: true,
+                data: result.rows,
+                pagination: {
+                    total,
+                    page: pageNum,
+                    limit: limitNum,
+                    totalPages: Math.ceil(total / limitNum)
+                }
+            });
+        }
+
+        const result = await pool.query(query);
         res.json({
             success: true,
             data: result.rows
@@ -233,6 +298,10 @@ export const addHoliday = async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Missing fields" });
         }
 
+        if (typeof name !== "string" || name.trim().length > 100) {
+            return res.status(400).json({ error: "Holiday name must be at most 100 characters." });
+        }
+
         const result = await pool.query(
             `INSERT INTO holidays (name, date)
             VALUES ($1, $2)
@@ -274,6 +343,10 @@ export const updateHoliday = async (req: Request, res: Response) => {
 
         if (!name || !date) {
             return res.status(400).json({ error: "Missing fields" });
+        }
+
+        if (typeof name !== "string" || name.trim().length > 100) {
+            return res.status(400).json({ error: "Holiday name must be at most 100 characters." });
         }
 
         const result = await pool.query(

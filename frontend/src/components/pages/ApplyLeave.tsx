@@ -188,6 +188,7 @@ const ApplyLeave: React.FC = () => {
                             placeholder="Briefly describe the reason for your leave…"
                             className="h-20 resize-none border-gray-200 focus:border-primary focus:ring-primary/20 text-sm"
                             required
+                            maxLength={500}
                         />
                     </div>
 

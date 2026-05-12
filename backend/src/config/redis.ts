@@ -5,9 +5,41 @@ import dotenv from "dotenv";
 // In-memory fallback if Redis connection fails or for local dev
 class RedisMock {
     private store = new Map<string, string>();
-    async get(key: string) { return this.store.get(key) || null; }
-    async setex(key: string, _ttl: number, value: string) { this.store.set(key, value); }
-    async del(key: string) { this.store.delete(key); }
+    private timers = new Map<string, NodeJS.Timeout>();
+
+    async get(key: string) {
+        return this.store.get(key) || null;
+    }
+
+    async setex(key: string, ttl: number, value: string) {
+        this.store.set(key, value);
+        
+        const existing = this.timers.get(key);
+        if (existing) {
+            clearTimeout(existing);
+        }
+
+        const timer = setTimeout(() => {
+            this.store.delete(key);
+            this.timers.delete(key);
+            console.log(`[REDIS MOCK] Key ${key} expired after TTL of ${ttl}s`);
+        }, ttl * 1000);
+
+        if (typeof timer.unref === "function") {
+            timer.unref();
+        }
+        this.timers.set(key, timer);
+    }
+
+    async del(key: string) {
+        this.store.delete(key);
+        const timer = this.timers.get(key);
+        if (timer) {
+            clearTimeout(timer);
+            this.timers.delete(key);
+        }
+    }
+
     on(event: string, callback: () => void) {
         if (event === "connect") setTimeout(callback, 100);
     }

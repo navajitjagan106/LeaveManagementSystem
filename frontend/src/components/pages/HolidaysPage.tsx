@@ -164,6 +164,7 @@ const HolidaysPage = () => {
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
                                         className="rounded-xl border-gray-200"
+                                        maxLength={100}
                                     />
                                 </div>
                                 <div className="space-y-2">

@@ -22,6 +22,7 @@ router.get("/balance", restrictAdmin, getLeaveBalance);
 router.get("/team", getTeamLeaves)
 router.get("/teamonleave", getTeamOnLeave);
 router.get("/dashboard", restrictAdmin, getDashboardData)
+router.patch("/profile", updateUserProfile)
 router.patch("/getuserdata", updateUserProfile)
 router.post("/calculatedays", calculateDays)
 router.get("/getinitdata", restrictAdmin, getLeaveInitData)

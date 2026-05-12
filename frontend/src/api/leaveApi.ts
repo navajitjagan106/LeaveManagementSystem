@@ -44,7 +44,7 @@ export const updateUserProfile = (data: {
     gender?: string | null;
     date_of_birth?: string | null;
     location?: string | null;
-}) => API.patch("/leaves/getuserdata", data)
+}) => API.patch("/leaves/profile", data)
 
 export const cancelLeave = (id: number) =>
     API.delete(`/leaves/cancel/${id}`);

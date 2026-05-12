@@ -53,7 +53,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
         const userResult = await pool.query(
             `SELECT u.*, r.id as role_id, r.name as role FROM users u 
             JOIN roles r ON u.role_id = r.id 
-            WHERE u.email = $1`, 
+            WHERE u.email = $1`,
             [email]
         );
         if (userResult.rows.length === 0)
@@ -62,7 +62,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
         const dbUser = userResult.rows[0];
 
         const storedCode = await redis.get(`otp:${dbUser.id}`);
-        
+
         if (!storedCode || storedCode.toString().trim() !== code.toString().trim()) {
             console.warn(`OTP VERIFICATION FAILED: user=${dbUser.email}`);
             return res.status(400).json({ error: "Invalid or expired OTP" });
@@ -71,10 +71,10 @@ export const verifyOtp = async (req: Request, res: Response) => {
         await redis.del(`otp:${dbUser.id}`);
 
         const token = jwt.sign(
-            { 
-                id: dbUser.id, 
-                role_id: dbUser.role_id, 
-                name: dbUser.name, 
+            {
+                id: dbUser.id,
+                role_id: dbUser.role_id,
+                name: dbUser.name,
                 email: dbUser.email,
                 manager_id: dbUser.manager_id,
                 department: dbUser.department
@@ -126,7 +126,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
 export const getMe = async (req: Request, res: Response) => {
     try {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-        
+
         const userResult = await pool.query(
             `SELECT u.id, u.name, u.email, r.id AS role_id, r.name AS role, u.department, u.phone, u.gender, u.date_of_birth, u.location,
             m.name AS manager_name, p.name AS policy_name,
@@ -143,10 +143,10 @@ export const getMe = async (req: Request, res: Response) => {
 
         const dbUser = userResult.rows[0];
         const newToken = jwt.sign(
-            { 
-                id: dbUser.id, 
-                role_id: dbUser.role_id, 
-                name: dbUser.name, 
+            {
+                id: dbUser.id,
+                role_id: dbUser.role_id,
+                name: dbUser.name,
                 email: dbUser.email,
                 manager_id: dbUser.manager_id,
                 department: dbUser.department
@@ -223,6 +223,11 @@ export const resetPassword = async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Password must be at least 6 characters long" });
         }
 
+        const isUsed = await redis.get(`used_token:${token}`);
+        if (isUsed) {
+            return res.status(400).json({ error: "This password reset link has already been used" });
+        }
+
         const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
         if (!decoded || decoded.purpose !== "password_reset") {
             return res.status(400).json({ error: "Invalid or expired password reset link" });
@@ -230,6 +235,9 @@ export const resetPassword = async (req: Request, res: Response) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         await pool.query("UPDATE users SET password = $1 WHERE id = $2", [hashedPassword, decoded.id]);
+
+        // Blacklist token in Redis for 1 hour (3600s) to prevent reuse
+        await redis.setex(`used_token:${token}`, 3600, "1");
 
         res.json({ success: true, message: "Your password has been reset successfully." });
     } catch (err: any) {
