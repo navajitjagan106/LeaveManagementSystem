@@ -42,7 +42,7 @@ const Sidebar: React.FC = () => {
         { path: "/management/leave-types", label: "Leave Types", icon: CalendarDays, show: hasPage("manage_leave_types") },
         { path: "/management/policies", label: "Policies", icon: BookOpen, show: hasPage("manage_policies") },
         { path: "/management/global-leaves", label: "Global Leaves", icon: FileText, show: hasPage("manage_leave_records") },
-        { path: "/management/permissions", label: "Perms", icon: ShieldCheck, show: isAdmin },
+        { path: "/management/permissions", label: "Perms", icon: ShieldCheck, show: hasPage("manage_permissions") },
         { path: "/apply-leave", label: "Apply Leave", icon: FileText, show: !isAdmin },
         { path: "/leave-history", label: "History", icon: History, show: !isAdmin },
         { path: "/calendar", label: "Calendar", icon: CalendarDays, show: true },

@@ -15,8 +15,8 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../ui/chart';
 
 import EmployeeDetailsModal from '../modals/EmployeeDetailModal';
 import InviteEmployeeModal from '../modals/InviteEmployeeModal';
+import { getAvatarGradient } from '../../utils/avatar';
 
-const PALETTE = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899", "#14b8a6", "#f97316"];
 const ROLE_COLORS = [
     { bg: '#ede9fe', text: '#5746AF' },
     { bg: '#dbeafe', text: '#3b82f6' },
@@ -46,15 +46,12 @@ type Employee = {
 };
 type FilterKey = string
 
-const avatarColor = (name: string) => PALETTE[name.charCodeAt(0) % PALETTE.length];
-
 const EmployeeCard: React.FC<{
     emp: Employee;
     onClick: () => void;
     onEdit?: () => void;
 }> = ({ emp, onClick, onEdit }) => {
     const roleStyle = getRoleStyle(emp.role);
-    const color = avatarColor(emp.name);
 
     return (
         <div className="bg-white border border-gray-100 rounded-xl p-4 flex flex-col gap-3 hover:border-primary-light hover:shadow-md transition-all group">
@@ -62,8 +59,7 @@ const EmployeeCard: React.FC<{
                 <div
                     role="button"
                     onClick={onClick}
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 cursor-pointer"
-                    style={{ background: color }}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 cursor-pointer bg-gradient-to-tr ${getAvatarGradient(emp.id || emp.name)}`}
                 >
                     {emp.name.charAt(0).toUpperCase()}
                 </div>

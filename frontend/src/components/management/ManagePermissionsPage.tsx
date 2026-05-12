@@ -48,6 +48,7 @@ const SUPPORTED_ACTIONS: Record<string, ("can_view" | "can_edit" | "can_delete")
     manage_policies: ["can_view", "can_edit", "can_delete"],
     manage_leave_records: ["can_view"],
     bulk_upload: ["can_view"],
+    manage_permissions: ["can_view", "can_edit", "can_delete"],
 };
 
 const isSupported = (pageKey: string, actionKey: "can_view" | "can_edit" | "can_delete") => {

@@ -16,6 +16,7 @@ import RedirectHandler from "./components/common/ReDirectHandler";
 import SetupPassword from "./components/pages/SetupPassword";
 import HolidaysPage from "./components/pages/HolidaysPage";
 import { ToastProvider } from "./components/common/ToastContext";
+import LandingPage from "./components/pages/LandingPage";
 
 // Admin pages
 import AdminDashboard from "./components/management/AdminDashboard";
@@ -31,6 +32,7 @@ const App: React.FC = () => {
     <ToastProvider>
       <Router>
         <Routes>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/setup-password/:token" element={<SetupPassword />} />
 
@@ -150,7 +152,7 @@ const App: React.FC = () => {
             <Route
               path="management/permissions"
               element={
-                <ProtectedRoute allowedRoles={["admin"]}>
+                <ProtectedRoute requiredPage="manage_permissions">
                   <ManagePermissionsPage />
                 </ProtectedRoute>
               }

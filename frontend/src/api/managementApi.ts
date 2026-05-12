@@ -3,12 +3,11 @@ import API from "./axios";
 export const getEmployees = () => API.get("/management/users");
 export const updateEmployee = (id: number, data: any) => API.patch(`/management/users/${id}`, data);
 export const deleteEmployee = (id: number) => API.delete(`/management/users/${id}`);
-export const updateManager = (id: number, manager_id: number | null) => API.patch(`/management/users/${id}/manager`, { manager_id });
 export const reassignPolicy = (id: number, policy_id: number | null) => API.patch(`/management/users/${id}/policy`, { policy_id });
 export const resetLeaveBalance = (id: number) => API.post(`/management/users/${id}/reset-balance`);
 
 export const addLeaveType = (data: { name: string; description?: string }) => API.post("/management/leave-types", data);
-export const updateLeaveType = (id: number, name: string) => API.patch(`/management/leave-types/${id}`, { name });
+export const updateLeaveType = (id: number, data: { name: string; description?: string }) => API.patch(`/management/leave-types/${id}`, data);
 export const deleteLeaveType = (id: number) => API.delete(`/management/leave-types/${id}`);
 
 export const getPolicies = () => API.get("/management/policies");
@@ -20,6 +19,7 @@ export const setPolicyRules = (id: number, rules: { leave_type_id: number; total
     API.put(`/management/policies/${id}/rules`, { rules });
 
 export const addHoliday = (data: any) => API.post("/management/holidays", data);
+export const updateHoliday = (id: number, data: any) => API.patch(`/management/holidays/${id}`, data);
 export const deleteHoliday = (id: number) => API.delete(`/management/holidays/${id}`);
 
 export const getAllLeaves = () => API.get("/management/leaves");

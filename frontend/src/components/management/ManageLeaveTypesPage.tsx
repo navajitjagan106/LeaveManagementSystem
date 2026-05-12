@@ -1,8 +1,8 @@
 import PageHeader from "../common/PageHeader";
 import { useEffect, useState, useMemo } from "react";
 import { getLeaveTypes } from "../../api/leaveApi";
-import { addLeaveType, deleteLeaveType } from "../../api/managementApi";
-import { Plus, Trash2 } from "lucide-react";
+import { addLeaveType, deleteLeaveType, updateLeaveType } from "../../api/managementApi";
+import { Plus, Trash2, Edit } from "lucide-react";
 import { useToast } from "../common/ToastContext";
 import { useAsync } from "../../hooks/useAsync";
 import {
@@ -38,6 +38,36 @@ const ManageLeaveTypesPage = () => {
     const [name, setName] = useState("");
     const [desc, setDesc] = useState("");
     const [submitting, setSubmitting] = useState(false);
+
+    // Editing states
+    const [editingType, setEditingType] = useState<any | null>(null);
+    const [editName, setEditName] = useState("");
+    const [editDesc, setEditDesc] = useState("");
+    const [editing, setEditing] = useState(false);
+
+    const handleEditOpen = (type: any) => {
+        setEditingType(type);
+        setEditName(type.name);
+        setEditDesc(type.description || "");
+    };
+
+    const handleUpdate = async () => {
+        if (!editName.trim()) { toast.warning("Name is required"); return; }
+        try {
+            setEditing(true);
+            await updateLeaveType(editingType.id, {
+                name: editName.trim(),
+                description: editDesc.trim() || undefined
+            });
+            setEditingType(null);
+            fetchTypes();
+            toast.success("Leave category updated successfully!");
+        } catch {
+            toast.error("Failed to update leave category");
+        } finally {
+            setEditing(false);
+        }
+    };
 
     const handleAdd = async () => {
         if (!name.trim()) { toast.warning("Name is required"); return; }
@@ -161,17 +191,80 @@ const ManageLeaveTypesPage = () => {
                             <p className="text-xs text-gray-400 font-medium">{t.description || "No description provided for this leave category"}</p>
                         </div>
                         {canEdit && t.id !== 7 && (
-                            <button
-                                onClick={() => handleDelete(t.id)}
-                                className="text-gray-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition"
-                                title="Delete category"
-                            >
-                                <Trash2 size={15} />
-                            </button>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => handleEditOpen(t)}
+                                    className="text-gray-300 hover:text-primary hover:bg-primary-light/10 p-2 rounded-lg transition cursor-pointer"
+                                    title="Edit category"
+                                >
+                                    <Edit size={15} />
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(t.id)}
+                                    className="text-gray-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition cursor-pointer"
+                                    title="Delete category"
+                                >
+                                    <Trash2 size={15} />
+                                </button>
+                            </div>
                         )}
                     </div>
                 ))}
             </div>
+
+            {/* ── EDIT CATEGORY DIALOG MODAL ── */}
+            {editingType && (
+                <Dialog open={true} onOpenChange={(open) => { if (!open) setEditingType(null); }}>
+                    <DialogContent className="max-w-md p-6 bg-white rounded-2xl shadow-xl border-0">
+                        <DialogHeader className="text-left mb-4">
+                            <DialogTitle className="text-xl font-bold text-gray-900">Edit Leave Category</DialogTitle>
+                            <DialogDescription className="text-sm font-medium text-gray-500 mt-1">
+                                Update the category name and description.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4 my-5">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-lt-name" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Type Name</Label>
+                                <Input
+                                    id="edit-lt-name"
+                                    placeholder="e.g. Paternity Leave"
+                                    value={editName}
+                                    onChange={(e) => setEditName(e.target.value)}
+                                    className="rounded-xl border-gray-200 h-11 focus-visible:ring-primary-light"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-lt-desc" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Description (Optional)</Label>
+                                <Input
+                                    id="edit-lt-desc"
+                                    placeholder="e.g. Leave for new fathers"
+                                    value={editDesc}
+                                    onChange={(e) => setEditDesc(e.target.value)}
+                                    className="rounded-xl border-gray-200 h-11 focus-visible:ring-primary-light"
+                                />
+                            </div>
+                        </div>
+
+                        <DialogFooter className="flex gap-3 mt-6">
+                            <Button 
+                                variant="outline" 
+                                onClick={() => setEditingType(null)}
+                                className="flex-1 rounded-xl text-gray-500 border-gray-200 font-medium h-11 cursor-pointer"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleUpdate}
+                                disabled={editing}
+                                className="flex-1 bg-primary hover:bg-primary-dark text-white rounded-xl shadow-lg shadow-primary-light font-bold h-11 cursor-pointer"
+                            >
+                                {editing ? "Updating..." : "Update Category"}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
     );
 };

@@ -435,18 +435,36 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
 
         const result = await pool.query(query, values);
 
-        const events = result.rows.map((row) => ({
-            id: row.id,
-            name: row.name,
-            leave_type: row.leave_type,
-            from_date: row.from_date,
-            to_date: row.to_date,
-            duration_type: row.duration_type,
-            user_id: row.user_id,
-            manager_id: row.manager_id,
-            status: row.status,
-            ...(scope === 'all' && { reason: row.reason })
-        }));
+        const events = result.rows.map((row) => {
+
+            let category = 'organization';
+
+            if (Number(row.user_id) === Number(user_id)) {
+                category = 'self';
+            }
+            else if (Number(row.manager_id) === Number(user_id)) {
+                category = 'reportee';
+            }
+            else if (manager_id && Number(row.manager_id) === Number(manager_id)) {
+                category = 'teammate';
+            }
+
+
+
+            return {
+                id: row.id,
+                name: row.name,
+                leave_type: row.leave_type,
+                from_date: row.from_date,
+                to_date: row.to_date,
+                duration_type: row.duration_type,
+                user_id: row.user_id,
+                manager_id: row.manager_id,
+                status: row.status,
+                category,
+                ...(scope === 'all' && { reason: row.reason })
+            };
+        });
 
         res.json({ events, role });
 
@@ -485,11 +503,14 @@ export const getManagerLeaves = async (req: Request, res: Response) => {
             l.duration_type,
             l.approved_by,
             au.name AS approved_by_name,
+            l.applied_to AS manager_id,
+            mu.name AS manager_name,
             COUNT(*) OVER() AS total_count
         FROM leaves l
         JOIN users u  ON l.user_id      = u.id
         LEFT JOIN leave_types lt ON l.leave_type_id = lt.id
         LEFT JOIN users au ON l.approved_by = au.id
+        LEFT JOIN users mu ON l.applied_to = mu.id
         ${baseWhere}`;
 
         if (status) {
@@ -1112,14 +1133,14 @@ export const getTeamMemberProfileData = async (req: Request, res: Response) => {
             pool.query(
                 `SELECT
                     TO_CHAR(DATE_TRUNC('month', from_date), 'Mon') AS month,
-                    DATE_TRUNC('month', from_date) AS month_date,
+                    EXTRACT(MONTH FROM from_date)::int AS month_num,
                     SUM(total_days) AS days
                 FROM leaves
                 WHERE status = 'approved'
                 AND user_id = $1
-                AND from_date >= DATE_TRUNC('month', NOW()) - INTERVAL '11 months'
-                GROUP BY DATE_TRUNC('month', from_date)
-                ORDER BY month_date`,
+                AND EXTRACT(YEAR FROM from_date) = EXTRACT(YEAR FROM NOW())
+                GROUP BY EXTRACT(MONTH FROM from_date), TO_CHAR(DATE_TRUNC('month', from_date), 'Mon')
+                ORDER BY month_num`,
                 [targetId]
             ),
         ]);

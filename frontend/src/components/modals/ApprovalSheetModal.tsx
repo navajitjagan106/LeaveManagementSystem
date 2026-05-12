@@ -11,11 +11,15 @@ const STATUS_CONFIG = {
     rejected: { label: "Rejected", row: "bg-rose-50/40 text-rose-600 border-rose-100/50", badge: "bg-rose-50 text-rose-600 border-rose-100/80" },
 };
 
-const fmtDate = (d: string) =>
-    new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+const fmtDate = (d?: string | null) => {
+    if (!d) return "—";
+    return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+};
 
-const fmtDateTime = (d: string) =>
-    new Date(d).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
+const fmtDateTime = (d?: string | null) => {
+    if (!d) return "—";
+    return new Date(d).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
+};
 
 interface ApprovalSheetModalProps {
     selected: ApprovalRequest | null;
@@ -79,6 +83,27 @@ const ApprovalSheetModal: React.FC<ApprovalSheetModalProps> = ({
                         <div className="flex-1 px-8 py-8 space-y-6 overflow-y-auto">
                             <div className="grid grid-cols-1 gap-4">
                                 <div className="bg-gray-50 rounded-2xl px-5 py-4 flex flex-col gap-1 border border-gray-100/50">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Applied By</span>
+                                    <span className="text-sm font-semibold text-gray-800">{selected.employee_name}</span>
+                                    <span className="text-xs text-gray-400 mt-0.5">Department: {selected.department || "—"}</span>
+                                </div>
+
+                                {selected.manager_name && (
+                                    <div className="bg-gray-50 rounded-2xl px-5 py-4 flex flex-col gap-1 border border-gray-100/50">
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Applied To (Manager)</span>
+                                        <span className="text-sm font-semibold text-gray-800">{selected.manager_name}</span>
+                                        {selected.manager_id && (
+                                            <span className="text-xs text-gray-400 mt-0.5">Manager ID: #{selected.manager_id}</span>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="bg-gray-50 rounded-2xl px-5 py-4 flex flex-col gap-1 border border-gray-100/50">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Type of Leave</span>
+                                    <span className="text-sm font-semibold text-gray-800">{selected.leave_type}</span>
+                                </div>
+
+                                <div className="bg-gray-50 rounded-2xl px-5 py-4 flex flex-col gap-1 border border-gray-100/50">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Duration</span>
                                     <span className="text-sm font-semibold text-gray-800">
                                         {fmtDate(selected.from_date)} – {fmtDate(selected.to_date)}
@@ -90,9 +115,38 @@ const ApprovalSheetModal: React.FC<ApprovalSheetModalProps> = ({
 
                                 {selected.applied_at && (
                                     <div className="bg-gray-50 rounded-2xl px-5 py-4 flex flex-col gap-1 border border-gray-100/50">
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Applied on</span>
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Applied On</span>
                                         <span className="text-sm font-semibold text-gray-800">{fmtDateTime(selected.applied_at)}</span>
                                     </div>
+                                )}
+
+                                {selected.status !== "pending" && (
+                                    <>
+                                        <div className="bg-gray-50 rounded-2xl px-5 py-4 flex flex-col gap-1 border border-gray-100/50">
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                {selected.status === "approved" ? "Approved By" : "Rejected By"}
+                                            </span>
+                                            <span className="text-sm font-semibold text-gray-800">
+                                                {selected.approved_by_name || "System Admin"}
+                                            </span>
+                                        </div>
+
+                                        <div className="bg-gray-50 rounded-2xl px-5 py-4 flex flex-col gap-1 border border-gray-100/50">
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                {selected.status === "approved" ? "Approved At" : "Rejected At"}
+                                            </span>
+                                            <span className="text-sm font-semibold text-gray-800">
+                                                {fmtDateTime(selected.approved_at)}
+                                            </span>
+                                        </div>
+
+                                        {selected.status === "rejected" && selected.rejection_reason && (
+                                            <div className="bg-rose-50/50 rounded-2xl px-5 py-4 flex flex-col gap-1 border border-rose-100">
+                                                <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Reason for Rejection</span>
+                                                <p className="text-sm text-rose-700 font-medium italic mt-0.5">"{selected.rejection_reason}"</p>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
 
@@ -100,21 +154,6 @@ const ApprovalSheetModal: React.FC<ApprovalSheetModalProps> = ({
                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Reason for Leave</p>
                                 <p className="text-sm text-gray-700 leading-relaxed font-medium italic">"{selected.reason}"</p>
                             </div>
-
-                            {selected.approved_at && selected.status !== "pending" && (
-                                <div className={`p-6 rounded-2xl border ${selected.status === "approved" ? "bg-green-50 border-green-100/50" : "bg-red-50 border-red-100/50"}`}>
-                                    <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${selected.status === "approved" ? "text-green-500" : "text-red-500"}`}>
-                                        {selected.status === "approved" ? "Approval Details" : "Rejection Details"}
-                                    </p>
-                                    <p className="text-sm font-semibold text-gray-800">
-                                        Processed on {fmtDateTime(selected.approved_at)}
-                                        {selected.approved_by_name && ` by ${selected.approved_by_name}`}
-                                    </p>
-                                    {selected.status === "rejected" && selected.rejection_reason && (
-                                        <p className="text-sm text-red-700 mt-2 italic font-medium">"{selected.rejection_reason}"</p>
-                                    )}
-                                </div>
-                            )}
 
                             {showRejectInput && selected.status === "pending" && (
                                 <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getHolidays } from "../../api/leaveApi";
-import { addHoliday, deleteHoliday } from "../../api/managementApi";
-import { CalendarCheck, Trash2, Plus } from "lucide-react";
+import { addHoliday, updateHoliday, deleteHoliday } from "../../api/managementApi";
+import { CalendarCheck, Trash2, Plus, Edit2 } from "lucide-react";
 import PageHeader from "../common/PageHeader";
 import Loader from "../common/Loader";
 import { useToast } from "../common/ToastContext";
@@ -34,6 +34,7 @@ const HolidaysPage = () => {
     const [date, setDate] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [editingHoliday, setEditingHoliday] = useState<any | null>(null);
 
     const fetchHolidays = () => {
         getHolidays()
@@ -46,18 +47,24 @@ const HolidaysPage = () => {
         fetchHolidays();
     }, []);
 
-    const handleAdd = async () => {
+    const handleSubmit = async () => {
         if (!name || !date) { toast.warning("Fill all fields"); return; }
         try {
             setSubmitting(true);
-            await addHoliday({ name, date });
+            if (editingHoliday) {
+                await updateHoliday(editingHoliday.id, { name, date });
+                toast.success("Holiday updated!");
+            } else {
+                await addHoliday({ name, date });
+                toast.success("Holiday added!");
+            }
             setName("");
             setDate("");
+            setEditingHoliday(null);
             setIsDialogOpen(false);
             fetchHolidays();
-            toast.success("Holiday added!");
         } catch {
-            toast.error("Failed to add holiday");
+            toast.error(editingHoliday ? "Failed to update holiday" : "Failed to add holiday");
         } finally {
             setSubmitting(false);
         }
@@ -66,6 +73,15 @@ const HolidaysPage = () => {
     const handleDelete = async (id: number) => {
         try { await deleteHoliday(id); fetchHolidays(); toast.success("Holiday deleted"); }
         catch { toast.error("Failed to delete holiday"); }
+    };
+
+    const handleOpenChange = (open: boolean) => {
+        setIsDialogOpen(open);
+        if (!open) {
+            setName("");
+            setDate("");
+            setEditingHoliday(null);
+        }
     };
 
     const today = new Date();
@@ -90,15 +106,31 @@ const HolidaysPage = () => {
                     <p className="text-xs text-gray-400">{fmt(h.date)}</p>
                 </div>
             </div>
-            {canDelete && (
-                <button
-                    onClick={() => handleDelete(h.id)}
-                    className="text-gray-300 group-hover:text-red-400 transition p-1.5 rounded-lg hover:bg-red-50 focus:outline-none"
-                    title="Delete holiday"
-                >
-                    <Trash2 size={14} />
-                </button>
-            )}
+            <div className="flex items-center gap-1">
+                {canEdit && (
+                    <button
+                        onClick={() => {
+                            setEditingHoliday(h);
+                            setName(h.name);
+                            setDate(h.date.split("T")[0]);
+                            setIsDialogOpen(true);
+                        }}
+                        className="text-gray-300 group-hover:text-blue-500 transition p-1.5 rounded-lg hover:bg-blue-50 focus:outline-none"
+                        title="Edit holiday"
+                    >
+                        <Edit2 size={14} />
+                    </button>
+                )}
+                {canDelete && (
+                    <button
+                        onClick={() => handleDelete(h.id)}
+                        className="text-gray-300 group-hover:text-red-400 transition p-1.5 rounded-lg hover:bg-red-50 focus:outline-none"
+                        title="Delete holiday"
+                    >
+                        <Trash2 size={14} />
+                    </button>
+                )}
+            </div>
         </div>
     );
 
@@ -110,7 +142,7 @@ const HolidaysPage = () => {
                     subtitle={`${upcoming.length} upcoming holidays this year`}
                 />
                 {canEdit && (
-                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
                         <DialogTrigger asChild>
                             <button className="flex items-center gap-1.5 bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm hover:shadow-md active:scale-95 flex-shrink-0">
                                 <Plus size={13} className="stroke-[3px]" /> Add Holiday
@@ -118,8 +150,10 @@ const HolidaysPage = () => {
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-[425px]">
                             <DialogHeader>
-                                <DialogTitle>Add New Holiday</DialogTitle>
-                                <DialogDescription>Enter the holiday details below.</DialogDescription>
+                                <DialogTitle>{editingHoliday ? "Edit Holiday" : "Add New Holiday"}</DialogTitle>
+                                <DialogDescription>
+                                    {editingHoliday ? "Update the holiday details below." : "Enter the holiday details below."}
+                                </DialogDescription>
                             </DialogHeader>
                             <div className="space-y-4 py-4">
                                 <div className="space-y-2">
@@ -148,11 +182,11 @@ const HolidaysPage = () => {
                                     <Button variant="ghost" className="rounded-xl">Cancel</Button>
                                 </DialogClose>
                                 <Button 
-                                    onClick={handleAdd} 
+                                    onClick={handleSubmit} 
                                     disabled={submitting} 
                                     className="bg-primary hover:bg-primary-dark text-white rounded-xl"
                                 >
-                                    {submitting ? "Adding..." : "Add Holiday"}
+                                    {submitting ? (editingHoliday ? "Saving..." : "Adding...") : (editingHoliday ? "Save Changes" : "Add Holiday")}
                                 </Button>
                             </DialogFooter>
                         </DialogContent>

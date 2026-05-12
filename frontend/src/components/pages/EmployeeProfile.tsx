@@ -14,6 +14,8 @@ import {
 import Loader from '../common/Loader';
 import { Building2, Mail, Shield, Users, BookOpen, Phone, MapPin, UserRound, CalendarDays } from 'lucide-react';
 
+import { getAvatarGradient } from '../../utils/avatar';
+
 const PALETTE = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899", "#14b8a6", "#f97316"];
 const LIGHT_PALETTE = ["#eef2ff", "#d1fae5", "#fef3c7", "#fee2e2", "#dbeafe", "#fce7f3", "#ccfbf1", "#ffedd5"];
 
@@ -23,7 +25,7 @@ const ROLE_STYLE: Record<string, { bg: string; text: string }> = {
     employee: { bg: '#dbeafe', text: '#3b82f6' },
 };
 
-function avatarColor(name: string) { return PALETTE[name.charCodeAt(0) % PALETTE.length]; }
+
 
 function calcAge(dob: string | null | undefined): string {
     if (!dob) return "";
@@ -31,12 +33,8 @@ function calcAge(dob: string | null | undefined): string {
     return `(${Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25))} yrs)`;
 }
 
-function getLast12Months() {
-    const now = new Date();
-    return Array.from({ length: 12 }, (_, i) => {
-        const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
-        return d.toLocaleDateString('en', { month: 'short' });
-    });
+function getCurrentYearMonths() {
+    return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 }
 
 type BalanceItem = {
@@ -79,7 +77,7 @@ const EmployeeProfile: React.FC = () => {
                 setEmployee(empData);
                 setBalance(balData || []);
 
-                const months = getLast12Months();
+                const months = getCurrentYearMonths();
                 const dataMap = new Map<string, number>();
                 (monData || []).forEach((d: { month: string; days: number }) => {
                     dataMap.set(d.month, d.days);
@@ -94,7 +92,6 @@ const EmployeeProfile: React.FC = () => {
     if (!employee) return <div className="text-center py-16 text-gray-400">Employee not found</div>;
 
     const roleStyle = ROLE_STYLE[employee.role] ?? ROLE_STYLE.employee;
-    const color = avatarColor(employee.name);
     const balanceChartData = balance.map(b => ({ name: b.type, used: b.used, remaining: b.remaining }));
     const hasMonthly = monthlyData.some(d => d.days > 0);
 
@@ -147,8 +144,7 @@ const EmployeeProfile: React.FC = () => {
                         style={{ background: "linear-gradient(160deg, #5746AF 0%, #302178 100%)" }}
                     >
                         <div
-                            className="w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold ring-4 ring-white/20 mb-3"
-                            style={{ background: color }}
+                            className={`w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold ring-4 ring-white/20 mb-3 bg-gradient-to-tr ${getAvatarGradient(employee.id || employee.name)}`}
                         >
                             {employee.name.charAt(0).toUpperCase()}
                         </div>
@@ -251,7 +247,7 @@ const EmployeeProfile: React.FC = () => {
                         <Card className="shadow-none border border-gray-100 flex flex-col min-h-0">
                             <CardHeader className="pb-1 pt-4 px-5 flex-shrink-0">
                                 <CardTitle className="text-sm">Monthly Leave Taken</CardTitle>
-                                <CardDescription className="text-xs">Approved leave days — last 12 months</CardDescription>
+                                <CardDescription className="text-xs">Approved leave days — current year</CardDescription>
                             </CardHeader>
                             <CardContent className="flex-1 min-h-0 px-2 pb-4">
                                 <div className="relative h-full w-full">
@@ -275,7 +271,7 @@ const EmployeeProfile: React.FC = () => {
                                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                             <div className="bg-white/80 border border-gray-100 px-3 py-2 rounded-xl shadow-md backdrop-blur-sm text-center">
                                                 <p className="text-xs font-bold text-gray-500">No Approved Leaves</p>
-                                                <p className="text-[10px] text-gray-400">Past 12 months</p>
+                                                <p className="text-[10px] text-gray-400">Current calendar year</p>
                                             </div>
                                         </div>
                                     )}

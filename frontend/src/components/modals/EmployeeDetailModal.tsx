@@ -7,6 +7,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { useToast } from "../common/ToastContext";
 import { ManagerCombobox } from "../common/ManagerCombobox";
+import { getAvatarGradient } from "../../utils/avatar";
 import {
     Dialog,
     DialogContent,
@@ -236,7 +237,7 @@ const EmployeeDetailsModal = ({ user, onClose, onSuccess }: any) => {
                 <div className="px-6 py-5 border-b border-gray-100 bg-white flex-shrink-0">
                     <DialogHeader className="text-left">
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-primary-light flex-shrink-0">
+                            <div className={`w-12 h-12 rounded-2xl bg-gradient-to-tr ${getAvatarGradient(user.id || user.name)} flex items-center justify-center text-white font-bold text-lg shadow-lg flex-shrink-0`}>
                                 {initials(user.name)}
                             </div>
                             <div className="flex-1 min-w-0">

@@ -8,6 +8,7 @@ import { LeaveBalance, LeaveType } from "../../types";
 import PageHeader from '../common/PageHeader';
 import { useToast } from '../common/ToastContext';
 import { calculateWorkingDays } from "../../utils/calculateWorkingDays";
+import { getAvatarGradient } from "../../utils/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
@@ -17,7 +18,7 @@ import { Briefcase, HeartPulse, CalendarDays, AlertTriangle, UserCircle2, Users 
 
 const PALETTE = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899", "#14b8a6", "#f97316"];
 const LIGHT_PALETTE = ["#eef2ff", "#d1fae5", "#fef3c7", "#fee2e2", "#dbeafe", "#fce7f3", "#ccfbf1", "#ffedd5"];
-function avatarColor(name: string) { return PALETTE[name.charCodeAt(0) % PALETTE.length]; }
+
 
 const LEAVE_ICONS: Record<string, React.ReactNode> = {
     "Casual Leave": <Briefcase className="w-4 h-4" />,
@@ -278,8 +279,7 @@ const ApplyLeave: React.FC = () => {
                                         <div
                                             key={i}
                                             title={person.name}
-                                            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                                            style={{ background: avatarColor(person.name) }}
+                                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white bg-gradient-to-tr ${getAvatarGradient(person.user_id || person.name)}`}
                                         >
                                             {person.name.charAt(0).toUpperCase()}
                                         </div>

@@ -2,8 +2,9 @@ import PageHeader from "../common/PageHeader";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { getInvitations, resendInvitation, cancelInvitation } from "../../api/managementApi";
 import InviteEmployeeModal from "../modals/InviteEmployeeModal";
+import { getAvatarGradient } from "../../utils/avatar";
 import { useToast } from "../common/ToastContext";
-import { Mail, RefreshCw, X, ChevronLeft, ChevronRight, Clock, Briefcase, User, ArrowUpRight, ShieldCheck, UserCheck } from "lucide-react";
+import { Mail, RefreshCw, X, ChevronLeft, ChevronRight, Clock, Briefcase, User, ArrowUpRight, ShieldCheck, UserCheck, MoreHorizontal } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { useAsync } from "../../hooks/useAsync";
@@ -17,34 +18,32 @@ const STATUS_STYLES: Record<string, string> = {
 
 const FILTERS = ["all", "pending", "accepted", "expired", "cancelled"];
 
-const avatarColor = (str: string) => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const colors = ["#274C77", "#6096BA", "#5746AF", "#008080", "#4B0082", "#2E8B57", "#8B0000", "#D2691E"];
-    return colors[Math.abs(hash) % colors.length];
-};
+
 
 const InvitationCard = ({ inv, onResend, onCancel, canEdit, canDelete }: any) => {
-    const isPending = inv.status === "pending";
+    const [showMenu, setShowMenu] = useState(false);
     const statusStyle = STATUS_STYLES[inv.status] || "bg-gray-100 text-gray-500";
-    const avatarCol = avatarColor(inv.name || inv.email);
+    const avatarCol = getAvatarGradient(inv.id || inv.name || inv.email);
     const formattedExpiry = new Date(inv.expires_at).toLocaleDateString("en-GB", {
         day: "numeric",
         month: "short",
         year: "numeric"
     });
 
+    const canResend = inv.status === "pending" || inv.status === "expired" || inv.status === "cancelled";
+    const canCancelAction = inv.status === "pending" || inv.status === "expired";
+
     return (
-        <div className="bg-white border border-gray-100 rounded-xl p-5 flex flex-col justify-between hover:border-primary-light hover:shadow-md transition-all group min-h-[250px] relative">
+        <div 
+            onMouseLeave={() => setShowMenu(false)}
+            className="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col justify-between hover:border-primary-light hover:shadow-lg hover:shadow-primary-light/5 hover:translate-y-[-2px] transition-all duration-300 group min-h-[220px] relative"
+        >
             <div className="space-y-4">
                 {/* Header Section */}
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div
-                            className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                            style={{ background: avatarCol }}
+                            className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 bg-gradient-to-tr ${avatarCol}`}
                         >
                             {(inv.name || inv.email).charAt(0).toUpperCase()}
                         </div>
@@ -55,9 +54,52 @@ const InvitationCard = ({ inv, onResend, onCancel, canEdit, canDelete }: any) =>
                             <p className="text-xs text-gray-400 truncate mt-0.5" title={inv.email}>{inv.email}</p>
                         </div>
                     </div>
-                    <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-extrabold uppercase tracking-widest ${statusStyle} flex-shrink-0`}>
-                        {inv.status}
-                    </span>
+                    
+                    <div className="flex items-center gap-2">
+                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-extrabold uppercase tracking-widest ${statusStyle} flex-shrink-0`}>
+                            {inv.status}
+                        </span>
+                        
+                        {canEdit && (canResend || (canDelete && canCancelAction)) && (
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowMenu(!showMenu)}
+                                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all active:scale-95"
+                                    aria-label="Actions Menu"
+                                >
+                                    <MoreHorizontal size={16} />
+                                </button>
+                                {showMenu && (
+                                    <div className="absolute right-0 mt-1 w-36 bg-white border border-gray-100 rounded-xl shadow-lg py-1 z-20">
+                                        {canResend && (
+                                            <button
+                                                onClick={() => {
+                                                    onResend(inv.id);
+                                                    setShowMenu(false);
+                                                }}
+                                                className="w-full px-3 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-all"
+                                            >
+                                                <RefreshCw size={12} className="text-gray-400" />
+                                                Resend Invite
+                                            </button>
+                                        )}
+                                        {canDelete && canCancelAction && (
+                                            <button
+                                                onClick={() => {
+                                                    onCancel(inv.id);
+                                                    setShowMenu(false);
+                                                }}
+                                                className="w-full px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50/50 flex items-center gap-2 transition-all border-t border-gray-50"
+                                            >
+                                                <X size={12} className="text-red-400" />
+                                                Cancel Invite
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <hr className="border-gray-50" />
@@ -112,27 +154,6 @@ const InvitationCard = ({ inv, onResend, onCancel, canEdit, canDelete }: any) =>
                     </div>
                 </div>
             </div>
-
-            {canEdit && (isPending || (canDelete && inv.status === "expired")) && (
-                <div className="flex gap-2.5 mt-5 pt-3.5 border-t border-gray-50">
-                    {isPending && (
-                        <button
-                            onClick={() => onResend(inv.id)}
-                            className="flex-1 py-2 text-xs font-bold border border-gray-150 hover:border-gray-300 hover:text-gray-800 bg-white hover:bg-gray-50 text-gray-600 rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-98 shadow-sm"
-                        >
-                            <RefreshCw size={11} /> Resend
-                        </button>
-                    )}
-                    {canDelete && (isPending || inv.status === "expired") && (
-                        <button
-                            onClick={() => onCancel(inv.id)}
-                            className="flex-1 py-2 text-xs font-bold bg-red-50 hover:bg-red-100 text-red-500 rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-98"
-                        >
-                            <X size={11} /> Cancel
-                        </button>
-                    )}
-                </div>
-            )}
         </div>
     );
 };

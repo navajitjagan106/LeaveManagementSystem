@@ -3,10 +3,6 @@ import { pool } from "../config/db";
 
 type Action = "view" | "edit" | "delete";
 
-/**
- * Simple in-memory cache for per-page permission lookups.
- * Keyed by "roleId:pageKey", stores the DB row (or null for misses).
- */
 const PAGE_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const pageCache = new Map<string, { data: any; expires: number }>();
 
@@ -30,9 +26,6 @@ export const invalidatePageAccessCache = (roleId: number) => {
     }
 };
 
-/**
- * Fetch a single page's permission row for a role, with in-memory cache.
- */
 const getCachedPagePerm = async (roleId: number, pageKey: string) => {
     const cached = getPageCached(roleId, pageKey);
     if (cached.hit) return cached.data;

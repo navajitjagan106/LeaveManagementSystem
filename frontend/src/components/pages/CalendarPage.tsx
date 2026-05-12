@@ -22,6 +22,7 @@ type RawLeave = {
     user_id: number;
     manager_id: number;
     status: string;
+    category: "self" | "teammate" | "reportee" | "organization";
     reason?: string;
 };
 
@@ -59,6 +60,8 @@ const CalendarPage: React.FC = () => {
     // Filter toggle states
     const [filterSelf, setFilterSelf] = useState(true);
     const [filterTeammates, setFilterTeammates] = useState(true);
+    const [filterReportees, setFilterReportees] = useState(true);
+    const [filterOrganization, setFilterOrganization] = useState(true);
     const [filterHolidays, setFilterHolidays] = useState(true);
 
     const hasTeamAccess = role === "admin" || !!user?.permissions?.['manage_employees']?.can_view;
@@ -119,13 +122,14 @@ const CalendarPage: React.FC = () => {
 
         // 3. Add Categorized Leaves
         rawLeaves.forEach((leave) => {
-            const isSelf = Number(leave.user_id) === Number(user?.id);
+            const category = leave.category;
+            if (category === "self" && !filterSelf) return;
 
-            if (isSelf) {
-                if (!filterSelf) return;
-            } else {
-                if (!filterTeammates) return;
-            }
+            if (category === "teammate" && !filterTeammates) return;
+
+            if (category === "reportee" && !filterReportees) return;
+
+            if (category === "organization" && !filterOrganization) return;
 
             const isHalf = leave.duration_type === "half";
             let cur = new Date(leave.from_date);
@@ -142,7 +146,7 @@ const CalendarPage: React.FC = () => {
                     let text = "white";
                     let cls: string[] = ["border"];
 
-                    if (isSelf) {
+                    if (category === "self") {
                         if (leave.status === "pending") {
                             bg = "#f5f3ff";
                             border = "#818cf8";
@@ -153,9 +157,20 @@ const CalendarPage: React.FC = () => {
                             border = "#4f46e5";
                             text = "white";
                         }
-                    } else {
+                    }
+                    else if (category === "reportee") {
+                        bg = "#06b6d4";
+                        border = "#06b6d4";
+                        text = "white";
+                    }
+                    else if (category === "teammate") {
                         bg = "#f97316";
                         border = "#f97316";
+                        text = "white";
+                    }
+                    else if (category === "organization") {
+                        bg = "#64748b";
+                        border = "#64748b";
                         text = "white";
                     }
 
@@ -174,12 +189,97 @@ const CalendarPage: React.FC = () => {
         });
 
         return events;
-    }, [rawLeaves, holidays, filterSelf, filterTeammates, filterHolidays, user, holidayDates]);
+    }, [rawLeaves, holidays, filterSelf, filterTeammates, filterReportees, filterOrganization, filterHolidays, holidayDates]);
 
-    // Count states
-    const selfCount = useMemo(() => new Set(rawLeaves.filter(l => Number(l.user_id) === Number(user?.id)).map(l => l.id)).size, [rawLeaves, user]);
-    const teammatesCount = useMemo(() => new Set(rawLeaves.filter(l => Number(l.user_id) !== Number(user?.id)).map(l => l.id)).size, [rawLeaves, user]);
-    const reportsCount = useMemo(() => new Set(rawLeaves.filter(l => Number(l.manager_id) === Number(user?.id) && Number(l.user_id) !== Number(user?.id)).map(l => l.id)).size, [rawLeaves, user]);
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth(); // 0-indexed
+
+    // Count states (scoped to current year)
+    const selfCount = useMemo(
+        () =>
+            new Set(
+                rawLeaves
+                    .filter((l) => {
+                        if (l.category !== "self") return false;
+                        const yr = new Date(l.from_date).getFullYear();
+                        return yr === currentYear;
+                    })
+                    .map((l) => l.id)
+            ).size,
+        [rawLeaves, currentYear]
+    );
+    const teammatesCount = useMemo(
+        () =>
+            new Set(
+                rawLeaves
+                    .filter((l) => {
+                        if (l.category !== "teammate") return false;
+                        const yr = new Date(l.from_date).getFullYear();
+                        return yr === currentYear;
+                    })
+                    .map((l) => l.id)
+            ).size,
+        [rawLeaves, currentYear]
+    );
+    const reportsCount = useMemo(
+        () =>
+            new Set(
+                rawLeaves
+                    .filter((l) => {
+                        if (l.category !== "reportee") return false;
+                        const yr = new Date(l.from_date).getFullYear();
+                        return yr === currentYear;
+                    })
+                    .map((l) => l.id)
+            ).size,
+        [rawLeaves, currentYear]
+    );
+    const organizationCount = useMemo(
+        () =>
+            new Set(
+                rawLeaves
+                    .filter((l) => {
+                        if (l.category !== "organization") return false;
+                        const yr = new Date(l.from_date).getFullYear();
+                        return yr === currentYear;
+                    })
+                    .map((l) => l.id)
+            ).size,
+        [rawLeaves, currentYear]
+    );
+
+    // Specific counts for this month
+    const teammatesCountThisMonth = useMemo(
+        () =>
+            new Set(
+                rawLeaves
+                    .filter((l) => {
+                        if (l.category !== "teammate" || l.status !== "approved") return false;
+                        const start = new Date(l.from_date);
+                        const end = new Date(l.to_date);
+                        return (start.getFullYear() === currentYear && start.getMonth() === currentMonth) ||
+                               (end.getFullYear() === currentYear && end.getMonth() === currentMonth);
+                    })
+                    .map((l) => l.id)
+            ).size,
+        [rawLeaves, currentYear, currentMonth]
+    );
+
+    const reportsCountThisMonth = useMemo(
+        () =>
+            new Set(
+                rawLeaves
+                    .filter((l) => {
+                        if (l.category !== "reportee" || l.status !== "approved") return false;
+                        const start = new Date(l.from_date);
+                        const end = new Date(l.to_date);
+                        return (start.getFullYear() === currentYear && start.getMonth() === currentMonth) ||
+                               (end.getFullYear() === currentYear && end.getMonth() === currentMonth);
+                    })
+                    .map((l) => l.id)
+            ).size,
+        [rawLeaves, currentYear, currentMonth]
+    );
 
     const todayStr = toYMD(new Date());
     const onLeaveToday = useMemo(() => {
@@ -190,25 +290,39 @@ const CalendarPage: React.FC = () => {
         });
     }, [rawLeaves, todayStr]);
 
+    const isManagerOrAdmin = role === "admin" || !!user?.has_reportees || reportsCount > 0;
+
     const STATS = [
         {
             label: "Your Leaves This Year",
             value: selfCount,
-            unit: "scheduled leaves",
+            unit: "approved & pending",
             icon: CalendarDays,
             gradient: "from-primary to-primary",
             lightBg: "bg-indigo-50",
             textColor: "text-primary",
         },
-        {
-            label: "Direct Reports On Leave",
-            value: reportsCount,
-            unit: "team members",
-            icon: Users,
-            gradient: "from-cyan-500 to-blue-600",
-            lightBg: "bg-cyan-50",
-            textColor: "text-cyan-600",
-        },
+        ...(isManagerOrAdmin ? [
+            {
+                label: "Direct Reports On Leave (This Month)",
+                value: reportsCountThisMonth,
+                unit: "approved leaves",
+                icon: Users,
+                gradient: "from-cyan-500 to-blue-600",
+                lightBg: "bg-cyan-50",
+                textColor: "text-cyan-600",
+            }
+        ] : [
+            {
+                label: "Teammates On Leave (This Month)",
+                value: teammatesCountThisMonth,
+                unit: "approved leaves",
+                icon: Users,
+                gradient: "from-orange-500 to-amber-600",
+                lightBg: "bg-orange-50",
+                textColor: "text-orange-600",
+            }
+        ]),
         {
             label: "On Leave Today",
             value: onLeaveToday.length,
@@ -275,7 +389,7 @@ const CalendarPage: React.FC = () => {
 
             {/* Interactive Section */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                
+
                 {/* Filters sidebar */}
                 <div className="lg:col-span-1 space-y-4">
                     <Card className="border-gray-100 shadow-sm">
@@ -283,7 +397,7 @@ const CalendarPage: React.FC = () => {
                             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Calendar Layers</h4>
                         </div>
                         <CardContent className="p-4 space-y-3">
-                            
+
                             {/* Self Toggle */}
                             <button
                                 onClick={() => setFilterSelf(!filterSelf)}
@@ -304,19 +418,93 @@ const CalendarPage: React.FC = () => {
                             {/* Teammates Toggle */}
                             <button
                                 onClick={() => setFilterTeammates(!filterTeammates)}
-                                className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${filterTeammates ? "bg-orange-50/40 border-orange-200" : "bg-white border-gray-100 opacity-60 hover:opacity-90"}`}
+                                className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${filterTeammates
+                                        ? "bg-orange-50/40 border-orange-200"
+                                        : "bg-white border-gray-100 opacity-60 hover:opacity-90"
+                                    }`}
                             >
                                 <div className="flex items-center gap-3">
                                     <div className="w-5 h-5 rounded bg-orange-500 flex items-center justify-center text-white shrink-0">
                                         {filterTeammates && <Check size={12} strokeWidth={3} />}
                                     </div>
+
                                     <div>
-                                        <p className="text-xs font-bold text-gray-800">Teammates on Leave</p>
-                                        <p className="text-[10px] text-gray-400">All other employee leaves</p>
+                                        <p className="text-xs font-bold text-gray-800">
+                                            Teammates
+                                        </p>
+
+                                        <p className="text-[10px] text-gray-400">
+                                            Employees sharing your manager
+                                        </p>
                                     </div>
                                 </div>
-                                <span className="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">{teammatesCount}</span>
+
+                                <span className="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
+                                    {teammatesCount}
+                                </span>
                             </button>
+
+                            {/* Reporting Team Toggle */}
+                            {isManagerOrAdmin && (
+                                <button
+                                    onClick={() => setFilterReportees(!filterReportees)}
+                                    className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${filterReportees
+                                            ? "bg-cyan-50/40 border-cyan-200"
+                                            : "bg-white border-gray-100 opacity-60 hover:opacity-90"
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-5 h-5 rounded bg-cyan-500 flex items-center justify-center text-white shrink-0">
+                                            {filterReportees && <Check size={12} strokeWidth={3} />}
+                                        </div>
+
+                                        <div>
+                                            <p className="text-xs font-bold text-gray-800">
+                                                Reporting Team
+                                            </p>
+
+                                            <p className="text-[10px] text-gray-400">
+                                                Employees reporting to you
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <span className="bg-cyan-100 text-cyan-700 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
+                                        {reportsCount}
+                                    </span>
+                                </button>
+                            )}
+
+                            {/* Organization Toggle */}
+                            {hasTeamAccess && (
+                                <button
+                                    onClick={() => setFilterOrganization(!filterOrganization)}
+                                    className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${filterOrganization
+                                            ? "bg-slate-50/40 border-slate-200"
+                                            : "bg-white border-gray-100 opacity-60 hover:opacity-90"
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-5 h-5 rounded bg-slate-500 flex items-center justify-center text-white shrink-0">
+                                            {filterOrganization && <Check size={12} strokeWidth={3} />}
+                                        </div>
+
+                                        <div>
+                                            <p className="text-xs font-bold text-gray-800">
+                                                Organization
+                                            </p>
+
+                                            <p className="text-[10px] text-gray-400">
+                                                Other visible employees
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
+                                        {organizationCount}
+                                    </span>
+                                </button>
+                            )}
 
                             {/* Holidays Toggle */}
                             <button
@@ -350,10 +538,10 @@ const CalendarPage: React.FC = () => {
 
                     {/* Company Calendar Illustration Card */}
                     <Card className="border-gray-100/50 bg-gradient-to-br from-indigo-50/30 to-blue-50/30 p-5 flex flex-col items-center text-center">
-                        <img 
-                            src="/Calendar-rafiki.svg" 
-                            className="w-36 h-36 object-contain select-none opacity-95 hover:scale-105 transition-transform duration-300" 
-                            alt="Calendar Illustration" 
+                        <img
+                            src="/Calendar-rafiki.svg"
+                            className="w-36 h-36 object-contain select-none opacity-95 hover:scale-105 transition-transform duration-300"
+                            alt="Calendar Illustration"
                         />
                         <p className="text-xs font-extrabold text-slate-700 mt-2">Team Schedule</p>
                         <p className="text-[10px] text-slate-400 mt-1 leading-relaxed max-w-[180px]">
@@ -377,7 +565,7 @@ const CalendarPage: React.FC = () => {
                                     )}
                                 </div>
                             </div>
-                            
+
                             {/* Nav buttons */}
                             <div className="flex items-center gap-1">
                                 <button
@@ -422,7 +610,7 @@ const CalendarPage: React.FC = () => {
                                             <span
                                                 style={{ color: arg.event.textColor }}
                                                 className="text-[11px] font-bold truncate"
-                                              >
+                                            >
                                                 {arg.event.title}
                                             </span>
                                         </div>
@@ -460,10 +648,10 @@ const CalendarPage: React.FC = () => {
 
             </div>
 
-            <TeamViewModal 
-                selectedLeave={selectedLeave} 
-                onClose={() => setSelectedLeave(null)} 
-                hasTeamAccess={hasTeamAccess} 
+            <TeamViewModal
+                selectedLeave={selectedLeave}
+                onClose={() => setSelectedLeave(null)}
+                hasTeamAccess={hasTeamAccess}
             />
         </div>
     );

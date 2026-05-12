@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { getPending, approveLeave } from "../../api/leaveApi";
 import { ApprovalRequest } from "../../types";
 import PageHeader from "../common/PageHeader";
+import { getAvatarGradient } from "../../utils/avatar";
 import Loader from "../common/Loader";
 import { useToast } from "../common/ToastContext";
 import { Card } from "../ui/card";
@@ -22,24 +23,7 @@ const STATUS_CONFIG = {
     rejected: { label: "Rejected", badge: "bg-rose-50 text-rose-700 border-rose-200" },
 };
 
-const getAvatarBg = (name: string) => {
-    const colors = [
-        "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm shadow-blue-100",
-        "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-100",
-        "bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm shadow-violet-100",
-        "bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-sm shadow-amber-100",
-        "bg-gradient-to-br from-rose-500 to-pink-600 text-white shadow-sm shadow-rose-100",
-        "bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-sm shadow-cyan-100",
-        "bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white shadow-sm shadow-fuchsia-100",
-    ];
-    let hash = 0;
-    const cleanName = name || "";
-    for (let i = 0; i < cleanName.length; i++) {
-        hash = cleanName.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const index = Math.abs(hash) % colors.length;
-    return colors[index];
-};
+
 
 const fmtShortDate = (d: string) => {
     return new Date(d).toLocaleDateString("en-GB", {
@@ -344,7 +328,7 @@ const Approvals: React.FC = () => {
                                             {/* Employee */}
                                             <td className="px-5 py-4">
                                                 <div className="flex items-center gap-2.5">
-                                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-extrabold text-white shadow-sm ${getAvatarBg(req.employee_name)}`}>
+                                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-extrabold text-white shadow-sm bg-gradient-to-tr ${getAvatarGradient(req.employee_name)}`}>
                                                         {initials}
                                                     </div>
                                                     <div>

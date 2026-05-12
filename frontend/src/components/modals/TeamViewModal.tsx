@@ -1,6 +1,7 @@
 import React from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "../ui/sheet";
 import { X } from "lucide-react";
+import { getAvatarGradient } from "../../utils/avatar";
 
 type RawLeave = {
     id: number
@@ -41,7 +42,7 @@ const TeamViewModal: React.FC<TeamViewModalProps> = ({ selectedLeave, onClose, h
                                 <SheetHeader className="text-left">
                                     <div className="flex justify-between items-start gap-4">
                                         <div className="flex items-center gap-4 min-w-0">
-                                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-primary-light flex-shrink-0">
+                                            <div className={`w-14 h-14 rounded-2xl bg-gradient-to-tr ${getAvatarGradient(selectedLeave.id || name)} flex items-center justify-center text-white text-xl font-bold shadow-lg flex-shrink-0`}>
                                                 {initials}
                                             </div>
                                             <div className="min-w-0">

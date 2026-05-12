@@ -32,8 +32,46 @@ app.use("/api/auth", authRoutes);
 
 
 app.use("/api/management", authenticate, managementRoute);
+
+// ── 1. GLOBAL EXPRESS ERROR-HANDLING MIDDLEWARE ──
+// This catches any error thrown in middlewares or handlers and returns 500 instead of crashing.
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("❌ Express Global Error Handler:", err);
+  res.status(err.status || err.statusCode || 500).json({
+    success: false,
+    error: err.message || "An unexpected internal server error occurred"
+  });
+});
+
+// ── 2. PROCESS-LEVEL CRASH PROTECTION ──
+// These hooks intercept uncaught exceptions and unhandled promise rejections so the Node process never crashes.
+process.on("uncaughtException", (err) => {
+  console.error("🔥 CRITICAL UNCAUGHT EXCEPTION:", err);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("⚠️ UNHANDLED PROMISE REJECTION AT:", promise, "REASON:", reason);
+});
+
+import { pool } from "./config/db";
+
+const ensurePageDefinitions = async () => {
+  try {
+    const res = await pool.query("SELECT id FROM page_definitions WHERE key = 'manage_permissions'");
+    if (res.rows.length === 0) {
+      console.log("Seeding missing 'manage_permissions' page definition...");
+      await pool.query(
+        "INSERT INTO page_definitions (key, label, description) VALUES ('manage_permissions', 'Manage Permissions', 'Configure page roles and permissions')"
+      );
+    }
+  } catch (err) {
+    console.error("Error ensuring page definitions:", err);
+  }
+};
+
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server is running on port ${PORT}`);
+  await ensurePageDefinitions();
 });

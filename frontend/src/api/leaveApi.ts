@@ -12,9 +12,6 @@ export const getHolidays = () =>
 export const getHistory = (params: any) =>
     API.get("/leaves/history", { params });
 
-export const getManager = () =>
-    API.get("/leaves/users/manager");
-
 export const getLeaveTypes = () =>
     API.get("/leaves/types");
 

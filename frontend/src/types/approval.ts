@@ -9,6 +9,8 @@ export type ApprovalRequest = {
     reason: string;
     status: "pending" | "approved" | "rejected";
     duration_type: "full" | "half";
+    manager_id?: number;
+    manager_name?: string;
     approved_by?: number;
     approved_by_name?: string;
     approved_at?: string;

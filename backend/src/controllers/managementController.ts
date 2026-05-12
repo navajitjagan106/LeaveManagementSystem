@@ -106,43 +106,6 @@ export const deleteEmployee = async (req: Request, res: Response) => {
     }
 };
 
-export const updateManager = async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-
-        const { manager_id } = req.body;
-
-        if (manager_id) {
-            if (Number(manager_id) === Number(id)) {
-                return res.status(400).json({ error: "An employee cannot be their own manager" });
-            }
-            const loopCheck = await pool.query(`
-                WITH RECURSIVE chain AS (
-                    SELECT id, manager_id FROM users WHERE id = $1
-                    UNION ALL
-                    SELECT u.id, u.manager_id FROM users u
-                    JOIN chain c ON u.id = c.manager_id
-                )
-                SELECT id FROM chain WHERE id = $2
-            `, [manager_id, id]);
-            if (loopCheck.rows.length > 0) {
-                return res.status(400).json({ error: "Circular manager assignment detected (this manager reports up to the employee)" });
-            }
-        }
-
-        const result = await pool.query(
-            `UPDATE users
-            SET manager_id = $1
-            WHERE id = $2
-            RETURNING *`,
-            [manager_id, id]
-        );
-
-        res.json({ success: true, data: result.rows[0] });
-    } catch (err) {
-        res.status(500).json({ error: "Failed to update manager" });
-    }
-}
 
 export const createLeaveType = async (req: Request, res: Response) => {
     try {
@@ -191,10 +154,10 @@ export const getAllLeaves = async (req: Request, res: Response) => {
 export const updateLeaveType = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { name } = req.body;
+        const { name, description } = req.body;
         const result = await pool.query(
-            `UPDATE leave_types SET name = $1 WHERE id = $2 RETURNING *`,
-            [name, id]
+            `UPDATE leave_types SET name = $1, description = COALESCE($2, description) WHERE id = $3 RETURNING *`,
+            [name, description || null, id]
         );
         if (result.rows.length === 0) return res.status(404).json({ error: "Leave type not found" });
         res.json({ success: true, data: result.rows[0] });
@@ -303,6 +266,38 @@ export const deleteHoliday = async (req: Request, res: Response) => {
         res.status(500).json({ error: "Failed to delete holiday" });
     }
 };
+
+export const updateHoliday = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { name, date } = req.body;
+
+        if (!name || !date) {
+            return res.status(400).json({ error: "Missing fields" });
+        }
+
+        const result = await pool.query(
+            `UPDATE holidays 
+             SET name = $1, date = $2 
+             WHERE id = $3 
+             RETURNING *`,
+            [name, date, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Holiday not found" });
+        }
+
+        res.json({
+            success: true,
+            data: result.rows[0]
+        });
+
+    } catch (err) {
+        res.status(500).json({ error: "Failed to update holiday" });
+    }
+};
+
 
 export const getUserLeaveBalance = async (req: Request, res: Response) => {
     try {
@@ -484,6 +479,7 @@ export const getAdminDashboardStats = async (req: Request, res: Response) => {
             leaveCountResult,
             holCountResult,
             leavesResult,
+            usersResult,
         ] = await Promise.all([
             pool.query("SELECT COUNT(*)::int AS count FROM users"),
             pool.query("SELECT COUNT(*)::int AS count FROM invitations WHERE status = 'pending'"),
@@ -494,7 +490,44 @@ export const getAdminDashboardStats = async (req: Request, res: Response) => {
                 FROM leaves l
                 WHERE l.status = 'approved'
             `),
+            pool.query(`
+                SELECT u.id, u.name, u.email, u.department, u.manager_id, r.label as role
+                FROM users u
+                LEFT JOIN roles r ON u.role_id = r.id
+                ORDER BY u.manager_id NULLS FIRST
+            `),
         ]);
+
+        // Build corporate reporting hierarchy
+        const buildOrgTree = (users: any[]) => {
+            const userMap: Record<number, any> = {};
+            const roots: any[] = [];
+
+            users.forEach((user) => {
+                userMap[user.id] = {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role || "Employee",
+                    department: user.department || null,
+                    manager_id: user.manager_id ? Number(user.manager_id) : null,
+                    children: [],
+                };
+            });
+
+            users.forEach((user) => {
+                const node = userMap[user.id];
+                if (node.manager_id && userMap[node.manager_id]) {
+                    userMap[node.manager_id].children.push(node);
+                } else {
+                    roots.push(node);
+                }
+            });
+
+            return roots;
+        };
+
+        const orgTree = buildOrgTree(usersResult.rows);
 
         res.json({
             success: true,
@@ -505,6 +538,7 @@ export const getAdminDashboardStats = async (req: Request, res: Response) => {
                 holidays: holCountResult.rows[0]?.count || 0,
             },
             leaves: leavesResult.rows,
+            orgTree,
         });
     } catch (err) {
         console.error(err);

@@ -118,8 +118,8 @@ export const resendInvitation = async (req: Request, res: Response) => {
 
         const inv = await pool.query(
             `SELECT i.*
-             FROM invitations i
-             WHERE i.id = $1 AND i.status = 'pending'`, [id]
+            FROM invitations i
+            WHERE i.id = $1 AND i.status IN ('pending', 'cancelled')`, [id]
         );
 
         if (inv.rows.length === 0)
@@ -131,7 +131,7 @@ export const resendInvitation = async (req: Request, res: Response) => {
         const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
         await pool.query(
-            "UPDATE invitations SET token=$1, expires_at=$2 WHERE id=$3",
+            "UPDATE invitations SET token=$1, expires_at=$2, status='pending' WHERE id=$3",
             [newToken, expiresAt, id]
         );
 

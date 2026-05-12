@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react";
 import { getBalance, updateUserProfile } from "../../api/leaveApi";
 import { getMe, changePasswordApi } from "../../api/authApi";
 import { User } from "../../types";
+import { getAvatarGradient } from "../../utils/avatar";
 import {
     Mail, Building2, Users, BookOpen, Shield,
-    Phone, MapPin, UserRound, CalendarDays, Pencil, Check, X,
+    Phone, MapPin, UserRound, CalendarDays, Pencil, Check, X, Lock, KeyRound
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
 import { Input } from "../ui/input";
@@ -14,12 +15,9 @@ import {
     ChartContainer, ChartTooltip, ChartTooltipContent,
     ChartLegend, ChartLegendContent,
 } from "../ui/chart";
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog";
 const PALETTE = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899", "#14b8a6", "#f97316"];
 const LIGHT_PALETTE = ["#eef2ff", "#d1fae5", "#fef3c7", "#fee2e2", "#dbeafe", "#fce7f3", "#ccfbf1", "#ffedd5"];
-
-const AVATAR_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#3b82f6", "#ec4899"];
-function avatarColor(name: string) { return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length]; }
 
 function calcAge(dob: string | null | undefined): string {
     if (!dob) return "";
@@ -168,7 +166,6 @@ const Profile: React.FC = () => {
     if (!user) return <p className="text-center py-8 text-gray-400">Loading profile…</p>;
 
     const initials = user.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-    const color = avatarColor(user.name);
     const roleStyle = getRoleStyle(user.role);
 
     const employmentFields = [
@@ -234,8 +231,7 @@ const Profile: React.FC = () => {
                         style={{ background: "linear-gradient(160deg, #5746AF 0%, #302178 100%)" }}
                     >
                         <div
-                            className="w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold ring-4 ring-white/20 mb-3"
-                            style={{ background: color }}
+                            className={`w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold ring-4 ring-white/20 mb-3 bg-gradient-to-tr ${getAvatarGradient(user.id || user.name)}`}
                         >
                             {initials}
                         </div>
@@ -307,72 +303,16 @@ const Profile: React.FC = () => {
                             ))}
                         </div>
 
-                        {/* Change Password Collapsible Section */}
-                        <div className="mt-6 pt-5 border-t border-gray-100">
+                        {/* Change Password Button */}
+                        <div className="mt-6 pt-5 border-t border-gray-100 flex flex-col gap-2">
                             <button
                                 type="button"
-                                onClick={() => setShowPwdForm(!showPwdForm)}
-                                className="flex items-center justify-between w-full text-left text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-600 transition-colors"
+                                onClick={() => setShowPwdForm(true)}
+                                className="w-full py-2.5 px-3 border border-gray-200 hover:border-primary/50 text-gray-600 hover:text-primary rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all bg-gray-50/50 hover:bg-primary-light/10"
                             >
-                                <span>Security / Change Password</span>
-                                <span className="text-sm font-bold text-gray-400">
-                                    {showPwdForm ? "—" : "+"}
-                                </span>
+                                <KeyRound size={13} className="text-gray-400" />
+                                <span>Change Password</span>
                             </button>
-
-                            {showPwdForm && (
-                                <form onSubmit={handleUpdatePassword} className="flex flex-col gap-3 mt-4">
-                                    <div>
-                                        <label className="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">
-                                            Current Password
-                                        </label>
-                                        <input
-                                            type="password"
-                                            placeholder="••••••••"
-                                            value={pwdForm.oldPassword}
-                                            onChange={(e) => setPwdForm(p => ({ ...p, oldPassword: e.target.value }))}
-                                            className="w-full text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-primary"
-                                            required
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">
-                                            New Password
-                                        </label>
-                                        <input
-                                            type="password"
-                                            placeholder="Min 6 characters"
-                                            value={pwdForm.newPassword}
-                                            onChange={(e) => setPwdForm(p => ({ ...p, newPassword: e.target.value }))}
-                                            className="w-full text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-primary"
-                                            required
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">
-                                            Confirm New Password
-                                        </label>
-                                        <input
-                                            type="password"
-                                            placeholder="••••••••"
-                                            value={pwdForm.confirmPassword}
-                                            onChange={(e) => setPwdForm(p => ({ ...p, confirmPassword: e.target.value }))}
-                                            className="w-full text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-primary"
-                                            required
-                                        />
-                                    </div>
-
-                                    <button
-                                        type="submit"
-                                        disabled={updatingPwd || !pwdForm.oldPassword || !pwdForm.newPassword || !pwdForm.confirmPassword}
-                                        className="w-full mt-1.5 py-2 rounded-lg text-white text-xs font-semibold disabled:opacity-50 bg-primary hover:bg-primary-dark transition-all shadow-sm"
-                                    >
-                                        {updatingPwd ? "Updating…" : "Update Password"}
-                                    </button>
-                                </form>
-                            )}
                         </div>
                     </CardContent>
                 </Card>
@@ -489,6 +429,85 @@ const Profile: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Change Password Dialog Modal */}
+            <Dialog open={showPwdForm} onOpenChange={setShowPwdForm}>
+                <DialogContent className="max-w-md p-6 bg-white rounded-2xl shadow-xl">
+                    <DialogHeader>
+                        <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-3">
+                            <Lock size={20} />
+                        </div>
+                        <DialogTitle className="text-lg font-bold text-gray-900">Change Password</DialogTitle>
+                        <DialogDescription className="text-sm text-gray-500 mt-1">
+                            Protect your account by choosing a secure, strong password.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleUpdatePassword} className="flex flex-col gap-4 mt-2">
+                        <div className="space-y-1.5 text-left">
+                            <label className="text-xs font-semibold text-gray-600">
+                                Current Password
+                            </label>
+                            <input
+                                type="password"
+                                placeholder="••••••••"
+                                value={pwdForm.oldPassword}
+                                onChange={(e) => setPwdForm(p => ({ ...p, oldPassword: e.target.value }))}
+                                className="w-full text-sm px-3.5 py-2 border border-gray-200 rounded-xl bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                                required
+                            />
+                        </div>
+
+                        <div className="space-y-1.5 text-left">
+                            <label className="text-xs font-semibold text-gray-600">
+                                New Password
+                            </label>
+                            <input
+                                type="password"
+                                placeholder="Minimum 6 characters"
+                                value={pwdForm.newPassword}
+                                onChange={(e) => setPwdForm(p => ({ ...p, newPassword: e.target.value }))}
+                                className="w-full text-sm px-3.5 py-2 border border-gray-200 rounded-xl bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                                required
+                            />
+                        </div>
+
+                        <div className="space-y-1.5 text-left">
+                            <label className="text-xs font-semibold text-gray-600">
+                                Confirm New Password
+                            </label>
+                            <input
+                                type="password"
+                                placeholder="••••••••"
+                                value={pwdForm.confirmPassword}
+                                onChange={(e) => setPwdForm(p => ({ ...p, confirmPassword: e.target.value }))}
+                                className="w-full text-sm px-3.5 py-2 border border-gray-200 rounded-xl bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                                required
+                            />
+                        </div>
+
+                        <div className="flex gap-3 mt-4">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowPwdForm(false);
+                                    setPwdForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+                                }}
+                                className="flex-1 py-2.5 px-4 rounded-xl text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 text-sm font-semibold transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={updatingPwd || !pwdForm.oldPassword || !pwdForm.newPassword || !pwdForm.confirmPassword}
+                                className="flex-1 py-2.5 px-4 rounded-xl text-white text-sm font-semibold disabled:opacity-50 bg-primary hover:bg-primary-dark shadow-md transition-all"
+                            >
+                                {updatingPwd ? "Updating…" : "Update Password"}
+                            </button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
