@@ -29,8 +29,8 @@ const Sidebar: React.FC = () => {
 
     const isAdmin = user?.role_id === 1;
     const hasPage = (key: string) => isAdmin || user?.permissions?.[key]?.can_view === true;
-    const canManageHolidays = isAdmin || 
-        user?.permissions?.["manage_holidays"]?.can_edit === true || 
+    const canManageHolidays = isAdmin ||
+        user?.permissions?.["manage_holidays"]?.can_edit === true ||
         user?.permissions?.["manage_holidays"]?.can_delete === true;
 
     const menuItems = [

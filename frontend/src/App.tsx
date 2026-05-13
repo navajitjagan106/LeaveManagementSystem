@@ -28,9 +28,6 @@ import GlobalLeavesPage from "./components/management/GlobalLeavesPage";
 import BlockAdminRoute from "./components/common/BlockAdminRoute";
 import RequirePermission from "./components/common/RequirePermission";
 
-
-
-
 const App: React.FC = () => {
   return (
     <ToastProvider>

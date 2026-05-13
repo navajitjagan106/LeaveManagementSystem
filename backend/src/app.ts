@@ -33,24 +33,21 @@ app.use("/api/auth", authRoutes);
 
 app.use("/api/management", authenticate, managementRoute);
 
-// ── 1. GLOBAL EXPRESS ERROR-HANDLING MIDDLEWARE ──
-// This catches any error thrown in middlewares or handlers and returns 500 instead of crashing.
+
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error("❌ Express Global Error Handler:", err);
+  console.error(" Express Global Error Handler:", err);
   res.status(err.status || err.statusCode || 500).json({
     success: false,
     error: err.message || "An unexpected internal server error occurred"
   });
 });
 
-// ── 2. PROCESS-LEVEL CRASH PROTECTION ──
-// These hooks intercept uncaught exceptions and unhandled promise rejections so the Node process never crashes.
 process.on("uncaughtException", (err) => {
-  console.error("🔥 CRITICAL UNCAUGHT EXCEPTION:", err);
+  console.error(" CRITICAL UNCAUGHT EXCEPTION:", err);
 });
 
 process.on("unhandledRejection", (reason, promise) => {
-  console.error("⚠️ UNHANDLED PROMISE REJECTION AT:", promise, "REASON:", reason);
+  console.error(" UNHANDLED PROMISE REJECTION AT:", promise, "REASON:", reason);
 });
 
 import { pool } from "./config/db";
