@@ -1,7 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from "react-router-dom";
-import { useSelector } from "react-redux";
-import { RootState } from "./store";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./components/pages/Login";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import MainLayout from "./components/layout/MainLayout";
@@ -27,41 +25,11 @@ import ManageLeaveTypesPage from "./components/management/ManageLeaveTypesPage";
 import ManagePoliciesPage from "./components/management/ManagePoliciesPage";
 import ManagePermissionsPage from "./components/management/ManagePermissionsPage";
 import GlobalLeavesPage from "./components/management/GlobalLeavesPage";
+import BlockAdminRoute from "./components/common/BlockAdminRoute";
+import RequirePermission from "./components/common/RequirePermission";
 
-// Route wrapper to block Admins from employee-only routes
-const BlockAdminRoute: React.FC = () => {
-  const { user } = useSelector((state: RootState) => state.auth);
-  if (user && user.role_id === 1) {
-    return <Navigate to="/management" replace />;
-  }
-  return <Outlet />;
-};
 
-// Route wrapper to require specific page permissions
-interface RequirePermissionProps {
-  page: string;
-}
 
-const RequirePermission: React.FC<RequirePermissionProps> = ({ page }) => {
-  const { user } = useSelector((state: RootState) => state.auth);
-  if (!user) return null;
-
-  // Admin bypasses all checks
-  if (user.role_id === 1) return <Outlet />;
-
-  let hasPerm = user.permissions?.[page]?.can_view ?? false;
-
-  // Special logic for approvals page
-  if (page === "approvals" && user.has_reportees) {
-    hasPerm = true;
-  }
-
-  if (!hasPerm) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return <Outlet />;
-};
 
 const App: React.FC = () => {
   return (
