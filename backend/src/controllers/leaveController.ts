@@ -726,9 +726,9 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
                 `
                 SELECT
                 EXTRACT(DOW FROM d)::int AS day,
-                SUM(l.total_days::numeric / NULLIF((l.to_date - l.from_date + 1)::numeric, 0)) AS count
+                SUM(l.total_days::numeric / NULLIF((l.to_date::date - l.from_date::date + 1)::numeric, 0)) AS count
                 FROM leaves l,
-                GENERATE_SERIES(l.from_date, l.to_date, INTERVAL '1 day') AS d
+                GENERATE_SERIES(l.from_date::date, l.to_date::date, INTERVAL '1 day') AS d
                 WHERE l.user_id = $1
                 AND l.status = 'approved'
                 AND EXTRACT(DOW FROM d) NOT IN (0, 6)
