@@ -27,7 +27,7 @@ export const login = async (req: Request, res: Response) => {
         const isMatch = await bcrypt.compare(password, dbUser.password);
         if (!isMatch) {
             console.warn(`LOGIN ATTEMPT FAILED: Password mismatch - ${email}`);
-            return res.status(400).json({ error: "Wrong password" });
+            return res.status(400).json({ error: "Invalid credentials" });
         }
 
         if (!dbUser.email_verified)
@@ -103,13 +103,7 @@ export const getMe = async (req: Request, res: Response) => {
         if (userResult.rows.length === 0) return res.status(404).json({ error: "User not found" });
 
         const dbUser = userResult.rows[0];
-        const newToken = jwt.sign(
-            { id: dbUser.id },
-            process.env.JWT_SECRET as string,
-            { expiresIn: process.env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] }
-        );
 
-        setAuthCookies(res, newToken);
 
         const permissionsPromise = fetchUserPermissions(req.user.id, req.user.role_id);
         const leaveTypesPromise = pool.query(
@@ -193,6 +187,13 @@ export const resetPassword = async (req: Request, res: Response) => {
         // Blacklist token in Redis for 1 hour (3600s) to prevent reuse
         await redis.setex(`used_token:${token}`, 3600, "1");
 
+        const tokenForUser = jwt.sign(
+            { id: decoded.id },
+            process.env.JWT_SECRET as string,
+            { expiresIn: process.env.JWT_EXPIRES_IN as any }
+        );
+
+        setAuthCookies(res, tokenForUser);
         res.json({ success: true, message: "Your password has been reset successfully." });
     } catch (err: any) {
         if (err?.name === "TokenExpiredError") {

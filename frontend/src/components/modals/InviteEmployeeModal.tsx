@@ -29,12 +29,12 @@ const InviteEmployeeModal = ({ onClose, onSuccess }: any) => {
 
     // Single Form State
     const [form, setForm] = useState({
-        name: "", email: "", role: "employee", department: "",
+        name: "", email: "", role_id: 3 as number | "", department: "",
         manager_id: "" as number | "", policy_id: "", expires_in_hours: "48",
     });
     const [managers, setManagers] = useState<any[]>([]);
     const [policies, setPolicies] = useState<any[]>([]);
-    const [roles, setRoles] = useState<any[]>(["employee"]);
+    const [roles, setRoles] = useState<any[]>([{ id: 3, name: "employee", label: "Employee" }]);
     const [loading, setLoading] = useState(false);
 
     // Bulk State
@@ -67,15 +67,23 @@ const InviteEmployeeModal = ({ onClose, onSuccess }: any) => {
                 const fetchedRoles = roleRes.data?.data;
                 if (fetchedRoles && fetchedRoles.length > 0) {
                     const updatedRoles = [...fetchedRoles];
-                    const hasAdmin = updatedRoles.some(r => (typeof r === "string" ? r : r.name) === "admin");
+                    const hasAdmin = updatedRoles.some(r => r.name === "admin");
                     if (!hasAdmin) {
-                        updatedRoles.push("admin");
+                        updatedRoles.push({ id: 1, name: "admin", label: "Admin" });
                     }
                     setRoles(updatedRoles);
+                    const empRole = updatedRoles.find(r => r.name === "employee");
+                    if (empRole) {
+                        setForm(f => ({ ...f, role_id: empRole.id }));
+                    } else {
+                        setForm(f => ({ ...f, role_id: updatedRoles[0].id }));
+                    }
                 }
             })
             .catch(() => {
                 console.log("Using default fallback roles list due to permission restrictions.");
+                setRoles([{ id: 3, name: "employee", label: "Employee" }]);
+                setForm(f => ({ ...f, role_id: 3 }));
             });
     }, []);
 
@@ -88,7 +96,7 @@ const InviteEmployeeModal = ({ onClose, onSuccess }: any) => {
             await sendInvitation({
                 name: form.name,
                 email: form.email,
-                role: form.role,
+                role_id: form.role_id !== "" ? Number(form.role_id) : undefined,
                 department: form.department || undefined,
                 manager_id: form.manager_id !== "" ? Number(form.manager_id) : undefined,
                 policy_id: form.policy_id ? Number(form.policy_id) : undefined,
@@ -294,15 +302,13 @@ const InviteEmployeeModal = ({ onClose, onSuccess }: any) => {
                             <div className="space-y-3">
                                 <SectionHeading label="Role & Manager" />
                                 <select
-                                    value={form.role}
-                                    onChange={(e) => setForm({ ...form, role: e.target.value })}
-                                    className="w-full border border-gray-200 px-3 py-2.5 rounded-xl text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-light transition-colors capitalize"
+                                    value={form.role_id}
+                                    onChange={(e) => setForm({ ...form, role_id: Number(e.target.value) })}
+                                    className="w-full border border-gray-200 px-3 py-2.5 rounded-xl text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-light transition-colors"
                                 >
                                     {roles.map((r) => {
-                                        const rVal = typeof r === "string" ? r : r.name;
-                                        const rLabel = typeof r === "string"
-                                            ? r.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")
-                                            : r.label || r.name;
+                                        const rVal = r.id;
+                                        const rLabel = r.label || r.name;
                                         return (
                                             <option key={rVal} value={rVal}>
                                                 {rLabel}

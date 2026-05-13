@@ -14,7 +14,7 @@ export const getPolicies = async (_req: Request, res: Response) => {
     } catch {
         res.status(500).json({ error: "Failed to fetch policies" });
     }
-};
+};//
 
 export const createPolicy = async (req: Request, res: Response) => {
     try {
@@ -29,7 +29,7 @@ export const createPolicy = async (req: Request, res: Response) => {
         if (err.code === "23505") return res.status(400).json({ error: "Policy name already exists" });
         res.status(500).json({ error: "Failed to create policy" });
     }
-};
+};//
 
 export const deletePolicy = async (req: Request, res: Response) => {
     try {
@@ -42,7 +42,7 @@ export const deletePolicy = async (req: Request, res: Response) => {
     } catch {
         res.status(500).json({ error: "Failed to delete policy" });
     }
-};
+};//
 
 export const getPolicyRules = async (req: Request, res: Response) => {
     try {
@@ -58,7 +58,7 @@ export const getPolicyRules = async (req: Request, res: Response) => {
     } catch {
         res.status(500).json({ error: "Failed to fetch rules" });
     }
-};
+};//
 
 export const setPolicyRules = async (req: Request, res: Response) => {
     try {
@@ -79,7 +79,7 @@ export const setPolicyRules = async (req: Request, res: Response) => {
 
             await pool.query(
                 `INSERT INTO leave_policy_rules (policy_id, leave_type_id, total_allocated)
-                 VALUES ${valuePairs.join(", ")}`,
+                VALUES ${valuePairs.join(", ")}`,
                 values
             );
         }
@@ -88,7 +88,7 @@ export const setPolicyRules = async (req: Request, res: Response) => {
     } catch {
         res.status(500).json({ error: "Failed to update rules" });
     }
-};
+};//
 
 // Reassign a policy to an employee — upserts leave_balances
 export const reassignPolicy = async (req: Request, res: Response) => {
@@ -136,7 +136,7 @@ export const resetLeaveBalance = async (req: Request, res: Response) => {
     } catch {
         res.status(500).json({ error: "Failed to reset leave balance" });
     }
-};
+}
 
 export const updatePolicy = async (req: Request, res: Response) => {
     try {
@@ -152,4 +152,4 @@ export const updatePolicy = async (req: Request, res: Response) => {
         if (err.code === "23505") return res.status(400).json({ error: "Policy name already exists" });
         res.status(500).json({ error: "Failed to update policy" });
     }
-};
+};//

@@ -60,7 +60,6 @@ const Approvals: React.FC = () => {
         setPageInputVal(page.toString());
     }, [page]);
 
-    // Search input debounce
     useEffect(() => {
         const t = setTimeout(() => {
             setFilters(prev => ({ ...prev, search: searchInput }));

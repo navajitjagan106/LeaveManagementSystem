@@ -26,6 +26,7 @@ const ManageLeaveTypesPage = () => {
     const { user } = useSelector((state: RootState) => state.auth);
     const isAdmin = user?.role_id === 1;
     const canEdit = isAdmin || user?.permissions?.['manage_leave_types']?.can_edit === true;
+    const canDelete = isAdmin || user?.permissions?.['manage_leave_types']?.can_delete === true;
 
     const { data: typesData, LoadingScreen, execute: fetchTypes } = useAsync(getLeaveTypes, true);
 
@@ -190,22 +191,26 @@ const ManageLeaveTypesPage = () => {
                             </div>
                             <p className="text-xs text-gray-400 font-medium">{t.description || "No description provided for this leave category"}</p>
                         </div>
-                        {canEdit && t.id !== 7 && (
+                        {t.id !== 7 && (canEdit || canDelete) && (
                             <div className="flex items-center gap-1">
-                                <button
-                                    onClick={() => handleEditOpen(t)}
-                                    className="text-gray-300 hover:text-primary hover:bg-primary-light/10 p-2 rounded-lg transition cursor-pointer"
-                                    title="Edit category"
-                                >
-                                    <Edit size={15} />
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(t.id)}
-                                    className="text-gray-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition cursor-pointer"
-                                    title="Delete category"
-                                >
-                                    <Trash2 size={15} />
-                                </button>
+                                {canEdit && (
+                                    <button
+                                        onClick={() => handleEditOpen(t)}
+                                        className="text-gray-300 hover:text-primary hover:bg-primary-light/10 p-2 rounded-lg transition cursor-pointer"
+                                        title="Edit category"
+                                    >
+                                        <Edit size={15} />
+                                    </button>
+                                )}
+                                {canDelete && (
+                                    <button
+                                        onClick={() => handleDelete(t.id)}
+                                        className="text-gray-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition cursor-pointer"
+                                        title="Delete category"
+                                    >
+                                        <Trash2 size={15} />
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>

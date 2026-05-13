@@ -1,5 +1,7 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { RootState } from "./store";
 import Login from "./components/pages/Login";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import MainLayout from "./components/layout/MainLayout";
@@ -20,12 +22,46 @@ import LandingPage from "./components/pages/LandingPage";
 
 // Admin pages
 import AdminDashboard from "./components/management/AdminDashboard";
-import { Navigate } from "react-router-dom";
 import ManageInvitationsPage from "./components/management/ManageInvitationsPage";
 import ManageLeaveTypesPage from "./components/management/ManageLeaveTypesPage";
 import ManagePoliciesPage from "./components/management/ManagePoliciesPage";
 import ManagePermissionsPage from "./components/management/ManagePermissionsPage";
 import GlobalLeavesPage from "./components/management/GlobalLeavesPage";
+
+// Route wrapper to block Admins from employee-only routes
+const BlockAdminRoute: React.FC = () => {
+  const { user } = useSelector((state: RootState) => state.auth);
+  if (user && user.role_id === 1) {
+    return <Navigate to="/management" replace />;
+  }
+  return <Outlet />;
+};
+
+// Route wrapper to require specific page permissions
+interface RequirePermissionProps {
+  page: string;
+}
+
+const RequirePermission: React.FC<RequirePermissionProps> = ({ page }) => {
+  const { user } = useSelector((state: RootState) => state.auth);
+  if (!user) return null;
+
+  // Admin bypasses all checks
+  if (user.role_id === 1) return <Outlet />;
+
+  let hasPerm = user.permissions?.[page]?.can_view ?? false;
+
+  // Special logic for approvals page
+  if (page === "approvals" && user.has_reportees) {
+    hasPerm = true;
+  }
+
+  if (!hasPerm) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Outlet />;
+};
 
 const App: React.FC = () => {
   return (
@@ -36,6 +72,7 @@ const App: React.FC = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/setup-password/:token" element={<SetupPassword />} />
 
+          {/* One wrapper handles auth + layout */}
           <Route
             element={
               <ProtectedRoute>
@@ -43,121 +80,57 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           >
-            {/* ── Employee / Manager pages  */}
-            <Route
-              path="dashboard"
-              element={
-                <ProtectedRoute blockAdmin={true}>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="apply-leave"
-              element={
-                <ProtectedRoute blockAdmin={true}>
-                  <ApplyLeave />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="leave-history"
-              element={
-                <ProtectedRoute blockAdmin={true}>
-                  <LeaveHistory />
-                </ProtectedRoute>
-              }
-            />
+            {/* Then separate wrappers for specific guard types */}
+            <Route element={<BlockAdminRoute />}>
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="apply-leave" element={<ApplyLeave />} />
+              <Route path="leave-history" element={<LeaveHistory />} />
+              <Route path="leave-balance" element={<LeaveBalance />} />
+            </Route>
+
+            {/* No guard needed - all roles */}
             <Route path="profile" element={<Profile />} />
-            <Route
-              path="leave-balance"
-              element={
-                <ProtectedRoute blockAdmin={true}>
-                  <LeaveBalance />
-                </ProtectedRoute>
-              }
-            />
             <Route path="calendar" element={<CalendarPage />} />
-            <Route path="team-view" element={<Navigate to="/calendar" replace />} />
             <Route path="holidays" element={<HolidaysPage />} />
 
-            <Route
-              path="approvals"
-              element={
-                <ProtectedRoute requiredPage="approvals">
-                  <Approvals />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="employees"
-              element={
-                <ProtectedRoute requiredPages={["manage_employees"]}>
-                  <EmployeeDirectory />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="employees/:id"
-              element={
-                <ProtectedRoute requiredPages={["manage_employees"]}>
-                  <EmployeeProfile />
-                </ProtectedRoute>
-              }
-            />
+            {/* Permission-based guard */}
+            <Route element={<RequirePermission page="approvals" />}>
+              <Route path="approvals" element={<Approvals />} />
+            </Route>
 
-            {/* ── Management pages  */}
-            <Route
-              path="management"
-              element={
-                <ProtectedRoute requiredPage="admin_dashboard">
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
+            <Route element={<RequirePermission page="manage_employees" />}>
+              <Route path="employees" element={<EmployeeDirectory />} />
+              <Route path="employees/:id" element={<EmployeeProfile />} />
+            </Route>
+
+            {/* Management section */}
+            <Route element={<RequirePermission page="admin_dashboard" />}>
+              <Route path="management" element={<AdminDashboard />} />
+            </Route>
+
             <Route path="management/employees" element={<Navigate to="/employees" replace />} />
-            <Route
-              path="management/invitations"
-              element={
-                <ProtectedRoute requiredPage="manage_invitations">
-                  <ManageInvitationsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="management/leave-types"
-              element={
-                <ProtectedRoute requiredPage="manage_leave_types">
-                  <ManageLeaveTypesPage />
-                </ProtectedRoute>
-              }
-            />
 
-            <Route
-              path="management/policies"
-              element={
-                <ProtectedRoute requiredPage="manage_policies">
-                  <ManagePoliciesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="management/global-leaves"
-              element={
-                <ProtectedRoute requiredPage="manage_leave_records">
-                  <GlobalLeavesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="management/permissions"
-              element={
-                <ProtectedRoute requiredPage="manage_permissions">
-                  <ManagePermissionsPage />
-                </ProtectedRoute>
-              }
-            />
+            <Route element={<RequirePermission page="manage_invitations" />}>
+              <Route path="management/invitations" element={<ManageInvitationsPage />} />
+            </Route>
+
+            <Route element={<RequirePermission page="manage_leave_types" />}>
+              <Route path="management/leave-types" element={<ManageLeaveTypesPage />} />
+            </Route>
+
+            <Route element={<RequirePermission page="manage_policies" />}>
+              <Route path="management/policies" element={<ManagePoliciesPage />} />
+            </Route>
+
+            <Route element={<RequirePermission page="manage_leave_records" />}>
+              <Route path="management/global-leaves" element={<GlobalLeavesPage />} />
+            </Route>
+
+            <Route element={<RequirePermission page="manage_permissions" />}>
+              <Route path="management/permissions" element={<ManagePermissionsPage />} />
+            </Route>
           </Route>
+
           <Route path="*" element={<RedirectHandler />} />
         </Routes>
       </Router>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getInvitationByToken, acceptInvitation } from "../../api/authApi";
+import { getInvitationByToken, acceptInvitation, resetPasswordApi } from "../../api/authApi";
+import Loader from "../common/Loader";
 
 const PASSWORD_RULES = [
     { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
@@ -36,7 +37,11 @@ const SetupPassword: React.FC = () => {
         }
         try {
             setLoading(true);
-            await acceptInvitation(token!, { password: form.password });
+            if (invitation?.type === "reset") {
+                await resetPasswordApi({ token: token!, password: form.password });
+            } else {
+                await acceptInvitation(token!, { password: form.password });
+            }
             navigate("/dashboard");
         } catch (err: any) {
             setError(err?.response?.data?.error || "Failed to set up account");
@@ -66,7 +71,7 @@ const SetupPassword: React.FC = () => {
         return (
             <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-50 via-slate-50 to-indigo-50/50">
                 <div className="flex flex-col items-center gap-3">
-                    <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-600 rounded-full animate-spin"></div>
+                    <Loader />
                     <p className="text-indigo-950 font-semibold text-sm tracking-wide">Loading invitation details...</p>
                 </div>
             </div>
@@ -75,17 +80,15 @@ const SetupPassword: React.FC = () => {
 
     return (
         <div className="flex min-h-screen bg-slate-50">
-            {/* ── Left Pane: Soft Blue-Tinted Welcome Panel (2/3 Width on Desktop) ── */}
             <div className="hidden md:flex md:w-2/3 bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-slate-50/30 items-center justify-center p-12 relative border-r border-slate-100">
-                {/* Clean, subtle geometric elements in matching light tints */}
                 <div className="absolute top-20 left-20 w-72 h-72 rounded-full bg-blue-100/20 blur-3xl" />
                 <div className="absolute bottom-20 right-20 w-72 h-72 rounded-full bg-indigo-100/20 blur-3xl" />
-                
+
                 <div className="max-w-lg text-center flex flex-col items-center gap-8 z-10">
-                    <img 
-                        src="/welcome-illustration.svg" 
-                        className="w-96 h-96 object-contain" 
-                        alt="Welcome Illustration" 
+                    <img
+                        src="/welcome-illustration.svg"
+                        className="w-96 h-96 object-contain"
+                        alt="Welcome Illustration"
                     />
                     <div className="space-y-3">
                         <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">
@@ -98,10 +101,9 @@ const SetupPassword: React.FC = () => {
                 </div>
             </div>
 
-            {/* ── Right Pane: Password Setup Form (1/3 Width on Desktop) ── */}
             <div className="w-full md:w-1/3 flex items-center justify-center p-6 sm:p-10 bg-slate-50/20">
                 <div className="w-full max-w-sm bg-white p-8 rounded-2xl shadow-xl border border-slate-100 flex flex-col gap-6">
-                    
+
                     {/* Header */}
                     <div className="flex flex-col gap-1">
                         <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">

@@ -7,23 +7,19 @@ import Loader from "./Loader";
 
 type Props = {
     children: React.ReactNode;
-    allowedRoles?: string[];
-    requiredPage?: string;
-    requiredPages?: string[];
-    blockAdmin?: boolean;
 };
 
-const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles, requiredPage, requiredPages, blockAdmin }) => {
+const ProtectedRoute: React.FC<Props> = ({ children }) => {
     const dispatch = useDispatch<AppDispatch>();
     const { user, loading, initialized } = useSelector((state: RootState) => state.auth);
 
     useEffect(() => {
-        if (!initialized && !user) {
+        if (!initialized) {
             dispatch(fetchMe());
         }
-    }, [dispatch, initialized, user]);
+    }, [dispatch, initialized]);
 
-    if (loading && !initialized) {
+    if (!initialized || loading) {
         return (
             <div className="flex items-center justify-center h-screen bg-gray-50">
                 <Loader />
@@ -31,40 +27,7 @@ const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles, requiredPage,
         );
     }
 
-    if (!user && initialized) return <Navigate to="/login" />;
-
-    if (!user) return null;
-
-    if (blockAdmin && user.role_id === 1) {
-        return <Navigate to="/management" replace />;
-    }
-
-    // Admin bypasses all other restrictions
-    if (user.role_id === 1) return <>{children}</>;
-
-    // If still loading fresh permissions for a specific page check
-    if (loading && (requiredPage || requiredPages)) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <Loader />
-            </div>
-        );
-    }
-
-    // If restrictions are specified, at least one must grant access
-    if (allowedRoles || requiredPage || requiredPages) {
-        const roleGrants = allowedRoles?.includes(user.role) ?? false;
-        let permGrants = requiredPage ? (user.permissions?.[requiredPage]?.can_view ?? false) : false;
-        
-        if (requiredPages && requiredPages.length > 0) {
-            permGrants = requiredPages.some(page => user.permissions?.[page]?.can_view ?? false);
-        }
-
-        if (requiredPage === "approvals" && user.has_reportees) {
-            permGrants = true;
-        }
-        if (!roleGrants && !permGrants) return <Navigate to="/dashboard" replace />;
-    }
+    if (!user) return <Navigate to="/login" replace />;
 
     return <>{children}</>;
 };

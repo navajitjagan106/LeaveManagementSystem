@@ -46,6 +46,7 @@ const DashBoard: React.FC = () => {
 
     const totalUsed = data.leave_balance.reduce((s, i) => s + i.used, 0);
     const totalAlloc = data.leave_balance.reduce((s, i) => s + i.total_allocated, 0);
+
     const pieData = data.leave_balance
         .filter(lb => lb.used > 0)
         .map((lb, i) => ({ name: lb.name, value: lb.used, fill: COLORS[i % COLORS.length] }));
@@ -70,7 +71,7 @@ const DashBoard: React.FC = () => {
 
             <div className="bg-gradient-to-r from-primary to-primary-dark text-white px-6 py-5 rounded-2xl flex items-center justify-between relative overflow-hidden min-h-[130px]">
                 <div className="absolute top-0 right-0 w-64 h-full bg-white/5 rounded-full blur-2xl transform translate-x-20 pointer-events-none" />
-                
+
                 <div className="z-10 max-w-[65%] sm:max-w-[75%]">
                     <p className="text-xs text-primary-light mb-1">
                         {today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
@@ -86,10 +87,10 @@ const DashBoard: React.FC = () => {
                 </div>
 
                 <div className="absolute right-4 bottom-0 top-0 hidden md:flex items-center justify-center w-44 z-10 pointer-events-none">
-                    <img 
-                        src="/Dashboard.svg" 
-                        className="h-[120%] object-contain transform translate-y-3 select-none" 
-                        alt="Dashboard Illustration" 
+                    <img
+                        src="/Dashboard.svg"
+                        className="h-[120%] object-contain transform translate-y-3 select-none"
+                        alt="Dashboard Illustration"
                     />
                 </div>
             </div>

@@ -3,14 +3,19 @@ import jwt from "jsonwebtoken";
 import { pool } from "../config/db";
 
 export const authenticate = async (req: any, res: Response, next: NextFunction) => {
+  const token = req.cookies?.token;
+  if (!token) {
+    return res.status(401).json({ error: "No token provided" });
+  }
+
+  let decoded: any;
   try {
-    const token = req.cookies?.token;
-    
-    if (!token) {
-      return res.status(401).json({ error: "No token provided" });
-    }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
-    
+    decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+
+  try {
     const userRow = await pool.query(
         `SELECT u.id, u.role_id, r.name as role, u.name 
          FROM users u
@@ -26,6 +31,7 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
     req.user = userRow.rows[0];
     next();
   } catch (err) {
-    return res.status(401).json({ error: "Invalid token" });
+    console.error("AUTH DATABASE ERROR:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 };

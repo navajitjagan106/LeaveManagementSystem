@@ -76,7 +76,7 @@ export const getDashboardData = async (req: Request, res: Response) => {
         console.error(err);
         res.status(500).json({ error: "Failed to fetch dashboard data" });
     }
-};
+}; // 
 
 export const getLeaveInitData = async (req: Request, res: Response) => {
     try {
@@ -109,7 +109,7 @@ export const getLeaveInitData = async (req: Request, res: Response) => {
         console.error(err);
         res.status(500).json({ error: "Failed to fetch init data" });
     }
-};
+}; //
 
 export const applyLeave = async (req: Request, res: Response) => {
     try {
@@ -127,9 +127,15 @@ export const applyLeave = async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Reason must be at most 500 characters." });
         }
 
+        const start = new Date(from_date);
+        const end = new Date(to_date);
+
+        if (end < start) {
+            return res.status(400).json({ error: "End date must be after start date" });
+        }
+
         const user_id = req.user.id;
 
-        // Parallelize holiday check and leave balance fetch
         const holidaysPromise = getHolidaysinRange(from_date, to_date, pool);
         const balancePromise = pool.query(
             `SELECT lb.total_allocated, lb.used, lt.name AS leave_type_name, lt.is_unlimited
@@ -148,7 +154,24 @@ export const applyLeave = async (req: Request, res: Response) => {
         const { total_allocated, used, leave_type_name, is_unlimited } = balanceRes.rows[0];
         const remaining = total_allocated - used;
 
-        // Resolve manager — retrieve the applicant's assigned manager in a single query by JOINing users m
+        const total_days = calculateWorkingDays(
+            from_date,
+            to_date,
+            holidays,
+            duration_type
+        );
+        if (total_days === 0) {
+            return res.status(400).json({
+                error: "Selected dates contain only weekends/holidays"
+            });
+        }
+
+        if (!is_unlimited && total_days > remaining) {
+            return res.status(400).json({
+                error: `Insufficient leave balance. Remaining: ${remaining}`
+            });
+        }
+
         const applicantRes = await pool.query(
             `SELECT u.name AS applicant_name, m.id AS manager_id, m.name AS manager_name, m.email AS manager_email
              FROM users u
@@ -182,30 +205,6 @@ export const applyLeave = async (req: Request, res: Response) => {
             }
         }
 
-        const start = new Date(from_date);
-        const end = new Date(to_date);
-
-        if (end < start) {
-            return res.status(400).json({ error: "End date must be after start date" });
-        }
-
-        const total_days = calculateWorkingDays(
-            from_date,
-            to_date,
-            holidays,
-            duration_type
-        );
-        if (total_days === 0) {
-            return res.status(400).json({
-                error: "Selected dates contain only weekends/holidays"
-            });
-        }
-
-        if (!is_unlimited && total_days > remaining) {
-            return res.status(400).json({
-                error: `Insufficient leave balance. Remaining: ${remaining}`
-            });
-        }
         const overlapCheck = await pool.query(
             `SELECT * FROM leaves 
             WHERE user_id = $1
@@ -258,7 +257,7 @@ export const applyLeave = async (req: Request, res: Response) => {
         console.error("ERROR:", err);
         res.status(500).json({ error: "Failed to apply leave" });
     }
-};
+};//
 
 export const cancelLeave = async (req: Request, res: Response) => {
     try {
@@ -286,7 +285,7 @@ export const cancelLeave = async (req: Request, res: Response) => {
     } catch (err) {
         res.status(500).json({ error: "Failed to cancel leave" });
     }
-};
+};//
 
 export const getLeaveHistory = async (req: Request, res: Response) => {
     try {
@@ -354,7 +353,7 @@ export const getLeaveHistory = async (req: Request, res: Response) => {
         console.error(err);
         res.status(500).json({ error: "Failed to fetch leave history" });
     }
-};
+};//
 
 export const getLeaveTypes = async (req: Request, res: Response) => {
     try {
@@ -474,7 +473,7 @@ export const getTeamLeaves = async (req: Request, res: Response) => {
         console.error(err);
         res.status(500).json({ error: "Failed to fetch team leaves" });
     }
-};
+};//
 
 export const getManagerLeaves = async (req: Request, res: Response) => {
     try {
@@ -553,7 +552,7 @@ export const getManagerLeaves = async (req: Request, res: Response) => {
         console.error(err);
         res.status(500).json({ error: "Failed to fetch pending leaves" });
     }
-};
+};//
 
 export const approveLeave = async (req: Request, res: Response) => {
     const client = await pool.connect();
@@ -697,7 +696,7 @@ export const approveLeave = async (req: Request, res: Response) => {
     } finally {
         client.release();
     }
-};
+};//
 
 export const getLeaveBalance = async (req: Request, res: Response) => {
     try {
@@ -760,7 +759,7 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
         console.error(err);
         res.status(500).json({ error: "Failed to fetch leave balance" });
     }
-};
+}; // //
 
 export const getHolidays = async (req: Request, res: Response) => {
     try {
@@ -772,7 +771,7 @@ export const getHolidays = async (req: Request, res: Response) => {
         console.error(err)
         res.status(500).json({ error: "Failed to fetch holidays" })
     }
-}
+}//
 
 export const calculateDays = async (req: Request, res: Response) => {
     try {
@@ -807,7 +806,7 @@ export const calculateDays = async (req: Request, res: Response) => {
     } catch (err) {
         res.status(500).json({ error: "Failed to calculate days" });
     }
-};
+};//
 
 export const getNotifications = async (req: Request, res: Response) => {
     try {
@@ -826,7 +825,7 @@ export const getNotifications = async (req: Request, res: Response) => {
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch notifications" });
     }
-};
+};//
 
 export const getNotificationCount = async (req: Request, res: Response) => {
     try {
@@ -841,7 +840,7 @@ export const getNotificationCount = async (req: Request, res: Response) => {
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch notification count" });
     }
-};
+};//
 
 export const markNotificationsRead = async (req: Request, res: Response) => {
     try {
@@ -856,7 +855,7 @@ export const markNotificationsRead = async (req: Request, res: Response) => {
     } catch (err) {
         res.status(500).json({ error: "Failed to mark notifications as read" });
     }
-};
+};//
 
 export const getTeamOnLeave = async (req: Request, res: Response) => {
     try {
@@ -900,7 +899,7 @@ export const getTeamOnLeave = async (req: Request, res: Response) => {
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch team on leave" });
     }
-};
+};//
 
 export const getTeamMembers = async (req: Request, res: Response) => {
     try {
@@ -912,6 +911,7 @@ export const getTeamMembers = async (req: Request, res: Response) => {
         let result;
         if (scope === "all") {
             if (roleId !== 1) {
+                //has access but shud not show admin
                 result = await pool.query(
                     `SELECT u.id, u.name, u.email, r.name AS role, u.department,
                             u.phone, u.gender, u.date_of_birth, u.location,
@@ -925,6 +925,7 @@ export const getTeamMembers = async (req: Request, res: Response) => {
                     ORDER BY u.name`
                 );
             } else {
+                //admin
                 result = await pool.query(
                     `SELECT u.id, u.name, u.email, r.name AS role, u.department,
                             u.phone, u.gender, u.date_of_birth, u.location,
@@ -938,6 +939,7 @@ export const getTeamMembers = async (req: Request, res: Response) => {
                 );
             }
         } else {
+            //manager or reportees
             result = await pool.query(
                 `SELECT u.id, u.name, u.email, r.name AS role, u.department,
                         u.phone, u.gender, u.date_of_birth, u.location,
@@ -1018,7 +1020,7 @@ export const getLeaveTrendByType = async (req: Request, res: Response) => {
         console.error(err);
         res.status(500).json({ error: "Failed to fetch leave trend" });
     }
-};
+};//
 
 
 
@@ -1092,7 +1094,7 @@ export const updateUserProfile = async (req: Request, res: Response) => {
         console.error(err);
         res.status(500).json({ error: "Failed to update profile" });
     }
-};
+};//
 
 export const getTeamMemberProfileData = async (req: Request, res: Response) => {
     try {
@@ -1169,4 +1171,4 @@ export const getTeamMemberProfileData = async (req: Request, res: Response) => {
         console.error(err);
         res.status(500).json({ error: "Failed to fetch team member profile data" });
     }
-};
+};//

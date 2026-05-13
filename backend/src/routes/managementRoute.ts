@@ -38,7 +38,7 @@ router.post("/users/:id/reset-balance", requirePageAccess("manage_employees", "e
 // ── Leave types 
 router.post("/leave-types", requirePageAccess("manage_leave_types", "edit"), createLeaveType);
 router.patch("/leave-types/:id", requirePageAccess("manage_leave_types", "edit"), updateLeaveType);
-router.delete("/leave-types/:id", requirePageAccess("manage_leave_types", "edit"), deleteLeaveType);
+router.delete("/leave-types/:id", requirePageAccess("manage_leave_types", "delete"), deleteLeaveType);
 
 // ── Policies 
 router.get("/policies", requireAnyPageAccess([{ pageKey: "manage_policies", action: "view" }, { pageKey: "manage_employees", action: "view" }]), getPolicies);

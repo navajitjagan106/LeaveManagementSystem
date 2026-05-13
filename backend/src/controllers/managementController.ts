@@ -31,7 +31,7 @@ export const getAllEmployees = async (req: Request, res: Response) => {
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch employees" });
     }
-};
+};//
 
 export const updateEmployee = async (req: Request, res: Response) => {
     try {
@@ -159,7 +159,7 @@ export const createLeaveType = async (req: Request, res: Response) => {
     } catch {
         res.status(500).json({ error: "Failed to create leave type" });
     }
-};
+};//
 
 
 export const getAllLeaves = async (req: Request, res: Response) => {
@@ -240,7 +240,7 @@ export const updateLeaveType = async (req: Request, res: Response) => {
     } catch {
         res.status(500).json({ error: "Failed to update leave type" });
     }
-};
+};//
 
 export const deleteLeaveType = async (req: Request, res: Response) => {
     const client = await pool.connect();
@@ -298,7 +298,7 @@ export const deleteLeaveType = async (req: Request, res: Response) => {
     } finally {
         client.release();
     }
-};
+};//
 
 
 export const addHoliday = async (req: Request, res: Response) => {
@@ -628,5 +628,5 @@ export const getAdminDashboardStats = async (req: Request, res: Response) => {
         console.error(err);
         res.status(500).json({ error: "Failed to fetch admin dashboard statistics" });
     }
-};
+};//
 

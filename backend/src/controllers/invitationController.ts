@@ -4,7 +4,6 @@ import crypto from "crypto";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { setAuthCookies } from "../utils/authUtils";
-import { fetchUserPermissions } from "../utils/permissionUtils";
 import { sendInvitationEmail } from "../utils/emailService";
 
 const MIN_EXPIRY_HOURS = 1;
@@ -12,25 +11,35 @@ const MAX_EXPIRY_HOURS = 168;
 
 export const sendInvitation = async (req: Request, res: Response) => {
     try {
-        const { name, email, role, department, manager_id, policy_id, expires_in_hours } = req.body;
+        const { name, email, role, role_id, department, manager_id, policy_id, expires_in_hours } = req.body;
         const invitedBy = (req as any).user.id;
 
-        if (!name || !email || !role)
-            return res.status(400).json({ error: "Name, email and role are required" });
+        if (!name || !email)
+            return res.status(400).json({ error: "Name and email are required" });
 
-        const normalizedRole = role.toLowerCase().trim();
+        let targetRoleId: number | null = null;
 
-        // Validate role exists in roles table
-        const validRolesRes = await pool.query("SELECT id, name FROM roles");
-        const roleMap = new Map<string, number>();
-        validRolesRes.rows.forEach(r => roleMap.set(r.name.toLowerCase().trim(), r.id));
+        if (role_id) {
+            targetRoleId = Number(role_id);
+            const roleCheck = await pool.query("SELECT id FROM roles WHERE id = $1", [targetRoleId]);
+            if (roleCheck.rows.length === 0) {
+                return res.status(400).json({ error: "Invalid role_id provided" });
+            }
+        } else if (role) {
+            const normalizedRole = role.toLowerCase().trim();
+            const validRolesRes = await pool.query("SELECT id, name FROM roles");
+            const roleMap = new Map<string, number>();
+            validRolesRes.rows.forEach(r => roleMap.set(r.name.toLowerCase().trim(), r.id));
 
-        if (!roleMap.has(normalizedRole)) {
-            return res.status(400).json({ 
-                error: `Invalid role '${role}'. Available roles in the system: ${Array.from(roleMap.keys()).join(", ")}` 
-            });
+            if (!roleMap.has(normalizedRole)) {
+                return res.status(400).json({
+                    error: `Invalid role '${role}'. Available roles in the system: ${Array.from(roleMap.keys()).join(", ")}`
+                });
+            }
+            targetRoleId = roleMap.get(normalizedRole) || null;
+        } else {
+            return res.status(400).json({ error: "Role or role_id is required" });
         }
-        const targetRoleId = roleMap.get(normalizedRole);
 
         const expiryHours = Number(expires_in_hours) || 48;
         if (expiryHours < MIN_EXPIRY_HOURS || expiryHours > MAX_EXPIRY_HOURS)
@@ -74,7 +83,7 @@ export const sendInvitation = async (req: Request, res: Response) => {
         console.error(err);
         res.status(500).json({ error: "Failed to send invitation" });
     }
-};
+};//
 
 export const getInvitations = async (req: Request, res: Response) => {
     try {
@@ -112,7 +121,7 @@ export const getInvitations = async (req: Request, res: Response) => {
         console.error(err);
         res.status(500).json({ error: "Failed to fetch invitations" });
     }
-};
+};//
 
 export const resendInvitation = async (req: Request, res: Response) => {
     try {
@@ -150,7 +159,7 @@ export const resendInvitation = async (req: Request, res: Response) => {
     } catch {
         res.status(500).json({ error: "Failed to resend invitation" });
     }
-};
+};//
 
 export const cancelInvitation = async (req: Request, res: Response) => {
     try {
@@ -166,7 +175,7 @@ export const cancelInvitation = async (req: Request, res: Response) => {
     } catch {
         res.status(500).json({ error: "Failed to cancel invitation" });
     }
-};
+};//
 
 export const getInvitationByToken = async (req: Request, res: Response) => {
     try {
@@ -209,7 +218,7 @@ export const getInvitationByToken = async (req: Request, res: Response) => {
     } catch {
         res.status(500).json({ error: "Failed to fetch details" });
     }
-};
+};//
 
 export const acceptInvitation = async (req: Request, res: Response) => {
     try {
@@ -219,50 +228,7 @@ export const acceptInvitation = async (req: Request, res: Response) => {
         if (!password)
             return res.status(400).json({ error: "Password is required" });
 
-        // Try to decode as JWT first
-        let isReset = false;
-        let userId: number | null = null;
-        try {
-            const decoded = jwt.verify(token as string, process.env.JWT_SECRET as string) as any;
-            if (decoded && decoded.purpose === "password_reset") {
-                isReset = true;
-                userId = decoded.id;
-            }
-        } catch (jwtErr) {
-            // Ignore, proceed to check invitations
-        }
 
-        if (isReset && userId) {
-            // It is a password reset!
-            const hashedPassword = await bcrypt.hash(password, 10);
-            await pool.query("UPDATE users SET password = $1 WHERE id = $2", [hashedPassword, userId]);
-
-            // Auto-login the user
-            const dbUserResult = await pool.query(
-                `SELECT u.*, r.id as role_id, r.name as role FROM users u 
-                 JOIN roles r ON u.role_id = r.id 
-                 WHERE u.id = $1`, 
-                [userId]
-            );
-            const dbUser = dbUserResult.rows[0];
-            const tokenForUser = jwt.sign(
-                { id: dbUser.id },
-                process.env.JWT_SECRET as string,
-                { expiresIn: process.env.JWT_EXPIRES_IN as any }
-            );
-
-            const permissions = await fetchUserPermissions(dbUser.id, dbUser.role_id);
-            const userData = {
-                id: dbUser.id, name: dbUser.name, email: dbUser.email,
-                role: dbUser.role, manager_id: dbUser.manager_id, department: dbUser.department,
-                permissions,
-            };
-
-            setAuthCookies(res, tokenForUser);
-            return res.json({ success: true, user: userData, type: "reset" });
-        }
-
-        // If not a reset token, proceed with original accept invitation logic
         const inv = await pool.query(
             `SELECT * FROM invitations 
             WHERE token=$1 AND status='pending' AND expires_at > NOW()`,
@@ -329,29 +295,14 @@ export const acceptInvitation = async (req: Request, res: Response) => {
         );
 
         // Auto-login the user
-        const dbUserResult = await pool.query(
-            `SELECT u.*, r.id as role_id, r.name as role FROM users u 
-             JOIN roles r ON u.role_id = r.id 
-             WHERE u.id = $1`, 
-            [createdUserId]
-        );
-        const dbUser = dbUserResult.rows[0];
         const tokenForUser = jwt.sign(
-            { id: dbUser.id },
+            { id: createdUserId },
             process.env.JWT_SECRET as string,
             { expiresIn: process.env.JWT_EXPIRES_IN as any }
         );
 
-        const permissions = await fetchUserPermissions(dbUser.id, dbUser.role_id);
-
-        const userData = {
-            id: dbUser.id, name: dbUser.name, email: dbUser.email,
-            role: dbUser.role, manager_id: dbUser.manager_id, department: dbUser.department,
-            permissions,
-        };
-
         setAuthCookies(res, tokenForUser);
-        res.json({ success: true, user: userData, type: "invitation" });
+        res.json({ success: true, type: "invitation" });
 
     } catch (err) {
         console.error(err);

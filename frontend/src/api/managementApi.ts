@@ -30,7 +30,7 @@ export const exportLeaves = (params?: Record<string, string>) =>
     API.get("/management/export", { params, responseType: "blob" });
 
 export const sendInvitation = (data: {
-    name: string; email: string; role: string;
+    name: string; email: string; role?: string; role_id?: number;
     department?: string; manager_id?: number; policy_id?: number; expires_in_hours?: number;
 }) => API.post("/management/invitations", data);
 
