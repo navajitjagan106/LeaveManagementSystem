@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { pool } from "../config/db";
+import { invalidateCache } from "../utils/cacheUtils";
 
 
 
@@ -91,6 +92,8 @@ export const updateEmployee = async (req: Request, res: Response) => {
         );
 
         res.json({ success: true, data: userRes.rows[0] });
+        invalidateCache('role:', true); // Invalidate all role-based caches as employee list might change
+        invalidateCache('user:', true); // Invalidate user caches as manager/department might change
     } catch (err) {
         res.status(500).json({ error: "Failed to update employee" });
     }
@@ -134,6 +137,8 @@ export const deleteEmployee = async (req: Request, res: Response) => {
         }
 
         res.json({ success: true, message: "Employee and all associated records deleted successfully." });
+        invalidateCache('role:', true);
+        invalidateCache('user:', true);
     } catch (err) {
         await client.query("ROLLBACK");
         console.error("DELETE EMPLOYEE ERROR:", err);
@@ -156,6 +161,7 @@ export const createLeaveType = async (req: Request, res: Response) => {
             [name, description || null]
         );
         res.json({ success: true, data: result.rows[0] });
+        invalidateCache('global:/api/leaves/types', true);
     } catch {
         res.status(500).json({ error: "Failed to create leave type" });
     }
@@ -237,6 +243,7 @@ export const updateLeaveType = async (req: Request, res: Response) => {
         );
         if (result.rows.length === 0) return res.status(404).json({ error: "Leave type not found" });
         res.json({ success: true, data: result.rows[0] });
+        invalidateCache('global:/api/leaves/types', true);
     } catch {
         res.status(500).json({ error: "Failed to update leave type" });
     }
@@ -291,6 +298,7 @@ export const deleteLeaveType = async (req: Request, res: Response) => {
 
         await client.query("COMMIT");
         res.json({ success: true, message: "Leave type successfully deleted" });
+        invalidateCache('global:/api/leaves/types', true);
     } catch (err: any) {
         await client.query("ROLLBACK");
         console.error("Error in deleteLeaveType:", err);
@@ -324,6 +332,7 @@ export const addHoliday = async (req: Request, res: Response) => {
             success: true,
             data: result.rows[0]
         });
+        invalidateCache('global:/api/leaves/holidays', true);
 
     } catch (err) {
         res.status(500).json({ error: "Failed to add holiday" });
@@ -341,6 +350,7 @@ export const deleteHoliday = async (req: Request, res: Response) => {
         );
 
         res.json({ success: true });
+        invalidateCache('global:/api/leaves/holidays', true);
 
     } catch (err) {
         res.status(500).json({ error: "Failed to delete holiday" });
@@ -376,6 +386,7 @@ export const updateHoliday = async (req: Request, res: Response) => {
             success: true,
             data: result.rows[0]
         });
+        invalidateCache('global:/api/leaves/holidays', true);
 
     } catch (err) {
         res.status(500).json({ error: "Failed to update holiday" });
@@ -482,6 +493,8 @@ export const updateLeaveBalance = async (req: Request, res: Response) => {
             success: true,
             data: result.rows[0]
         });
+        invalidateCache(`user:${user_id}:/api/leaves/balance`, true);
+        invalidateCache(`user:${user_id}:/api/leaves/dashboard`, true);
 
     } catch (err) {
         console.error(err);
@@ -553,6 +566,35 @@ export const exportLeaves = async (req: Request, res: Response) => {
     }
 };
 
+export const getOrgTree = async (req: Request, res: Response) => {
+    try {
+        const { managerId } = req.query;
+
+        let query = `
+            SELECT u.id, u.name, u.email, u.department, u.manager_id, r.label as role,
+                   (SELECT COUNT(*) FROM users WHERE manager_id = u.id) > 0 AS has_children
+            FROM users u
+            LEFT JOIN roles r ON u.role_id = r.id
+        `;
+
+        const values: any[] = [];
+        if (managerId) {
+            query += ` WHERE u.manager_id = $1`;
+            values.push(managerId);
+        } else {
+            query += ` WHERE u.manager_id IS NULL`;
+        }
+
+        query += ` ORDER BY u.name ASC`;
+
+        const result = await pool.query(query, values);
+        res.json({ success: true, data: result.rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch organization tree" });
+    }
+};
+
 export const getAdminDashboardStats = async (req: Request, res: Response) => {
     try {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
@@ -563,7 +605,6 @@ export const getAdminDashboardStats = async (req: Request, res: Response) => {
             leaveCountResult,
             holCountResult,
             leavesResult,
-            usersResult,
         ] = await Promise.all([
             pool.query("SELECT COUNT(*)::int AS count FROM users"),
             pool.query("SELECT COUNT(*)::int AS count FROM invitations WHERE status = 'pending'"),
@@ -574,44 +615,7 @@ export const getAdminDashboardStats = async (req: Request, res: Response) => {
                 FROM leaves l
                 WHERE l.status = 'approved'
             `),
-            pool.query(`
-                SELECT u.id, u.name, u.email, u.department, u.manager_id, r.label as role
-                FROM users u
-                LEFT JOIN roles r ON u.role_id = r.id
-                ORDER BY u.manager_id NULLS FIRST
-            `),
         ]);
-
-        // Build corporate reporting hierarchy
-        const buildOrgTree = (users: any[]) => {
-            const userMap: Record<number, any> = {};
-            const roots: any[] = [];
-
-            users.forEach((user) => {
-                userMap[user.id] = {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    role: user.role || "Employee",
-                    department: user.department || null,
-                    manager_id: user.manager_id ? Number(user.manager_id) : null,
-                    children: [],
-                };
-            });
-
-            users.forEach((user) => {
-                const node = userMap[user.id];
-                if (node.manager_id && userMap[node.manager_id]) {
-                    userMap[node.manager_id].children.push(node);
-                } else {
-                    roots.push(node);
-                }
-            });
-
-            return roots;
-        };
-
-        const orgTree = buildOrgTree(usersResult.rows);
 
         res.json({
             success: true,
@@ -622,7 +626,6 @@ export const getAdminDashboardStats = async (req: Request, res: Response) => {
                 holidays: holCountResult.rows[0]?.count || 0,
             },
             leaves: leavesResult.rows,
-            orgTree,
         });
     } catch (err) {
         console.error(err);

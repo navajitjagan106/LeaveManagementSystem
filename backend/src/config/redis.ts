@@ -125,6 +125,36 @@ const persistentProxy = {
             return fallbackStore.del(key);
         }
     },
+    keys: async (pattern: string) => {
+        if (isMock) {
+            // Very basic mock for keys
+            const results: string[] = [];
+            // Accessing private store for the sake of the proxy
+            const store = (fallbackStore as any).store;
+            for (const key of store.keys()) {
+                if (key.includes(pattern.replace('*', ''))) results.push(key);
+            }
+            return results;
+        }
+        try {
+            return await instance.keys(pattern);
+        } catch (err: any) {
+            console.error(`[REDIS REAL] KEYS FAILED: ${err.message}`);
+            return [];
+        }
+    },
+    flushall: async () => {
+        if (isMock) {
+            (fallbackStore as any).store.clear();
+            (fallbackStore as any).timers.clear();
+            return;
+        }
+        try {
+            return await instance.flushall();
+        } catch (err: any) {
+            console.error(`[REDIS REAL] FLUSHALL FAILED: ${err.message}`);
+        }
+    },
     on: (event: string, callback: any) => {
         if (instance) instance.on(event, callback);
     }

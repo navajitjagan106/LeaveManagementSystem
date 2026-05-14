@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { pool } from "../config/db";
 import { invalidatePermissionCache } from "../utils/permissionUtils";
 import { invalidatePageAccessCache } from "../middleware/pageAccessMiddleware";
+import { invalidateCache } from "../utils/cacheUtils";
 
 export const getPageDefinitions = async (_req: Request, res: Response) => {
     try {
@@ -134,6 +135,9 @@ export const setRolePermissions = async (req: Request, res: Response) => {
         // Bust in-memory caches so changes take effect immediately
         invalidatePermissionCache(roleId);
         invalidatePageAccessCache(roleId);
+        invalidateCache('role:', true);
+        invalidateCache('global:/api/management/pages', true);
+        invalidateCache('global:/api/management/roles', true);
 
         res.json({ success: true });
     } catch (err) {
@@ -171,6 +175,8 @@ export const deleteRole = async (req: Request, res: Response) => {
         // Bust in-memory caches for the deleted role
         invalidatePermissionCache(roleId);
         invalidatePageAccessCache(roleId);
+        invalidateCache('role:', true);
+        invalidateCache('global:/api/management/roles', true);
 
         res.json({ success: true, message: `Role '${role}' deleted successfully.` });
     } catch (err) {

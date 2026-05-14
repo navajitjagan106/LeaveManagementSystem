@@ -56,9 +56,9 @@ export function DialogContent({ children, className }: { children: ReactNode; cl
   const { open, setOpen } = useContext(DialogContext);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/40" onClick={() => setOpen(false)} />
-      <div className={cn("relative bg-white rounded-2xl shadow-xl p-6 w-full mx-4 max-w-sm", className)}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => setOpen(false)} />
+      <div className={cn("relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm animate-in fade-in zoom-in duration-300", className)}>
         <button
           onClick={() => setOpen(false)}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"

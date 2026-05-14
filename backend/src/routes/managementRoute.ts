@@ -5,17 +5,18 @@ import {
     getAllEmployees, updateEmployee, deleteEmployee,
     createLeaveType, updateLeaveType, deleteLeaveType, addHoliday,
     deleteHoliday, updateHoliday, getAllLeaves, getUserLeaveBalance, updateLeaveBalance, exportLeaves,
-    getAdminDashboardStats,
+    getAdminDashboardStats, getOrgTree,
 } from "../controllers/managementController";
 import { sendInvitation, getInvitations, resendInvitation, cancelInvitation, bulkUpload } from "../controllers/invitationController";
 import { getPolicies, createPolicy, deletePolicy, getPolicyRules, setPolicyRules, reassignPolicy, resetLeaveBalance, updatePolicy } from "../controllers/leavePolicyController";
 import { getPageDefinitions, getRolePermissions, setRolePermissions, getAvailableRoles, deleteRole, createRole } from "../controllers/permissionController";
+import { apiCache } from "../middleware/cacheMiddleware";
 
 const router = express.Router();
 
 // ── Permissions management
-router.get("/pages", requirePageAccess("manage_permissions", "view"), getPageDefinitions);
-router.get("/roles", requirePageAccess("manage_permissions", "view"), getAvailableRoles);
+router.get("/pages", requirePageAccess("manage_permissions", "view"), apiCache(600, 'global'), getPageDefinitions);
+router.get("/roles", requirePageAccess("manage_permissions", "view"), apiCache(600, 'global'), getAvailableRoles);
 router.post("/roles", requirePageAccess("manage_permissions", "edit"), createRole);
 router.get("/roles/:role/permissions", requirePageAccess("manage_permissions", "view"), getRolePermissions);
 router.put("/roles/:role/permissions", requirePageAccess("manage_permissions", "edit"), setRolePermissions);
@@ -29,7 +30,7 @@ router.delete("/invitations/:id", requirePageAccess("manage_invitations", "delet
 router.post("/bulk-upload", requirePageAccess("bulk_upload", "edit"), bulkUpload);
 
 // ── Employees 
-router.get("/users", requirePageAccess("manage_employees", "view"), getAllEmployees);
+router.get("/users", requirePageAccess("manage_employees", "view"), apiCache(120, 'role'), getAllEmployees);
 router.patch("/users/:id", requirePageAccess("manage_employees", "edit"), updateEmployee);
 router.delete("/users/:id", requirePageAccess("manage_employees", "delete"), deleteEmployee);
 router.patch("/users/:id/policy", requirePageAccess("manage_employees", "edit"), reassignPolicy);
@@ -41,7 +42,7 @@ router.patch("/leave-types/:id", requirePageAccess("manage_leave_types", "edit")
 router.delete("/leave-types/:id", requirePageAccess("manage_leave_types", "delete"), deleteLeaveType);
 
 // ── Policies 
-router.get("/policies", requireAnyPageAccess([{ pageKey: "manage_policies", action: "view" }, { pageKey: "manage_employees", action: "view" }]), getPolicies);
+router.get("/policies", requireAnyPageAccess([{ pageKey: "manage_policies", action: "view" }, { pageKey: "manage_employees", action: "view" }]), apiCache(300, 'global'), getPolicies);
 router.post("/policies", requirePageAccess("manage_policies", "edit"), createPolicy);
 router.patch("/policies/:id", requirePageAccess("manage_policies", "edit"), updatePolicy);
 router.delete("/policies/:id", requirePageAccess("manage_policies", "delete"), deletePolicy);
@@ -58,6 +59,7 @@ router.get("/leaves", requirePageAccess("manage_leave_records", "view"), getAllL
 router.get("/user-balance/:id", requireAnyPageAccess([{ pageKey: "manage_leave_records", action: "view" }, { pageKey: "manage_employees", action: "view" }]), getUserLeaveBalance);
 router.patch("/user-balance", requirePageAccess("manage_leave_records", "edit"), updateLeaveBalance);
 router.get("/export", requirePageAccess("manage_leave_records", "view"), exportLeaves);
-router.get("/dashboard-stats", requirePageAccess("admin_dashboard", "view"), getAdminDashboardStats);
+router.get("/dashboard-stats", requirePageAccess("admin_dashboard", "view"), apiCache(300, 'role'), getAdminDashboardStats);
+router.get("/org-tree", requirePageAccess("admin_dashboard", "view"), getOrgTree);
 
 export default router;

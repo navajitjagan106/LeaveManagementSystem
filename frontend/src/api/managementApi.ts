@@ -42,3 +42,4 @@ export const cancelInvitation = (id: number) => API.delete(`/management/invitati
 export const bulkUpload = (csvText: string) => API.post("/management/bulk-upload", { csvText });
 
 export const getAdminDashboardStats = () => API.get("/management/dashboard-stats");
+export const getOrgTree = (managerId?: number) => API.get("/management/org-tree", { params: { managerId } });

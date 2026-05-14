@@ -37,8 +37,6 @@ export const calculateDays = (data: {
 export const getLeaveInitData = () =>
     API.get("/leaves/getinitdata")
 
-
-
 export const updateUserProfile = (data: {
     phone?: string | null;
     gender?: string | null;
@@ -48,7 +46,6 @@ export const updateUserProfile = (data: {
 
 export const cancelLeave = (id: number) =>
     API.delete(`/leaves/cancel/${id}`);
-
 
 export const getNotifications = () =>
     API.get("/leaves/notifications");
@@ -73,3 +70,6 @@ export const getLeaveTrend = (months: number = 6) =>
 
 export const getTeamMemberProfileData = (id: number) =>
   API.get(`/leaves/team-member-profile/${id}`);
+
+export const getOrgChart = () => API.get("/leaves/org-chart");
+export const getOrgChildren = (managerId: number) => API.get("/leaves/org-children", { params: { managerId } });

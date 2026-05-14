@@ -73,17 +73,26 @@ const Sidebar: React.FC = () => {
                         const Icon = item.icon;
                         const isActive = location.pathname === item.path;
                         return (
-                            <Link
-                                key={item.path}
-                                to={item.path}
-                                title={collapsed ? item.label : undefined}
-                                className={`flex flex-col items-center justify-center w-full py-3 transition-all flex-shrink-0
-                                    ${isActive ? "bg-sidebar-active" : "hover:bg-sidebar-active"}`}
-                                style={{ color: isActive ? "#fff" : "rgba(255,255,255,0.6)" }}
-                            >
-                                <Icon size={19} />
-                                {!collapsed && <span className="text-[10px] mt-1 font-medium">{item.label}</span>}
-                            </Link>
+                            <div key={item.path} className="w-full px-2 py-0.5">
+                                <Link
+                                    to={item.path}
+                                    title={collapsed ? item.label : undefined}
+                                    className={`flex flex-col items-center justify-center w-full py-3 transition-all duration-300 flex-shrink-0 group rounded-2xl
+                                        ${isActive 
+                                            ? "bg-primary text-white shadow-[0_4px_12px_rgba(39,76,119,0.4)] scale-[0.98]" 
+                                            : "hover:bg-sidebar-active/50 text-white/50"}`}
+                                >
+                                    <Icon 
+                                        size={isActive ? 20 : 19} 
+                                        className={`transition-all duration-500 group-hover:rotate-12 ${isActive ? "text-white" : "group-hover:text-white"}`} 
+                                    />
+                                    {!collapsed && (
+                                        <span className={`text-[10px] mt-1 font-bold tracking-tight transition-colors ${isActive ? "text-white" : "group-hover:text-white"}`}>
+                                            {item.label}
+                                        </span>
+                                    )}
+                                </Link>
+                            </div>
                         );
                     })}
             </nav>

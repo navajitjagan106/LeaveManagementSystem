@@ -37,7 +37,6 @@ const App: React.FC = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/setup-password/:token" element={<SetupPassword />} />
 
-          {/* One wrapper handles auth + layout */}
           <Route
             element={
               <ProtectedRoute>
@@ -45,7 +44,7 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           >
-            {/* Then separate wrappers for specific guard types */}
+
             <Route element={<BlockAdminRoute />}>
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="apply-leave" element={<ApplyLeave />} />
@@ -53,7 +52,6 @@ const App: React.FC = () => {
               <Route path="leave-balance" element={<LeaveBalance />} />
             </Route>
 
-            {/* No guard needed - all roles */}
             <Route path="profile" element={<Profile />} />
             <Route path="calendar" element={<CalendarPage />} />
             <Route path="holidays" element={<HolidaysPage />} />

@@ -7,9 +7,10 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import { DashboardData } from "../../types";
 import PageHeader from '../common/PageHeader';
 import Loader from '../common/Loader';
-import { CalendarCheck, CalendarMinus, Clock, BookOpen, FileText, Users, ChevronRight } from "lucide-react";
+import { CalendarCheck, CalendarMinus, Clock, BookOpen, FileText, Users, ChevronRight, Network, ArrowRight } from "lucide-react";
 import { PieChart, Pie, Label } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../ui/chart";
+import OrgChartModal from "../modals/OrgChartModal";
 
 const COLORS = ["#274C77", "#6096BA", "#A3CEF1", "#1B3655", "#64748B"];
 
@@ -18,6 +19,7 @@ const DashBoard: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<DashboardData | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [isOrgModalOpen, setIsOrgModalOpen] = useState(false);
     const { holidays } = useOutletContext<{ holidays: any[] }>();
     const navigate = useNavigate();
 
@@ -71,7 +73,6 @@ const DashBoard: React.FC = () => {
 
             <div className="bg-gradient-to-r from-primary to-primary-dark text-white px-6 py-5 rounded-2xl flex items-center justify-between relative overflow-hidden min-h-[130px]">
                 <div className="absolute top-0 right-0 w-64 h-full bg-white/5 rounded-full blur-2xl transform translate-x-20 pointer-events-none" />
-
                 <div className="z-10 max-w-[65%] sm:max-w-[75%]">
                     <p className="text-xs text-primary-light mb-1">
                         {today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
@@ -85,13 +86,8 @@ const DashBoard: React.FC = () => {
                             : "No pending requests — all caught up!"}
                     </p>
                 </div>
-
                 <div className="absolute right-4 bottom-0 top-0 hidden md:flex items-center justify-center w-44 z-10 pointer-events-none">
-                    <img
-                        src="/Dashboard.svg"
-                        className="h-[120%] object-contain transform translate-y-3 select-none"
-                        alt="Dashboard Illustration"
-                    />
+                    <img src="/Dashboard.svg" className="h-[120%] object-contain transform translate-y-3 select-none" alt="Dashboard Illustration" />
                 </div>
             </div>
 
@@ -102,180 +98,172 @@ const DashBoard: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+                <div className="lg:col-span-3 flex flex-col gap-3">
+                    {/* Leave Balance Chart */}
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex-1 flex flex-col">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-sm font-semibold text-gray-800">Leave Balance</h3>
+                            <span className="text-xs px-3 py-1 rounded-full font-medium bg-primary-light text-primary">
+                                {totalAlloc - totalUsed} / {totalAlloc} remaining
+                            </span>
+                        </div>
 
-                <div className="lg:col-span-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-semibold text-gray-800">Leave Balance</h3>
-                        <span className="text-xs px-3 py-1 rounded-full font-medium bg-primary-light text-primary">
-                            {totalAlloc - totalUsed} / {totalAlloc} remaining
-                        </span>
+                        <div className="flex items-center gap-4 flex-1">
+                            <ChartContainer
+                                config={donutConfig}
+                                style={{ width: donutSize, height: donutSize, flexShrink: 0 }}
+                            >
+                                <PieChart>
+                                    {pieData.length > 0 && <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />}
+                                    <Pie
+                                        data={donutData}
+                                        dataKey="value"
+                                        nameKey="name"
+                                        innerRadius={innerRadius}
+                                        outerRadius={outerRadius}
+                                        strokeWidth={3}
+                                        stroke="white"
+                                    >
+                                        <Label
+                                            content={({ viewBox }) => {
+                                                if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                                                    return (
+                                                        <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
+                                                            <tspan x={viewBox.cx} y={viewBox.cy} style={{ fontSize: Math.round(donutSize * 0.15), fontWeight: 700, fill: "#1f2937" }}>{totalUsed}</tspan>
+                                                            <tspan x={viewBox.cx} y={(viewBox.cy || 0) + Math.round(donutSize * 0.1)} style={{ fontSize: Math.round(donutSize * 0.07), fill: "#9ca3af" }}>used</tspan>
+                                                        </text>
+                                                    );
+                                                }
+                                            }}
+                                        />
+                                    </Pie>
+                                </PieChart>
+                            </ChartContainer>
+
+                            <div className="flex-1 space-y-2">
+                                {data.leave_balance.map((item, i) => {
+                                    const color = COLORS[i % COLORS.length];
+                                    const isUnlimited = (item as any).is_unlimited;
+                                    const pct = isUnlimited ? 100 : item.total_allocated > 0 ? (item.used / item.total_allocated) * 100 : 0;
+                                    return (
+                                        <div key={item.name}>
+                                            <div className="flex justify-between mb-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
+                                                    <span className="text-xs text-gray-500">{item.name}</span>
+                                                </div>
+                                                <span className="text-xs font-semibold text-gray-700">
+                                                    {item.used}{isUnlimited ? " (∞)" : `/${item.total_allocated}`}
+                                                </span>
+                                            </div>
+                                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                                <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: isUnlimited ? `${Math.min(item.used * 10, 100)}%` : `${pct}%`, background: color }} />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <ChartContainer
-                            config={donutConfig}
-                            style={{ width: donutSize, height: donutSize, flexShrink: 0 }}
-                        >
-                            <PieChart>
-                                {pieData.length > 0 && <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />}
-                                <Pie
-                                    data={donutData}
-                                    dataKey="value"
-                                    nameKey="name"
-                                    innerRadius={innerRadius}
-                                    outerRadius={outerRadius}
-                                    strokeWidth={3}
-                                    stroke="white"
-                                >
-                                    <Label
-                                        content={({ viewBox }) => {
-                                            if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                                                return (
-                                                    <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                                                        <tspan
-                                                            x={viewBox.cx}
-                                                            y={viewBox.cy}
-                                                            style={{ fontSize: Math.round(donutSize * 0.15), fontWeight: 700, fill: "#1f2937" }}
-                                                        >
-                                                            {totalUsed}
-                                                        </tspan>
-                                                        <tspan
-                                                            x={viewBox.cx}
-                                                            y={(viewBox.cy || 0) + Math.round(donutSize * 0.1)}
-                                                            style={{ fontSize: Math.round(donutSize * 0.07), fill: "#9ca3af" }}
-                                                        >
-                                                            used
-                                                        </tspan>
-                                                    </text>
-                                                );
-                                            }
-                                        }}
-                                    />
-                                </Pie>
-                            </PieChart>
-                        </ChartContainer>
-
-                        <div className="flex-1 space-y-2">
-                            {data.leave_balance.map((item, i) => {
-                                const color = COLORS[i % COLORS.length];
-                                const isUnlimited = (item as any).is_unlimited;
-                                const pct = isUnlimited
-                                    ? 100
-                                    : item.total_allocated > 0 ? (item.used / item.total_allocated) * 100 : 0;
-                                return (
-                                    <div key={item.name}>
-                                        <div className="flex justify-between mb-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
-                                                <span className="text-xs text-gray-500">{item.name}</span>
-                                            </div>
-                                            {isUnlimited ? (
-                                                <span className="text-xs font-semibold text-gray-700">{item.used} used <span className="font-normal text-gray-400">(∞)</span></span>
-                                            ) : (
-                                                <span className="text-xs font-semibold text-gray-700">{item.used}/{item.total_allocated}</span>
-                                            )}
-                                        </div>
-                                        <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                            <div
-                                                className="h-1.5 rounded-full transition-all duration-500"
-                                                style={{
-                                                    width: isUnlimited ? `${Math.min(item.used * 10, 100)}%` : `${pct}%`,
-                                                    background: color,
-                                                    opacity: isUnlimited ? 0.6 : 1,
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                    {/* Org Tree Shortcut - Smaller Size */}
+                    <div
+                        onClick={() => setIsOrgModalOpen(true)}
+                        className="group relative h-20 rounded-2xl overflow-hidden bg-gradient-to-r from-primary to-primary-dark cursor-pointer shadow-md hover:shadow-lg transition-all duration-500"
+                    >
+                        <div className="absolute top-0 right-0 w-64 h-full bg-white/5 rounded-full blur-3xl transform translate-x-20 group-hover:scale-110 transition-transform duration-700" />
+                        <div className="relative h-full px-6 flex items-center justify-between z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/20 shadow-xl group-hover:bg-white group-hover:text-primary transition-all duration-500">
+                                    <Network size={20} className="group-hover:rotate-12 transition-transform duration-500" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-white tracking-tight">Organization Structure</h3>
+                                    <p className="text-[10px] text-primary-light font-medium">Explore company hierarchy</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 text-white/50 group-hover:text-white text-[10px] font-bold group-hover:translate-x-1 transition-transform duration-300">
+                                View Tree <ArrowRight size={12} />
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div className="lg:col-span-2 flex flex-col gap-3">
+                    {/* Apply Leave Shortcut - Smaller Size */}
                     <div
-                        className="rounded-2xl p-4 flex flex-col justify-between cursor-pointer group bg-gradient-to-r from-primary to-primary-dark"
-                        style={{ minHeight: 110 }}
                         onClick={() => navigate("/apply-leave")}
+                        className="group relative h-20 rounded-2xl overflow-hidden bg-gradient-to-r from-primary to-primary-dark shadow-md hover:shadow-lg transition-all duration-500"
                     >
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-2 bg-white/20">
-                                    <FileText size={15} className="text-white" />
+                        <div className="relative h-full px-6 flex items-center justify-between z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/20 transition-all group-hover:scale-110">
+                                    <FileText size={20} className="text-white group-hover:rotate-12 transition-transform duration-500" />
                                 </div>
-                                <h3 className="text-sm font-semibold text-white mb-0.5">Apply for Leave</h3>
-                                <p className="text-xs text-primary-light">Submit a new leave request</p>
+                                <div>
+                                    <h3 className="text-sm font-bold text-white tracking-tight">Apply for Leave</h3>
+                                    <p className="text-[10px] text-primary-light font-medium">Submit new request</p>
+                                </div>
                             </div>
-                            <ChevronRight size={16} className="text-white/50 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                            <ChevronRight size={18} className="text-white/50 group-hover:text-white group-hover:translate-x-1 transition-all" />
                         </div>
                     </div>
 
-                    <div className="bg-gray-50 rounded-xl p-4 flex-1 border border-gray-100">
+                    {/* Upcoming Holidays - 2 Items */}
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                         <div className="flex items-center justify-between mb-3">
                             <h3 className="text-sm font-semibold text-gray-800">Upcoming Holidays</h3>
-                            <button
-                                onClick={() => navigate("/holidays")}
-                                className="text-xs text-primary hover:text-primary-dark font-medium hover:underline"
-                            >
-                                View All →
-                            </button>
+                            <button onClick={() => navigate("/holidays")} className="text-xs text-primary hover:text-primary-dark font-medium hover:underline">View All →</button>
                         </div>
                         {upcomingHolidays.length === 0
                             ? <p className="text-xs text-gray-400">No upcoming holidays</p>
                             : (
-                                <div className="space-y-2.5">
-                                    {upcomingHolidays.slice(0, 3).map((h, i) => {
+                                <div className="space-y-2">
+                                    {upcomingHolidays.slice(0, 2).map((h, i) => {
                                         const d = new Date(h.date);
                                         return (
-                                            <div key={i} className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-lg bg-primary-light flex flex-col items-center justify-center flex-shrink-0">
-                                                    <span className="text-[8px] font-bold text-primary uppercase leading-none">
-                                                        {d.toLocaleDateString("en-GB", { month: "short" })}
-                                                    </span>
-                                                    <span className="text-sm font-bold text-primary-dark leading-tight">{d.getDate()}</span>
+                                            <div key={i} className="flex items-center gap-3 group cursor-pointer">
+                                                <div className="w-9 h-9 rounded-lg bg-primary-light flex flex-col items-center justify-center flex-shrink-0 shadow-sm transition-transform group-hover:scale-105">
+                                                    <span className="text-[7px] font-bold text-primary uppercase leading-none">{d.toLocaleDateString("en-GB", { month: "short" })}</span>
+                                                    <span className="text-xs font-bold text-primary-dark leading-tight">{d.getDate()}</span>
                                                 </div>
-                                                <span className="text-xs text-gray-600">{h.name}</span>
+                                                <span className="text-xs text-gray-600 font-medium group-hover:text-primary transition-colors">{h.name}</span>
                                             </div>
                                         );
                                     })}
                                 </div>
                             )}
                     </div>
+
+                    {/* Team Members on Leave - Integrated Here */}
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex-1 min-h-[140px]">
+                        <h3 className="text-sm font-semibold text-gray-800 mb-3">Team Absence</h3>
+                        {todayHoliday ? (
+                            <div className="text-[11px] font-medium text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-100">Holiday: {todayHoliday.name}</div>
+                        ) : data.team_on_leave.length === 0 ? (
+                            <div className="flex items-center gap-2 text-xs text-green-600 font-medium"><Users size={14} /> Everyone present</div>
+                        ) : (
+                            <div className="space-y-2">
+                                <div className="flex -space-x-2 overflow-hidden">
+                                    {data.team_on_leave.slice(0, 5).map((member, i) => (
+                                        <div key={i} className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-primary-light text-primary  items-center justify-center text-[10px] font-bold border border-white" title={member.name}>
+                                            {member.name.charAt(0).toUpperCase()}
+                                        </div>
+                                    ))}
+                                    {data.team_on_leave.length > 5 && (
+                                        <div className="flex items-center justify-center h-8 w-8 rounded-full ring-2 ring-white bg-gray-100 text-gray-400 text-[9px] font-bold">+{data.team_on_leave.length - 5}</div>
+                                    )}
+                                </div>
+                                <p className="text-[10px] text-gray-400 font-medium">
+                                    {data.team_on_leave.length} team member{data.team_on_leave.length > 1 ? 's' : ''} out today
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-800 mb-3">Team Members on Leave</h3>
-                {todayHoliday ? (
-                    <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-100">
-                        <p className="text-sm font-medium text-amber-700">Today is a holiday — {todayHoliday.name}</p>
-                    </div>
-                ) : data.team_on_leave.length === 0 ? (
-                    <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-green-50 border border-green-100">
-                        <Users size={15} className="text-green-500" />
-                        <p className="text-sm text-green-600">Everyone is in today</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
-                        {data.team_on_leave.map((member, i) => (
-                            <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white border border-gray-100">
-                                <div
-                                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0"
-                                    style={{ background: `${COLORS[i % COLORS.length]}20`, color: COLORS[i % COLORS.length] }}
-                                >
-                                    {member.name.charAt(0).toUpperCase()}
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-800">{member.name}</p>
-                                    <p className="text-xs text-gray-400">
-                                        {new Date(member.from_date).toLocaleDateString("en-GB")} → {new Date(member.to_date).toLocaleDateString("en-GB")}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+            <OrgChartModal isOpen={isOrgModalOpen} onClose={() => setIsOrgModalOpen(false)} />
         </div>
     );
 };

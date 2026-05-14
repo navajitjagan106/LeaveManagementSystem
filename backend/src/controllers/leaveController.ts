@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { pool } from "../config/db";
+import { invalidateCache } from "../utils/cacheUtils";
 import { calculateWorkingDays } from "../utils/calculateWorkingDays";
 import { getHolidaysinRange } from "../utils/getHolidaysinRange";
 import { sendLeaveApplicationEmail, sendLeaveStatusEmail } from "../utils/emailService";
@@ -252,6 +253,7 @@ export const applyLeave = async (req: Request, res: Response) => {
             success: true,
             data: result.rows[0]
         });
+        await invalidateCache(`user:${user_id}:/api/leaves/dashboard`, true);
 
     } catch (err) {
         console.error("ERROR:", err);
@@ -282,6 +284,7 @@ export const cancelLeave = async (req: Request, res: Response) => {
         );
 
         res.json({ success: true });
+        invalidateCache(`user:${req.user.id}:/api/leaves/dashboard`, true);
     } catch (err) {
         res.status(500).json({ error: "Failed to cancel leave" });
     }
@@ -684,6 +687,9 @@ export const approveLeave = async (req: Request, res: Response) => {
             success: true,
             data: result.rows[0]
         });
+        invalidateCache(`user:${leaveData.user_id}:/api/leaves/balance`, true);
+        invalidateCache(`user:${leaveData.user_id}:/api/leaves/dashboard`, true);
+        invalidateCache('role:', true); // Team leaves might have changed
 
     } catch (err: any) {
         await client.query("ROLLBACK");
@@ -1172,3 +1178,70 @@ export const getTeamMemberProfileData = async (req: Request, res: Response) => {
         res.status(500).json({ error: "Failed to fetch team member profile data" });
     }
 };//
+export const getOrgChart = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+        // 1. Get the user's direct reports (downward)
+        const reportsResult = await pool.query(`
+            SELECT u.id, u.name, u.email, u.department, u.manager_id, r.label as role,
+                   (SELECT COUNT(*) FROM users WHERE manager_id = u.id) > 0 AS has_children
+            FROM users u
+            LEFT JOIN roles r ON u.role_id = r.id
+            WHERE u.manager_id = $1 AND r.name != 'admin'
+        `, [userId]);
+
+        // 2. Get the user's manager chain (upward)
+        // We can do this with a recursive CTE
+        const chainResult = await pool.query(`
+            WITH RECURSIVE manager_chain AS (
+                SELECT id, name, email, department, manager_id, role_id, 1 as level
+                FROM users
+                WHERE id = $1
+                UNION ALL
+                SELECT u.id, u.name, u.email, u.department, u.manager_id, u.role_id, mc.level + 1
+                FROM users u
+                INNER JOIN manager_chain mc ON u.id = mc.manager_id
+            )
+            SELECT mc.*, r.label as role,
+                   (SELECT COUNT(*) FROM users WHERE manager_id = mc.id) > 0 AS has_children
+            FROM manager_chain mc
+            LEFT JOIN roles r ON mc.role_id = r.id
+            WHERE r.name != 'admin' OR mc.id = $1
+            ORDER BY level DESC
+        `, [userId]);
+
+        res.json({
+            success: true,
+            data: {
+                chain: chainResult.rows,
+                reports: reportsResult.rows
+            }
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch org chart" });
+    }
+};
+
+export const getOrgChildren = async (req: Request, res: Response) => {
+    try {
+        const { managerId } = req.query;
+        if (!managerId) return res.status(400).json({ error: "managerId is required" });
+
+        const result = await pool.query(`
+            SELECT u.id, u.name, u.email, u.department, u.manager_id, r.label as role,
+                   (SELECT COUNT(*) FROM users WHERE manager_id = u.id) > 0 AS has_children
+            FROM users u
+            LEFT JOIN roles r ON u.role_id = r.id
+            WHERE u.manager_id = $1 AND r.name != 'admin'
+            ORDER BY u.name ASC
+        `, [managerId]);
+
+        res.json({ success: true, data: result.rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch children" });
+    }
+};
