@@ -32,7 +32,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
         { label: "Manage Invitations", desc: "Invite and onboard new employees.", path: "/management/invitations", icon: Mail, category: "Admin", show: isAdmin },
         { label: "Permissions", desc: "Configure role-based access control.", path: "/management/permissions", icon: ShieldCheck, category: "Admin", show: isAdmin },
         { label: "Profile Settings", desc: "Manage your personal account details.", path: "/profile", icon: Settings, category: "Personal" },
-    ].filter(item => item.show !== false);
+    ].filter(item => item.show !== false)
 
     const filteredNav = navigationItems.filter(item => 
         item.label.toLowerCase().includes(query.toLowerCase())

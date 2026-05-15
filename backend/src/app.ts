@@ -7,6 +7,7 @@ import leaveRoutes from "./routes/leaveRoute"
 import authRoutes from "./routes/authRoute";
 import { authenticate } from "./middleware/authMiddleware";
 import managementRoute from "./routes/managementRoute";
+import { pool } from "./config/db";
 
 const app = express();
 
@@ -27,8 +28,22 @@ app.get("/", (_req, res) => {
   res.send("API is running");
 });
 
-app.get("/health", (_req, res) => {
-  res.status(200).send("OK");
+app.get("/health", async (_, res) => {
+  try {
+    // Simple query to verify database connectivity
+    await pool.query("SELECT 1");
+
+    res.status(200).json({
+      status: "ok",
+      database: "connected",
+    });
+  } catch (err) {
+    console.error("Health check database error:", err);
+    res.status(500).json({
+      status: "error",
+      message: "Database connection failed"
+    });
+  }
 });
 
 app.use("/api/leaves", authenticate, leaveRoutes);
@@ -54,7 +69,6 @@ process.on("unhandledRejection", (reason, promise) => {
   console.error(" UNHANDLED PROMISE REJECTION AT:", promise, "REASON:", reason);
 });
 
-import { pool } from "./config/db";
 
 const ensurePageDefinitions = async () => {
   try {
