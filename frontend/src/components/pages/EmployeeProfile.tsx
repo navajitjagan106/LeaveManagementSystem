@@ -13,7 +13,7 @@ import {
 } from '../ui/breadcrumb';
 import Loader from '../common/Loader';
 import { Building2, Mail, Shield, Users, BookOpen, Phone, MapPin, UserRound, CalendarDays } from 'lucide-react';
-
+import ForbiddenAccess from '../common/ForbiddenAccess';
 import { getAvatarGradient } from '../../utils/avatar';
 
 const PALETTE = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899", "#14b8a6", "#f97316"];
@@ -56,6 +56,8 @@ const monthlyChartConfig = {
     days: { label: "Days Taken", color: "#5746AF" },
 };
 
+
+
 const EmployeeProfile: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -66,11 +68,13 @@ const EmployeeProfile: React.FC = () => {
     const [balance, setBalance] = useState<BalanceItem[]>([]);
     const [monthlyData, setMonthlyData] = useState<{ month: string; days: number }[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isForbidden, setIsForbidden] = useState(false);
 
     useEffect(() => {
         if (!id) return;
         const numId = Number(id);
         setLoading(true);
+        setIsForbidden(false);
         getTeamMemberProfileData(numId)
             .then((res) => {
                 const { employee: empData, balances: balData, monthly: monData } = res.data;
@@ -84,11 +88,19 @@ const EmployeeProfile: React.FC = () => {
                 });
                 setMonthlyData(months.map(m => ({ month: m, days: dataMap.get(m) ?? 0 })));
             })
-            .catch(console.error)
+            .catch((err) => {
+                console.error(err);
+                if (err.response?.status === 403) {
+                    setIsForbidden(true);
+                }
+            })
             .finally(() => setLoading(false));
     }, [id]);
 
     if (loading) return <div className="flex justify-center items-center h-full"><Loader /></div>;
+    
+    if (isForbidden) return <ForbiddenAccess />;
+
     if (!employee) return <div className="text-center py-16 text-gray-400">Employee not found</div>;
 
     const roleStyle = ROLE_STYLE[employee.role] ?? ROLE_STYLE.employee;

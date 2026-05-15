@@ -8,8 +8,12 @@ import { useDispatch } from "react-redux";
 import { AppDispatch } from "../../store";
 import { fetchMe } from "../../store/slices/authSlice";
 
+import { SearchProvider, useSearch } from "../../context/SearchContext";
+import CommandPalette from "../common/CommandPalette";
+
 const LayoutInner = ({ holidays }: { holidays: any[] }) => {
   const { collapsed } = useSidebar();
+  const { isOpen, close } = useSearch();
 
   return (
     <div className="flex bg-surface h-screen overflow-hidden">
@@ -23,6 +27,7 @@ const LayoutInner = ({ holidays }: { holidays: any[] }) => {
           <Outlet context={{ holidays }} />
         </div>
       </div>
+      <CommandPalette isOpen={isOpen} onClose={close} />
     </div>
   );
 };
@@ -48,7 +53,9 @@ const MainLayout = () => {
 
   return (
     <SidebarProvider>
-      <LayoutInner holidays={holidays} />
+      <SearchProvider>
+        <LayoutInner holidays={holidays} />
+      </SearchProvider>
     </SidebarProvider>
   );
 };

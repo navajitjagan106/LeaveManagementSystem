@@ -1,10 +1,9 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
 import { getOrgTree } from "../../api/managementApi";
 import { getAvatarGradient } from "../../utils/avatar";
 import Loader from "../common/Loader";
-import { X, Network, Plus, Minus } from "lucide-react";
+import { X, Network, ChevronDown, ChevronUp } from "lucide-react";
 
 interface AdminOrgChartModalProps {
     isOpen: boolean;
@@ -19,7 +18,6 @@ const TreeNode: React.FC<TreeNodeProps> = ({ node }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [children, setChildren] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
 
     const handleToggle = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -84,9 +82,9 @@ const TreeNode: React.FC<TreeNodeProps> = ({ node }) => {
                             {loading ? (
                                 <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                             ) : isExpanded ? (
-                                <Minus size={12} strokeWidth={3} />
+                                <ChevronUp size={12} strokeWidth={3} />
                             ) : (
-                                <Plus size={12} strokeWidth={3} />
+                                <ChevronDown size={12} strokeWidth={3} />
                             )}
                         </button>
                     )}

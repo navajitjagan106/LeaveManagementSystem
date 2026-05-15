@@ -5,7 +5,7 @@ import {
     getAllEmployees, updateEmployee, deleteEmployee,
     createLeaveType, updateLeaveType, deleteLeaveType, addHoliday,
     deleteHoliday, updateHoliday, getAllLeaves, getUserLeaveBalance, updateLeaveBalance, exportLeaves,
-    getAdminDashboardStats, getOrgTree,
+    getAdminDashboardStats, getOrgTree, searchUsers,
 } from "../controllers/managementController";
 import { sendInvitation, getInvitations, resendInvitation, cancelInvitation, bulkUpload } from "../controllers/invitationController";
 import { getPolicies, createPolicy, deletePolicy, getPolicyRules, setPolicyRules, reassignPolicy, resetLeaveBalance, updatePolicy } from "../controllers/leavePolicyController";
@@ -18,13 +18,13 @@ const router = express.Router();
 router.get("/pages", requirePageAccess("manage_permissions", "view"), apiCache(600, 'global'), getPageDefinitions);
 router.get("/roles", requirePageAccess("manage_permissions", "view"), apiCache(600, 'global'), getAvailableRoles);
 router.post("/roles", requirePageAccess("manage_permissions", "edit"), createRole);
-router.get("/roles/:role/permissions", requirePageAccess("manage_permissions", "view"), getRolePermissions);
+router.get("/roles/:role/permissions", requirePageAccess("manage_permissions", "view"), apiCache(600, 'role'), getRolePermissions);
 router.put("/roles/:role/permissions", requirePageAccess("manage_permissions", "edit"), setRolePermissions);
 router.delete("/roles/:role", requirePageAccess("manage_permissions", "delete"), deleteRole);
 
 // ── Invitations 
 router.post("/invitations", requirePageAccess("manage_invitations", "edit"), sendInvitation);
-router.get("/invitations", requirePageAccess("manage_invitations", "view"), getInvitations);
+router.get("/invitations", requirePageAccess("manage_invitations", "view"), apiCache(120, 'role'), getInvitations);
 router.post("/invitations/:id/resend", requirePageAccess("manage_invitations", "edit"), resendInvitation);
 router.delete("/invitations/:id", requirePageAccess("manage_invitations", "delete"), cancelInvitation);
 router.post("/bulk-upload", requirePageAccess("bulk_upload", "edit"), bulkUpload);
@@ -46,7 +46,7 @@ router.get("/policies", requireAnyPageAccess([{ pageKey: "manage_policies", acti
 router.post("/policies", requirePageAccess("manage_policies", "edit"), createPolicy);
 router.patch("/policies/:id", requirePageAccess("manage_policies", "edit"), updatePolicy);
 router.delete("/policies/:id", requirePageAccess("manage_policies", "delete"), deletePolicy);
-router.get("/policies/:id/rules", requirePageAccess("manage_policies", "view"), getPolicyRules);
+router.get("/policies/:id/rules", requirePageAccess("manage_policies", "view"), apiCache(600, 'global'), getPolicyRules);
 router.put("/policies/:id/rules", requirePageAccess("manage_policies", "edit"), setPolicyRules);
 
 // ── Holidays 
@@ -60,6 +60,7 @@ router.get("/user-balance/:id", requireAnyPageAccess([{ pageKey: "manage_leave_r
 router.patch("/user-balance", requirePageAccess("manage_leave_records", "edit"), updateLeaveBalance);
 router.get("/export", requirePageAccess("manage_leave_records", "view"), exportLeaves);
 router.get("/dashboard-stats", requirePageAccess("admin_dashboard", "view"), apiCache(300, 'role'), getAdminDashboardStats);
-router.get("/org-tree", requirePageAccess("admin_dashboard", "view"), getOrgTree);
+router.get("/org-tree", requirePageAccess("admin_dashboard", "view"), apiCache(600, 'role'), getOrgTree);
+router.get("/search", searchUsers);
 
 export default router;

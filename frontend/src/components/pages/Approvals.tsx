@@ -21,6 +21,7 @@ const STATUS_CONFIG = {
     pending: { label: "Pending", badge: "bg-amber-50 text-amber-700 border-amber-200" },
     approved: { label: "Approved", badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
     rejected: { label: "Rejected", badge: "bg-rose-50 text-rose-700 border-rose-200" },
+    cancelled: { label: "Cancelled", badge: "bg-gray-50 text-gray-700 border-gray-200" },
 };
 
 
@@ -140,16 +141,19 @@ const Approvals: React.FC = () => {
         let pending = 0;
         let approved = 0;
         let rejected = 0;
+        let cancelled = 0;
         approvalQueue.forEach((r) => {
             if (r.status === "pending") pending++;
             else if (r.status === "approved") approved++;
             else if (r.status === "rejected") rejected++;
+            else if (r.status === "cancelled") cancelled++;
         });
         return {
             total: approvalQueue.length,
             pending,
             approved,
-            rejected
+            rejected,
+            cancelled
         };
     }, [approvalQueue]);
 
@@ -255,6 +259,7 @@ const Approvals: React.FC = () => {
                             <SelectItem value="pending">Pending</SelectItem>
                             <SelectItem value="approved">Approved</SelectItem>
                             <SelectItem value="rejected">Rejected</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
                         </SelectContent>
                     </Select>
 

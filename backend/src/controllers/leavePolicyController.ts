@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { pool } from "../config/db";
+import { invalidateCache } from "../utils/cacheUtils";
 
 export const getPolicies = async (_req: Request, res: Response) => {
     try {
@@ -11,7 +12,8 @@ export const getPolicies = async (_req: Request, res: Response) => {
             ORDER BY p.created_at ASC
         `);
         res.json({ success: true, data: result.rows });
-    } catch {
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ error: "Failed to fetch policies" });
     }
 };//
@@ -26,6 +28,7 @@ export const createPolicy = async (req: Request, res: Response) => {
         );
         res.json({ success: true, data: result.rows[0] });
     } catch (err: any) {
+        console.error(err);
         if (err.code === "23505") return res.status(400).json({ error: "Policy name already exists" });
         res.status(500).json({ error: "Failed to create policy" });
     }
@@ -39,7 +42,8 @@ export const deletePolicy = async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Policy is assigned to employees — reassign them first" });
         await pool.query("DELETE FROM leave_policies WHERE id = $1", [id]);
         res.json({ success: true });
-    } catch {
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ error: "Failed to delete policy" });
     }
 };//
@@ -55,7 +59,8 @@ export const getPolicyRules = async (req: Request, res: Response) => {
             ORDER BY lt.name
         `, [id]);
         res.json({ success: true, data: result.rows });
-    } catch {
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ error: "Failed to fetch rules" });
     }
 };//
@@ -85,7 +90,10 @@ export const setPolicyRules = async (req: Request, res: Response) => {
         }
 
         res.json({ success: true });
-    } catch {
+        await invalidateCache(`global:/api/management/policies/${id}/rules`, true);
+        await invalidateCache('global:/api/management/policies', true);
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ error: "Failed to update rules" });
     }
 };//
@@ -123,7 +131,8 @@ export const reassignPolicy = async (req: Request, res: Response) => {
         }
 
         res.json({ success: true });
-    } catch {
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ error: "Failed to reassign policy" });
     }
 };
@@ -133,7 +142,8 @@ export const resetLeaveBalance = async (req: Request, res: Response) => {
         const { id } = req.params;
         await pool.query("UPDATE leave_balances SET used = 0 WHERE user_id = $1", [id]);
         res.json({ success: true });
-    } catch {
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ error: "Failed to reset leave balance" });
     }
 }
@@ -148,7 +158,9 @@ export const updatePolicy = async (req: Request, res: Response) => {
             [name, description || null, id]
         );
         res.json({ success: true, data: result.rows[0] });
+        await invalidateCache('global:/api/management/policies', true);
     } catch (err: any) {
+        console.error(err);
         if (err.code === "23505") return res.status(400).json({ error: "Policy name already exists" });
         res.status(500).json({ error: "Failed to update policy" });
     }

@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import { getAdminDashboardStats } from "../../api/managementApi";
 import PageHeader from "../common/PageHeader";
 import { useAsync } from "../../hooks/useAsync";

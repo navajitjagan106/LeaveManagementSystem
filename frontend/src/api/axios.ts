@@ -6,40 +6,8 @@ const API = axios.create({
   withCredentials: true,
 });
 
-// Simple in-memory cache for GET requests
-const cache = new Map<string, { data: any; expires: number }>();
-const CACHE_TTL = 30 * 1000; // 30 seconds
-
-API.interceptors.request.use((config) => {
-  if (config.method === "get") {
-    const key = config.url + JSON.stringify(config.params || {});
-    const cached = cache.get(key);
-    if (cached && Date.now() < cached.expires) {
-      // Return a custom "adapter" that returns the cached data
-      config.adapter = () => {
-        return Promise.resolve({
-          data: cached.data,
-          status: 200,
-          statusText: "OK",
-          headers: {},
-          config,
-          request: {},
-        });
-      };
-    }
-  }
-  return config;
-});
-
 API.interceptors.response.use(
   (response) => {
-    if (response.config.method === "get") {
-      const key = response.config.url + JSON.stringify(response.config.params || {});
-      cache.set(key, { data: response.data, expires: Date.now() + CACHE_TTL });
-    } else {
-      // Invalidate cache on mutations
-      cache.clear();
-    }
     return response;
   },
   (error) => {

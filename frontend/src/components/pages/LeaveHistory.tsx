@@ -11,7 +11,7 @@ import {
     Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "../ui/sheet";
 
-type Status = 'approved' | 'pending' | 'rejected';
+type Status = 'approved' | 'pending' | 'rejected' | 'cancelled';
 type DrawerField = {
     label: string;
     key: keyof Leave;
@@ -21,12 +21,14 @@ const STATUS_STYLES: Record<Status, string> = {
     approved: 'bg-green-100 text-green-700',
     pending: 'bg-yellow-100 text-yellow-700',
     rejected: 'bg-red-100 text-red-700',
+    cancelled: 'bg-gray-100 text-gray-500',
 };
 
 const STATUS_OPTIONS = [
     { label: 'Approved', value: 'approved' },
     { label: 'Pending', value: 'pending' },
     { label: 'Rejected', value: 'rejected' },
+    { label: 'Cancelled', value: 'cancelled' },
 ];
 
 const COLUMNS = [
@@ -109,7 +111,14 @@ const LeaveHistory: React.FC = () => {
         try {
             setCancelling(true);
             await cancelLeave(selectedLeave.id);
-            setLeaveHistory((prev) => prev.filter((l) => l.id !== selectedLeave.id));
+            toast.success("Leave request cancelled");
+            // Refresh to show the new status
+            const params: any = { limit: 5, page };
+            if (filters.status) params.status = filters.status;
+            if (filters.leaveType) params.leave_type_id = filters.leaveType;
+            if (filters.search) params.search = filters.search;
+            const response = await getHistory(params);
+            setLeaveHistory(response.data.data || []);
             setSelectedLeave(null);
         } catch {
             toast.error('Failed to cancel leave');

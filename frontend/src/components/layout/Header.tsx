@@ -2,17 +2,19 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
-import { Bell } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 import { getNotifications, getNotificationCount, markNotificationsRead } from "../../api/leaveApi";
 import { logoutApi } from "../../api/authApi";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+import { useSearch } from "../../context/SearchContext";
 
 type Notification = {
     id: number;
@@ -21,27 +23,16 @@ type Notification = {
     created_at: string;
 };
 
-const getGreeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 17) return "Good afternoon";
-    return "Good evening";
-};
-
 const Header: React.FC = () => {
     const { user } = useSelector((state: RootState) => state.auth);
+    const { toggle: toggleSearch } = useSearch();
     const navigate = useNavigate();
 
     const [unreadCount, setUnreadCount] = useState(0);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(false);
 
-    const today = new Date().toLocaleDateString("en-GB", {
-        weekday: "long",
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-    });
+
 
     const fetchUnreadCount = async () => {
         try {
@@ -75,26 +66,35 @@ const Header: React.FC = () => {
     useEffect(() => {
         fetchUnreadCount();
         const interval = setInterval(fetchUnreadCount, 30000);
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+        };
     }, []);
 
     const logout = async () => {
-        await logoutApi().catch(() => {});
+        await logoutApi().catch(() => { });
         window.location.href = "/login";
     };
 
-    const firstName = user?.name?.split(" ")[0] || "there";
 
     return (
         <div className="h-14 bg-primary flex items-center justify-between px-6 text-white sticky top-0 z-50 shadow-md">
-            {/* Left: Greeting + date */}
-            <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold">
-                    {getGreeting()}, {firstName}
-                </span>
-                <span className="hidden sm:inline-block text-[11px] text-white/50 font-medium border-l border-white/20 pl-3">
-                    {today}
-                </span>
+            {/* Left: Search Trigger (Main focus) */}
+            <div className="flex-1 max-w-xl">
+                <button
+                    onClick={toggleSearch}
+                    className="w-full flex items-center justify-between px-4 py-2 bg-white/10 border border-white/10 rounded-xl hover:bg-white/15 hover:border-white/20 transition-all group text-left"
+                >
+                    <div className="flex items-center gap-3">
+                        <Search size={16} className="text-white/40 group-hover:text-white/60" />
+                        <span className="text-sm text-white/40 font-medium">Search any action or ask for help...</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <kbd className="h-5 px-1.5 rounded border border-white/10 bg-white/5 font-mono text-[10px] font-medium text-white/40">
+                            ⌘ K
+                        </kbd>
+                    </div>
+                </button>
             </div>
 
             <div className="flex items-center gap-6">
@@ -133,9 +133,8 @@ const Header: React.FC = () => {
                                 {notifications.map((n) => (
                                     <DropdownMenuItem
                                         key={n.id}
-                                        className={`flex flex-col items-start gap-1 p-3 rounded-lg text-xs leading-normal transition-colors focus:bg-gray-50 cursor-default ${
-                                            !n.is_read ? "bg-indigo-50/50 hover:bg-indigo-50" : "hover:bg-gray-50"
-                                        }`}
+                                        className={`flex flex-col items-start gap-1 p-3 rounded-lg text-xs leading-normal transition-colors focus:bg-gray-50 cursor-default ${!n.is_read ? "bg-indigo-50/50 hover:bg-indigo-50" : "hover:bg-gray-50"
+                                            }`}
                                     >
                                         <p className="text-gray-800 font-medium">{n.message}</p>
                                         <p className="text-[10px] text-gray-400 mt-0.5">
@@ -164,14 +163,14 @@ const Header: React.FC = () => {
                             <p className="text-[11px] text-gray-400 capitalize mt-0.5">{user?.role || (user?.role_id === 1 ? 'admin' : '')}</p>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-gray-100 my-1" />
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                             onClick={() => navigate("/profile")}
                             className="px-3 py-2 rounded-lg text-xs font-semibold text-gray-600 hover:text-gray-950 focus:bg-gray-50 focus:text-gray-900 cursor-pointer"
                         >
                             Profile
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-gray-100 my-1" />
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                             onClick={logout}
                             className="px-3 py-2 rounded-lg text-xs font-semibold text-red-500 focus:bg-red-50/50 focus:text-red-600 cursor-pointer"
                         >

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { pool } from "../config/db";
+import { invalidateCache } from "../utils/cacheUtils";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -78,6 +79,7 @@ export const sendInvitation = async (req: Request, res: Response) => {
         }
 
         res.json({ success: true, data: result.rows[0] });
+        await invalidateCache('role:', true); // Clear all role-based caches to ensure invitations refresh
 
     } catch (err) {
         console.error(err);
@@ -155,8 +157,10 @@ export const resendInvitation = async (req: Request, res: Response) => {
         });
 
         res.json({ success: true });
+        await invalidateCache('role:', true); // Clear all role-based caches to ensure invitations refresh
 
-    } catch {
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ error: "Failed to resend invitation" });
     }
 };//
@@ -171,8 +175,10 @@ export const cancelInvitation = async (req: Request, res: Response) => {
         );
 
         res.json({ success: true });
+        await invalidateCache('role:', true); // Clear all role-based caches to ensure invitations refresh
 
-    } catch {
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ error: "Failed to cancel invitation" });
     }
 };//
@@ -215,7 +221,8 @@ export const getInvitationByToken = async (req: Request, res: Response) => {
 
         return res.status(404).json({ error: "This link is invalid or has expired." });
 
-    } catch {
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ error: "Failed to fetch details" });
     }
 };//
@@ -303,6 +310,11 @@ export const acceptInvitation = async (req: Request, res: Response) => {
 
         setAuthCookies(res, tokenForUser);
         res.json({ success: true, type: "invitation" });
+
+        // Invalidate employee lists
+        await invalidateCache('role:', true);
+        await invalidateCache('role:/api/leaves/org-chart', true);
+        await invalidateCache('role:/api/management/org-tree', true);
 
     } catch (err) {
         console.error(err);
@@ -419,7 +431,8 @@ export const bulkUpload = async (req: Request, res: Response) => {
         if (validRecords.length > 0) {
             try {
                 sortedRecords = topologicalSort(validRecords);
-            } catch {
+            } catch (err) {
+                console.error("Topological sort failed, falling back to original order:", err);
                 sortedRecords = validRecords;
             }
         }
@@ -525,6 +538,7 @@ export const bulkUpload = async (req: Request, res: Response) => {
                 }));
             }
         }
+        await invalidateCache('role:', true); // Clear all role-based caches to ensure invitations refresh
 
         return res.json({
             success: true,
@@ -535,12 +549,11 @@ export const bulkUpload = async (req: Request, res: Response) => {
                 processed: processedList
             }
         });
-
     } catch (err: any) {
         console.error(err);
         return res.status(500).json({ error: err.message || "Failed to process bulk upload" });
     }
-};
+}
 
 // Helper parsing/sorting functions
 function parseCSV(text: string) {
@@ -620,4 +633,4 @@ function topologicalSort(records: any[]): any[] {
     });
 
     return sorted;
-}
+};

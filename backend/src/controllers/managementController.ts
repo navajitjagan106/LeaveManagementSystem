@@ -32,6 +32,48 @@ export const getAllEmployees = async (req: Request, res: Response) => {
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch employees" });
     }
+};
+
+export const searchUsers = async (req: Request, res: Response) => {
+    try {
+        const { q } = req.query;
+        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+        const { role_id } = (req as any).user;
+        
+        if (!q) return res.json({ success: true, data: [] });
+
+        const searchTerm = `%${String(q).toLowerCase()}%`;
+        
+        let query;
+        const params = [searchTerm];
+
+        if (role_id === 1) {
+            // Admin can search everyone
+            query = `
+                SELECT u.id, u.name, u.email, r.name as role, u.department
+                FROM users u
+                JOIN roles r ON u.role_id = r.id
+                WHERE (LOWER(u.name) LIKE $1 OR LOWER(u.email) LIKE $1)
+                LIMIT 10
+            `;
+        } else {
+            // Employees cannot see admins
+            query = `
+                SELECT u.id, u.name, u.email, r.name as role, u.department
+                FROM users u
+                JOIN roles r ON u.role_id = r.id
+                WHERE (LOWER(u.name) LIKE $1 OR LOWER(u.email) LIKE $1)
+                AND r.name <> 'admin'
+                LIMIT 10
+            `;
+        }
+
+        const result = await pool.query(query, params);
+        res.json({ success: true, data: result.rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Search failed" });
+    }
 };//
 
 export const updateEmployee = async (req: Request, res: Response) => {
@@ -162,7 +204,8 @@ export const createLeaveType = async (req: Request, res: Response) => {
         );
         res.json({ success: true, data: result.rows[0] });
         invalidateCache('global:/api/leaves/types', true);
-    } catch {
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ error: "Failed to create leave type" });
     }
 };//
@@ -244,7 +287,8 @@ export const updateLeaveType = async (req: Request, res: Response) => {
         if (result.rows.length === 0) return res.status(404).json({ error: "Leave type not found" });
         res.json({ success: true, data: result.rows[0] });
         invalidateCache('global:/api/leaves/types', true);
-    } catch {
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ error: "Failed to update leave type" });
     }
 };//

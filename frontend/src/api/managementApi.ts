@@ -43,3 +43,4 @@ export const bulkUpload = (csvText: string) => API.post("/management/bulk-upload
 
 export const getAdminDashboardStats = () => API.get("/management/dashboard-stats");
 export const getOrgTree = (managerId?: number) => API.get("/management/org-tree", { params: { managerId } });
+export const searchUsers = (q: string) => API.get("/management/search", { params: { q } });

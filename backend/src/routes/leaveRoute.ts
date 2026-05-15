@@ -18,11 +18,11 @@ router.patch("/approve/:id", authorizeApprovals("edit"), approveLeave);
 router.post("/apply", restrictAdmin, applyLeave);
 router.get('/types', apiCache(600, 'global'), getLeaveTypes);
 router.get("/holidays", apiCache(600, 'global'), getHolidays)
-router.get("/history", restrictAdmin, getLeaveHistory);
+router.get("/history", restrictAdmin, apiCache(300, 'user'), getLeaveHistory);
 router.get("/pending", authorizeApprovals("view"), getManagerLeaves)
 router.get("/balance", restrictAdmin, apiCache(300, 'user'), getLeaveBalance);
-router.get("/team", getTeamLeaves)
-router.get("/teamonleave", getTeamOnLeave);
+router.get("/team", apiCache(180, 'user'), getTeamLeaves)
+router.get("/teamonleave", apiCache(300, 'user'), getTeamOnLeave);
 router.get("/dashboard", restrictAdmin, apiCache(300, 'user'), getDashboardData)
 router.patch("/profile", updateUserProfile)
 router.patch("/getuserdata", updateUserProfile)
@@ -36,7 +36,7 @@ router.get("/team-members", authorizeTeamAccess(), getTeamMembers);
 router.get("/team-balance-summary", authorizeTeamAccess(), getTeamBalanceSummary);
 router.get("/leave-trend", authorizeTeamAccess(), getLeaveTrendByType);
 router.get("/team-member-profile/:id", authorizeTeamAccess(), getTeamMemberProfileData);
-router.get("/org-chart", getOrgChart);
-router.get("/org-children", getOrgChildren);
+router.get("/org-chart", apiCache(600, 'role'), getOrgChart);
+router.get("/org-children", apiCache(600, 'role'), getOrgChildren);
 
 export default router;

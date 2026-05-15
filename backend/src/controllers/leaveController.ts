@@ -253,7 +253,12 @@ export const applyLeave = async (req: Request, res: Response) => {
             success: true,
             data: result.rows[0]
         });
+        
+        // Invalidate relevant user caches
         await invalidateCache(`user:${user_id}:/api/leaves/dashboard`, true);
+        await invalidateCache(`user:${user_id}:/api/leaves/history`, true);
+        await invalidateCache(`user:${user_id}:/api/leaves/team`, true);
+        await invalidateCache(`user:${user_id}:/api/leaves/teamonleave`, true);
 
     } catch (err) {
         console.error("ERROR:", err);
@@ -279,13 +284,19 @@ export const cancelLeave = async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Only pending leaves can be cancelled" });
 
         await pool.query(
-            `DELETE FROM leaves WHERE id = $1`,
+            `UPDATE leaves SET status = 'cancelled' WHERE id = $1`,
             [id]
         );
 
         res.json({ success: true });
-        invalidateCache(`user:${req.user.id}:/api/leaves/dashboard`, true);
+        
+        // Invalidate relevant user caches
+        await invalidateCache(`user:${req.user.id}:/api/leaves/dashboard`, true);
+        await invalidateCache(`user:${req.user.id}:/api/leaves/history`, true);
+        await invalidateCache(`user:${req.user.id}:/api/leaves/team`, true);
+        await invalidateCache(`user:${req.user.id}:/api/leaves/teamonleave`, true);
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: "Failed to cancel leave" });
     }
 };//
@@ -687,9 +698,16 @@ export const approveLeave = async (req: Request, res: Response) => {
             success: true,
             data: result.rows[0]
         });
-        invalidateCache(`user:${leaveData.user_id}:/api/leaves/balance`, true);
-        invalidateCache(`user:${leaveData.user_id}:/api/leaves/dashboard`, true);
-        invalidateCache('role:', true); // Team leaves might have changed
+        
+        // Invalidate relevant user caches
+        await invalidateCache(`user:${leaveData.user_id}:/api/leaves/balance`, true);
+        await invalidateCache(`user:${leaveData.user_id}:/api/leaves/dashboard`, true);
+        await invalidateCache(`user:${leaveData.user_id}:/api/leaves/history`, true);
+        await invalidateCache(`user:${leaveData.user_id}:/api/leaves/team`, true);
+        await invalidateCache(`user:${leaveData.user_id}:/api/leaves/teamonleave`, true);
+        
+        // Invalidate manager/teammate views (clearing role prefix is a broad but safe fallback)
+        await invalidateCache('role:', true); 
 
     } catch (err: any) {
         await client.query("ROLLBACK");
@@ -1116,6 +1134,21 @@ export const getTeamMemberProfileData = async (req: Request, res: Response) => {
             );
             if (check.rows.length === 0)
                 return res.status(403).json({ error: "Not your team member" });
+        }
+
+        // NEW: Restrict employees from viewing Admins
+        const targetUserRole = await pool.query(
+            "SELECT r.name FROM users u JOIN roles r ON u.role_id = r.id WHERE u.id = $1",
+            [targetId]
+        );
+
+        if (targetUserRole.rows.length > 0) {
+            const isAdminTarget = targetUserRole.rows[0].name === 'admin';
+            const isRequesterAdmin = (req as any).user.role_id === 1;
+
+            if (isAdminTarget && !isRequesterAdmin) {
+                return res.status(403).json({ error: "FORBIDDEN ACCESS: You don't have permission to view this profile." });
+            }
         }
 
         const [empResult, balanceResult, monthlyResult] = await Promise.all([

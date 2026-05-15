@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getOrgChart, getOrgChildren } from "../../api/leaveApi";
 import { getAvatarGradient } from "../../utils/avatar";
 import Loader from "../common/Loader";
-import { X, Network, Plus, Minus, ChevronDown, ExternalLink } from "lucide-react";
+import { X, Network, ChevronDown, ChevronUp } from "lucide-react";
 
 interface OrgChartModalProps {
     isOpen: boolean;
@@ -82,9 +82,9 @@ const TreeNode: React.FC<TreeNodeProps> = ({ node }) => {
                             {loading ? (
                                 <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                             ) : isExpanded ? (
-                                <Minus size={12} strokeWidth={3} />
+                                <ChevronUp size={12} strokeWidth={3} />
                             ) : (
-                                <Plus size={12} strokeWidth={3} />
+                                <ChevronDown size={12} strokeWidth={3} />
                             )}
                         </button>
                     )}
