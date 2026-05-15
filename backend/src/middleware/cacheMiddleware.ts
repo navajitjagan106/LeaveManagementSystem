@@ -27,11 +27,9 @@ export const apiCache = (ttlSeconds: number, type: 'global' | 'user' | 'role' = 
 
         const cachedData = await getCache(key);
         if (cachedData) {
-            // console.log(`[Cache Hit] ${key}`);
             return res.json(cachedData);
         }
 
-        // console.log(`[Cache Miss] ${key}`);
 
         // Override res.json to capture the response and cache it
         const originalJson = res.json;
