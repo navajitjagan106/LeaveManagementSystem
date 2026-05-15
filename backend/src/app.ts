@@ -27,6 +27,10 @@ app.get("/", (_req, res) => {
   res.send("API is running");
 });
 
+app.get("/health", (_req, res) => {
+  res.status(200).send("OK");
+});
+
 app.use("/api/leaves", authenticate, leaveRoutes);
 app.use("/api/auth", authRoutes);
 
