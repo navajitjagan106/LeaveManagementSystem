@@ -135,10 +135,11 @@ interface LeaveHeatmapProps {
     monthsGrouped: {
         monthName: string;
         weeks: {
-            day: Date;
+            day: Date | null;
             dateStr: string;
             count: number;
             employeesOnLeave: string[];
+            isPlaceholder?: boolean;
         }[][];
     }[];
     maxCount: number;
@@ -208,7 +209,22 @@ const LeaveHeatmap: React.FC<LeaveHeatmapProps> = React.memo(({ monthsGrouped, m
                                             {mGroup.weeks.map((week, wi) => (
                                                 <div key={wi} className="flex flex-col gap-[3.5px] shrink-0 w-[11px] items-center">
                                                     {week.map((cell, di) => {
-                                                        const { day, count, employeesOnLeave } = cell;
+                                                        const { day, count, employeesOnLeave, isPlaceholder } = cell;
+
+                                                        if (isPlaceholder) {
+                                                            return (
+                                                                <div
+                                                                    key={di}
+                                                                    className="w-[11px] h-[11px]"
+                                                                    style={{
+                                                                        backgroundColor: 'transparent',
+                                                                        border: 'none',
+                                                                        pointerEvents: 'none'
+                                                                    }}
+                                                                />
+                                                            );
+                                                        }
+
                                                         const bgCol = getHeatmapColor(count);
 
                                                         const dayCell = (
@@ -232,7 +248,7 @@ const LeaveHeatmap: React.FC<LeaveHeatmapProps> = React.memo(({ monthsGrouped, m
                                                                 </TooltipTrigger>
                                                                 <TooltipContent className="p-3 bg-white border border-gray-100 shadow-xl rounded-xl text-xs flex flex-col gap-1.5 max-w-[220px]">
                                                                     <div className="font-bold text-gray-800">
-                                                                        {day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                                                                        {day ? day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : ''}
                                                                     </div>
                                                                     <div className="text-gray-500 font-medium">
                                                                         {count} employee{count !== 1 ? 's' : ''} on leave
@@ -406,11 +422,7 @@ const EmployeeDirectory: React.FC = () => {
         const start = new Date();
         start.setDate(end.getDate() - 179); // 180 Days (approx 26 weeks)
 
-        while (start.getDay() !== 0) {
-            start.setDate(start.getDate() - 1);
-        }
-
-        const days = [];
+        const days: Date[] = [];
         let current = new Date(start);
         while (current <= end) {
             days.push(new Date(current));
@@ -422,33 +434,91 @@ const EmployeeDirectory: React.FC = () => {
 
         const max = Math.max(1, ...leaveTrend.map(d => d.count));
 
-        const gridWeeks = [];
-        for (let i = 0; i < days.length; i += 7) {
-            const weekDays = days.slice(i, i + 7).map(day => {
+        // Group days by actual month key
+        const daysByMonth = new Map<string, Date[]>();
+        days.forEach((day: Date) => {
+            const mName = day.toLocaleDateString('en-US', { month: 'short' });
+            const mYear = day.getFullYear();
+            const groupKey = `${mName} ${mYear}`;
+            if (!daysByMonth.has(groupKey)) {
+                daysByMonth.set(groupKey, []);
+            }
+            daysByMonth.get(groupKey)!.push(day);
+        });
+
+        const groups: {
+            monthName: string;
+            weeks: {
+                day: Date | null;
+                dateStr: string;
+                count: number;
+                employeesOnLeave: string[];
+                isPlaceholder?: boolean;
+            }[][];
+        }[] = [];
+
+        daysByMonth.forEach((monthDays: Date[], groupKey: string) => {
+            const weeksList: {
+                day: Date | null;
+                dateStr: string;
+                count: number;
+                employeesOnLeave: string[];
+                isPlaceholder?: boolean;
+            }[][] = [];
+            
+            let currentWeek: {
+                day: Date | null;
+                dateStr: string;
+                count: number;
+                employeesOnLeave: string[];
+                isPlaceholder?: boolean;
+            }[] = Array(7).fill(null);
+            
+            let lastWeekday = -1;
+
+            monthDays.forEach((day: Date) => {
+                const dayOfWeek = day.getDay(); // 0 (Sun) to 6 (Sat)
+                
+                if (dayOfWeek <= lastWeekday) {
+                    weeksList.push(currentWeek.map(cell => cell || {
+                        day: null,
+                        dateStr: '',
+                        count: 0,
+                        employeesOnLeave: [],
+                        isPlaceholder: true
+                    }));
+                    currentWeek = Array(7).fill(null);
+                }
+
                 const dateStr = normalizeDate(day);
                 const dayData = map.get(dateStr) || { count: 0, employees: [] };
-                return {
+
+                currentWeek[dayOfWeek] = {
                     day,
                     dateStr,
                     count: dayData.count,
-                    employeesOnLeave: dayData.employees
+                    employeesOnLeave: dayData.employees,
+                    isPlaceholder: false
                 };
+                lastWeekday = dayOfWeek;
             });
-            gridWeeks.push(weekDays);
-        }
 
-        const groups: { monthName: string; weeks: typeof gridWeeks }[] = [];
-        gridWeeks.forEach((week) => {
-            const mName = week[0].day.toLocaleDateString('en-US', { month: 'short' });
-            const mYear = week[0].day.getFullYear();
-            const groupKey = `${mName} ${mYear}`;
-            let existing = groups.find(g => g.monthName === groupKey);
-            if (!existing) {
-                existing = { monthName: groupKey, weeks: [] };
-                groups.push(existing);
+            if (currentWeek.some(cell => cell !== null)) {
+                weeksList.push(currentWeek.map(cell => cell || {
+                    day: null,
+                    dateStr: '',
+                    count: 0,
+                    employeesOnLeave: [],
+                    isPlaceholder: true
+                }));
             }
-            existing.weeks.push(week);
+
+            groups.push({
+                monthName: groupKey,
+                weeks: weeksList
+            });
         });
+
 
         return { monthsGrouped: groups, maxCount: max };
     }, [leaveTrend]);

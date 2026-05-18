@@ -71,11 +71,11 @@ if (redisUrl) {
 
     instance.on("error", (err: any) => {
         if (!isMock) {
-            console.error("Redis connection error:", err.message);
-            if (err.message.includes("allowlist")) {
-                isMock = true;
+            console.warn(`⚠️  Redis: Connection error (${err.message}). Switching to standard in-memory local cache fallback.`);
+            isMock = true;
+            try {
                 instance.disconnect();
-            }
+            } catch (e) {}
         }
     });
 } else {
