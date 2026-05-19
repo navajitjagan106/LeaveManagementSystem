@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, Command } from "lucide-react";
 import { getNotifications, getNotificationCount, markNotificationsRead } from "../../api/leaveApi";
 import { logoutApi } from "../../api/authApi";
 import {
@@ -31,8 +31,11 @@ const Header: React.FC = () => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(false);
+    const [isMac, setIsMac] = useState(true);
 
-
+    useEffect(() => {
+        setIsMac(typeof window !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent));
+    }, []);
 
     const fetchUnreadCount = async () => {
         try {
@@ -90,8 +93,19 @@ const Header: React.FC = () => {
                         <span className="text-sm text-white/40 font-medium">Search any action or ask for help...</span>
                     </div>
                     <div className="flex items-center gap-1">
-                        <kbd className="h-5 px-1.5 rounded border border-white/10 bg-white/5 font-mono text-[10px] font-medium text-white/40">
-                            ⌘ K
+                        <kbd className="h-5 px-1.5 rounded border border-white/10 bg-white/5 font-sans text-[9px] font-semibold text-white/50 flex items-center gap-1">
+                            {isMac ? (
+                                <>
+                                    <Command size={10} className="stroke-[2.5px]" />
+                                    <span className="text-[10px] font-bold">K</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="font-bold tracking-tight">Ctrl</span>
+                                    <span className="text-[9px] opacity-40">+</span>
+                                    <span className="text-[10px] font-bold">K</span>
+                                </>
+                            )}
                         </kbd>
                     </div>
                 </button>

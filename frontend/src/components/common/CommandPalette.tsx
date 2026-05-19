@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Users, LayoutDashboard, FileText, Settings, History, Calendar, Shield, Wallet,  Mail, ShieldCheck } from "lucide-react";
+import { Search, Users, LayoutDashboard, FileText, Settings, History, Calendar, Shield, Wallet,  Mail, ShieldCheck, ArrowUp, ArrowDown, CornerDownLeft } from "lucide-react";
 import { searchUsers } from "../../api/managementApi";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
@@ -221,10 +221,10 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
                 <div className="p-5 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end text-[13px] text-slate-400 font-medium tracking-tight">
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-2">
-                            Navigate <span className="flex items-center gap-1"><kbd className="bg-white border px-1.5 py-0.5 rounded shadow-sm text-slate-500">↑</kbd> <kbd className="bg-white border px-1.5 py-0.5 rounded shadow-sm text-slate-500">↓</kbd></span>
+                            Navigate <span className="flex items-center gap-1"><kbd className="bg-white border p-1 rounded shadow-sm text-slate-500 flex items-center justify-center"><ArrowUp size={11} className="stroke-[2.5px]" /></kbd> <kbd className="bg-white border p-1 rounded shadow-sm text-slate-500 flex items-center justify-center"><ArrowDown size={11} className="stroke-[2.5px]" /></kbd></span>
                         </div>
                         <div className="flex items-center gap-2">
-                            To select <kbd className="bg-white border px-1.5 py-0.5 rounded shadow-sm text-slate-500 font-mono">↵</kbd>
+                            To select <kbd className="bg-white border px-1.5 py-0.5 rounded shadow-sm text-slate-500 flex items-center gap-1.5 text-[11px] font-bold">Enter <CornerDownLeft size={11} className="stroke-[2.5px]" /></kbd>
                         </div>
                     </div>
                 </div>
